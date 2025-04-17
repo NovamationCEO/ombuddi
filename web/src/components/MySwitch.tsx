@@ -1,7 +1,7 @@
-import { FormControlLabel, Switch, FormGroup } from '@mui/material'
 import { FormControlLabel, Switch } from '@mui/material'
+import React from 'react'
 
-export function MySwitch(props: {
+export const MySwitch = React.memo(function MySwitch(props: {
     value: boolean
     setValue: (b: boolean) => void
     disabled?: boolean
@@ -9,18 +9,20 @@ export function MySwitch(props: {
 }) {
     const { value, setValue, disabled = false, label } = props
 
+    const handleChange = React.useCallback(() => {
+        setValue(!value)
+    }, [value, setValue])
+
     return (
-        <FormGroup>
-            <FormControlLabel
-                control={
-                    <Switch
-                        checked={value}
-                        onChange={() => setValue(!value)}
-                        disabled={disabled}
-                    />
-                }
-                label={label}
-            />
-        </FormGroup>
+        <FormControlLabel
+            control={
+                <Switch
+                    checked={value}
+                    onChange={handleChange}
+                    disabled={disabled}
+                />
+            }
+            label={label}
+        />
     )
-}
+})
