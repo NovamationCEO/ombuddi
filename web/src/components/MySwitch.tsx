@@ -1,4 +1,5 @@
 import { FormControlLabel, Switch, FormGroup } from '@mui/material'
+import { FormControlLabel, Switch } from '@mui/material'
 
 export function MySwitch(props: {
     value: boolean
