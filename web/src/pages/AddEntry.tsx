@@ -1,6 +1,7 @@
 import { Box, Button, FormControlLabel, Radio, RadioGroup, Stack, TextField, Tooltip } from '@mui/material'
 import { useState } from 'react'
 import { CodeSetter } from '../components/CodeSetter'
+import React from 'react'
 
 export function AddEntry() {
     const [contactName, setContactName] = useState('')
@@ -18,6 +19,15 @@ export function AddEntry() {
     const [gender, setGender] = useState<string>('N/A')
     const [role, setRole] = useState<string>('peon')
     const [generation, setGeneration] = useState<string>('unknown')
+    const [openIndex, setOpenIndex] = React.useState(0)
+
+    const setCodes = React.useCallback((codes: string[]) => {
+        setActiveCodes(codes)
+    }, [])
+
+    const updateOpenIndex = React.useCallback((idx: number) => {
+        setOpenIndex(idx)
+    }, [])
 
     function RoundedContainer(props: { title: string; children?: any }) {
         const { title, children } = props
@@ -284,7 +294,9 @@ export function AddEntry() {
                 <RoundedContainer title={'Codes'}>
                     <CodeSetter
                         activeCodes={activeCodes}
-                        setActiveCodes={setActiveCodes}
+                        setActiveCodes={setCodes}
+                        openIndex={openIndex}
+                        setOpenIndex={updateOpenIndex}
                     />
                 </RoundedContainer>
                 <RoundedContainer title={'Tags'}></RoundedContainer>
