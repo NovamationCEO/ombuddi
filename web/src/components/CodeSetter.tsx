@@ -54,52 +54,63 @@ export const CodeSetter = React.memo(function CodeSetter(props: {
     )
 
     return (
-        <Grid2 container>
-            {categories.map((category, index) => {
-                const isExpanded = openIndex === index
+        <Dialog open={showCodeSetter}>
+            <DialogTitle>IOA Codes</DialogTitle>
+            <DialogContent>
+                <Grid2 container>
+                    {ioaCategories.map((category, index) => {
+                        const isExpanded = openIndex === index
 
-                return (
-                    <Accordion
-                        key={category}
-                        expanded={isExpanded}
-                        onChange={(_, expanded) => setOpenIndex(expanded ? index : null)}
-                        disableGutters
-                    >
-                        <AccordionSummary>
-                            <Box fontWeight="bold">{category}</Box>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                            <Grid2
-                                container
-                                spacing={2}
+                        return (
+                            <Accordion
+                                key={category}
+                                expanded={isExpanded}
+                                onChange={(_, expanded) => setOpenIndex(expanded ? index : null)}
+                                disableGutters
                             >
-                                {codes
-                                    .filter((code) => code[0][0] === (index + 1).toString())
-                                    .map(([codeId, codeLabel]) => {
-                                        const isMatch = activeCodes.includes(codeId)
-                                        return (
-                                            <Grid2
-                                                xs={12}
-                                                sm={6}
-                                                lg={4}
-                                                xl={3}
-                                                key={codeId}
-                                            >
-                                                <Box onClick={(e) => e.stopPropagation()}>
-                                                    <MySwitch
-                                                        value={isMatch}
-                                                        setValue={(b) => handleToggle(codeId, b)}
-                                                        label={getLabel(codeId, codeLabel, isMatch)}
-                                                    />
-                                                </Box>
-                                            </Grid2>
-                                        )
-                                    })}
-                            </Grid2>
-                        </AccordionDetails>
-                    </Accordion>
-                )
-            })}
-        </Grid2>
+                                <AccordionSummary>
+                                    <Box fontWeight="bold">{category}</Box>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                    <Grid2
+                                        container
+                                        spacing={2}
+                                    >
+                                        {ioaCodes
+                                            .filter((code) => code[0][0] === (index + 1).toString())
+                                            .map(([codeId, codeLabel]) => {
+                                                const isMatch = localCodes.includes(codeId)
+                                                return (
+                                                    <Grid2
+                                                        xs={12}
+                                                        key={codeId}
+                                                    >
+                                                        <Box onClick={(e) => e.stopPropagation()}>
+                                                            <MySwitch
+                                                                value={isMatch}
+                                                                setValue={(b) => handleToggle(codeId, b)}
+                                                                label={getLabel(codeId, codeLabel, isMatch)}
+                                                            />
+                                                        </Box>
+                                                    </Grid2>
+                                                )
+                                            })}
+                                    </Grid2>
+                                </AccordionDetails>
+                            </Accordion>
+                        )
+                    })}
+                </Grid2>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={cancel}>Cancel</Button>
+                <Button
+                    variant={'contained'}
+                    onClick={save}
+                >
+                    Save
+                </Button>
+            </DialogActions>
+        </Dialog>
     )
 })
