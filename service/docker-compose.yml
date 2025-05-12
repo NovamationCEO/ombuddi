@@ -1,10 +1,32 @@
-version: "0.1"
-
 services:
-  web:
-    build: .
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER:  ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5001:5000"
+      - "5432:5432"                # expose if you need to connect from host
     volumes:
-      - .:/app
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
     command: python app.py
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db                   # your postgres service name
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DATABASE_URL: ${DB_URL}
+    ports:
+      - "5002:5000"
+    # volumes:
+    #   - .:/app       
+
+volumes:
+  db_data: {}

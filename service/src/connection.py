@@ -9,13 +9,6 @@ DATABASES = {
         "password": os.getenv("DB_PASS"),
         "database": os.getenv("DB_NAME"),
     },
-    "user_management": {
-        "host": os.getenv("DB_HOST"),
-        "port": os.getenv("DB_PORT"),
-        "user": os.getenv("DB_UM_USER"),
-        "password": os.getenv("DB_UM_PASS"),
-        "database": os.getenv("DB_UM_NAME"),
-    },
 }
 
 def get_db_connection(db_key="default"):

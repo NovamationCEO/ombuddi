@@ -6,6 +6,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
+// import { useKeycloak } from '@react-keycloak/web'
 
 export function AccountButton() {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
@@ -56,7 +57,11 @@ export function AccountButton() {
                                         id="composition-menu"
                                         aria-labelledby="composition-button"
                                     >
-                                        {!isLoggedIn && <MenuItem onClick={() => keycloak.login()}>Log In</MenuItem>}
+                                        <MenuItem onClick={() => navigate('/welcome')}>Welcome</MenuItem>
+                                        <MenuItem onClick={() => navigate('/')}>Home</MenuItem>
+                                        <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
+                                        <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
+                                        {/* {!isLoggedIn && <MenuItem onClick={() => keycloak.login()}>Log In</MenuItem>}
                                         {isLoggedIn && (
                                             <>
                                                 <MenuItem onClick={() => navigate(`/profile/${userId}`)}>
@@ -71,7 +76,7 @@ export function AccountButton() {
                                                     Logout
                                                 </MenuItem>
                                             </>
-                                        )}
+                                        )} */}
                                     </MenuList>
                                 </Box>
                             </ClickAwayListener>

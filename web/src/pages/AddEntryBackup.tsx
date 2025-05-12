@@ -1,6 +1,6 @@
 import { Box, Button, FormControlLabel, Radio, RadioGroup, Stack, TextField, Tooltip } from '@mui/material'
 import { useState } from 'react'
-import { CodeSetter } from '../components/CodeSetter'
+import { IoaCodeSetter } from '../components/IoaCodeSetter'
 import React from 'react'
 import { RoundedContainer } from '../components/RoundedContainer'
 
@@ -269,7 +269,7 @@ export function AddEntryBackup() {
                     </Stack>
                 </RoundedContainer>
                 <RoundedContainer title={'Codes'}>
-                    <CodeSetter
+                    <IoaCodeSetter
                         activeCodes={activeCodes}
                         setActiveCodes={setCodes}
                         openIndex={openIndex}

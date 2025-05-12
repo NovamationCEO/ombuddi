@@ -1,12 +1,13 @@
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, ButtonGroup, Stack } from '@mui/material'
 import React from 'react'
 import { AddNewCase } from './AddNewCase'
+import { LoadAllCases } from '../LoadAllCases/LoadAllCases'
 
 export function SelectCase() {
     const [caseId, setCaseId] = React.useState('')
     const [tab, setTab] = React.useState(0)
 
-    const caseButtonTitles = ['Create New Workheap', 'Load Existing Workheap', 'Log Without Workheap']
+    const caseButtonTitles = ['Create New Case', 'Load Existing Case', 'Log Without Case']
 
     function CaseButton(props: { title: string; index: number }) {
         return (
@@ -65,7 +66,7 @@ export function SelectCase() {
                     </AccordionSummary>
                     <AccordionDetails>
                         {tab === 0 && <AddNewCase />}
-                        {tab === 1 && <Box>Load</Box>}
+                        {tab === 1 && <LoadAllCases />}
                         {tab === 2 && <Box>Skip</Box>}
                     </AccordionDetails>
                 </Accordion>

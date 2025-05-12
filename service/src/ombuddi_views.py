@@ -1,0 +1,108 @@
+from flask import Blueprint, jsonify, send_file, request
+from utils import add_one, get_many, get_one, update_one
+
+ombuddi_views = Blueprint('ombuddi_views', __name__)
+
+case_model = {
+    'id': 'id',
+    'name': 'name',
+    'description': 'description',
+    'codes': 'codes',
+    'status': 'status',
+    'created_at': 'created_at',
+    'updated_at': 'updated_at',
+}
+
+@ombuddi_views.route('/api/v1/create_case', methods=['POST'])
+def create_case():
+    return add_one('cases', case_model, request)
+
+@ombuddi_views.route('/api/v1/get_case_by_id/<id>')
+def get_case_by_id(id):
+    constraints = {'id': id}
+    return get_one('cases', case_model, constraints)
+
+@ombuddi_views.route('/api/v1/get_all_cases')
+def get_all_cases():
+    constraints = {'status': 'active'}
+    return get_many('cases', case_model, constraints)
+
+
+organization_model = {
+    'id': 'id',
+    'name': 'name'
+}
+
+@ombuddi_views.route('/api/v1/get_organization_by_id/<id>')
+def get_organization_by_id(id):
+    constraints = {'id': id}
+    return get_one('organizations', organization_model, constraints)
+
+ombuds_model = {
+    'id': 'id',
+    'name': 'name',
+    'organizationId': 'organization_id'
+}
+
+@ombuddi_views.route('/api/v1/get_ombuds_by_id/<id>')
+def get_ombuds_by_id(id):
+    constraints = {'id': id}
+    return get_one('ombuds', ombuds_model, constraints)
+
+code_category_model = {
+    'id': 'id',
+    'organizationId': 'organization_id',
+    'name': 'name',
+    'softDelete': 'soft_delete',
+    'index': 'index',
+}
+
+@ombuddi_views.route('/api/v1/get_code_categories_by_organization_id/<id>')
+def get_code_categories_by_organization_id(id):
+    constraints = {'organization_id': id, 'soft_delete': False}
+    return get_many('code_categories', code_category_model, constraints)
+
+@ombuddi_views.route('/api/v1/add_code_category', methods=['POST'])
+def add_code_category():
+    return add_one('code_categories', code_category_model, request)
+
+@ombuddi_views.route('/api/v1/update_code_category', methods=['PUT'])
+def update_code_category():
+    return update_one('code_categories', code_category_model, request)
+
+code_model = {
+    'id': 'id',
+    'categoryId': 'category_id',
+    'organizationId': 'organization_id',
+    'softDelete': 'soft_delete',
+    'code': 'code',
+    'description': 'description'
+}
+
+@ombuddi_views.route('/api/v1/get_codes_by_category_id/<id>')
+def get_codes_by_category_id(id):
+    constraints = {'code_category_id': id, 'soft_delete': False}
+    return get_many('codes', code_model, constraints)
+
+@ombuddi_views.route('/api/v1/get_codes_by_organization_id/<id>')
+def get_codes_by_organization_id(id):
+    constraints = {'organization_id': id, 'soft_delete': False}
+    return get_many('codes', code_model, constraints)
+
+@ombuddi_views.route('/api/v1/add_code', methods=['POST'])
+def add_code():
+    return add_one('codes', code_model, request)
+
+@ombuddi_views.route('/api/v1/update_code', methods=['PUT'])
+def update_code():
+    return update_one('codes', code_model, request)
+
+@ombuddi_views.route('/api/v1/get_code_by_id/<id>')
+def get_code_by_id(id):
+    constraints = {'id': id}
+    return get_one('codes', code_model, constraints)
+
+@ombuddi_views.route('/api/v1/get_all_codes_by_organization_id/<code>')
+def get_all_codes_by_organization_id(code):
+    constraints = {'organization_id': code}
+    return get_many('codes', code_model, constraints)

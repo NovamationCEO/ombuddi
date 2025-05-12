@@ -14,8 +14,9 @@ export function RoundedContainer(props: { title: string; children?: JSX.Element 
                 bgcolor={'#1976d2'}
                 color={'white'}
                 paddingLeft={2}
-                paddingTop={0.5}
-                paddingBottom={0.5}
+                paddingTop={1}
+                paddingBottom={1}
+                fontWeight={'bold'}
             >
                 {title}
             </Box>

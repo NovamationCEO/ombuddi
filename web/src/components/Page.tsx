@@ -42,9 +42,9 @@ export function Page(props: { element: JSX.Element }) {
                 position={'relative'}
                 display={'flex'}
             >
-                <SidebarLeft>
+                {/* <SidebarLeft>
                     <NavigationMenu />
-                </SidebarLeft>
+                </SidebarLeft> */}
                 <Box
                     flex={1}
                     display={'flex'}

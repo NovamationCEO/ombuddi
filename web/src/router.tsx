@@ -7,6 +7,9 @@ import { WelcomePage } from './pages/WelcomePage'
 import { AddEntry } from './pages/AddEntry'
 import { Cases } from './pages/Cases'
 import { ReportPage } from './pages/Report'
+import { AddPerson } from './components/AddPerson/AddPerson'
+import { Profile } from './pages/Profile'
+import { Organization } from './pages/Organization'
 
 export const router = createBrowserRouter([
     {
@@ -18,4 +21,7 @@ export const router = createBrowserRouter([
     { path: '/add_entry', element: <Page element={<AddEntry />} /> },
     { path: '/cases', element: <Page element={<Cases />} /> },
     { path: '/report', element: <Page element={<ReportPage />} /> },
+    { path: '/add_person', element: <Page element={<AddPerson />} /> },
+    { path: '/profile', element: <Page element={<Profile />} /> },
+    { path: '/organization', element: <Page element={<Organization />} /> },
 ])

@@ -1,29 +1,34 @@
-import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    TextField,
-    Tooltip,
-    useTheme,
-} from '@mui/material'
+import { Button, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { RoundButton } from '../../trusted-components/RoundButton'
 import { Lock } from '@mui/icons-material'
-import { CodeSetter } from '../CodeSetter'
-import { ioaCategories, ioaCodes } from '../../constants/ioaConstants'
-import { RoundedContainer } from '../RoundedContainer'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
+import { useSnack } from '../../libraries/useSnack'
+import { creator } from '../../tools/db_tools/creator'
+import { useUserId } from '../../tools/useUserId'
+import { useGetter } from '../../tools/db_tools/useGetter'
+import { CodeSetterBox } from '../CodeSetterBox'
+import { useIoaOrgId } from '../../tools/useIoaOrgId'
+import { OmbudsType } from '../../types/majorTypes'
 
+type CaseType = {
+    id: string
+    name: string
+    codes: string[]
+}
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
     const [imageUrl, setImageUrl] = React.useState('')
-    const [activeCodes, setActiveCodes] = React.useState<string[]>([])
-    const [showCodeSetter, setShowCodeSetter] = React.useState(false)
+    const [activeIoaCodes, setActiveIoaCodes] = React.useState<string[]>([])
+    const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
     const theme = useTheme()
+    const setSnack = useSnack((state) => state.setSnack)
+    const [description, setDescription] = React.useState('')
+    const userId = useUserId()
+    const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
+    const organizationId = ombudsRes.data?.organizationId
+    const ioaId = useIoaOrgId()
 
     async function getRandomName() {
         const newRandomName = await fetch('https://random-word-api.herokuapp.com/word?number=3')
@@ -48,20 +53,43 @@ export function AddNewCase() {
         setImageUrl(`https://picsum.photos/seed/${caseName}/60/60`)
     }, [caseName])
 
-    function save() {}
+    async function save() {
+        const payload = {
+            name: caseName,
+            description: description,
+            codes: activeIoaCodes,
+            status: 'active',
+        }
+        await creator<CaseType>('create_case', payload).then((response) => {
+            console.log(response)
+            if (response.success) {
+                setSnack({
+                    message: 'Case created successfully',
+                    severity: 'success',
+                })
+            } else {
+                setSnack({
+                    message: 'Error creating case - ' + response.status,
+                    severity: 'error',
+                })
+            }
+        })
+    }
 
     function cancel() {}
 
     return (
         <Stack spacing={2}>
-            <CodeSetter
-                showCodeSetter={showCodeSetter}
-                setShowCodeSetter={setShowCodeSetter}
-                activeCodes={activeCodes}
-                setActiveCodes={setActiveCodes}
-            />
+            {/* <IoaCodeSetter
+                showCodeSetter={showIoaCodeSetter}
+                setShowCodeSetter={setShowIoaCodeSetter}
+                activeCodes={activeIoaCodes}
+                setActiveCodes={setActiveIoaCodes}
+            /> */}
 
-            <Box>Add New Workheap</Box>
+            <Box>
+                <Typography variant={'h5'}>Add New Case</Typography>
+            </Box>
             <Box
                 display={'flex'}
                 alignItems={'center'}
@@ -70,14 +98,14 @@ export function AddNewCase() {
                 <TextField
                     value={caseName}
                     onChange={(e) => setCaseName(e.target.value)}
-                    label={'Workheap Name'}
+                    label={'Case Name'}
                     fullWidth
                 />
                 <Box>
                     <Tooltip
                         title={
                             <Box>
-                                <Box fontWeight={'bold'}>Choose a name to identify this workheap.</Box>
+                                <Box fontWeight={'bold'}>Choose a name to identify this case.</Box>
                                 <Box>
                                     Security: This name is visible within your organization. It is saved in plaintext.
                                 </Box>
@@ -102,7 +130,7 @@ export function AddNewCase() {
                 >
                     Randomize
                 </Button>
-                <Tooltip title={'A random security image, based on the workheap name, to make identifying easier.'}>
+                <Tooltip title={'A random security image, based on the case name, to make identifying easier.'}>
                     <Box
                         padding={1}
                         width={60}
@@ -116,38 +144,27 @@ export function AddNewCase() {
                     </Box>
                 </Tooltip>
             </Box>
-            <RoundedContainer title={'IOA Codes'}>
-                <Box
-                    onClick={() => setShowCodeSetter(true)}
-                    border={'1px solid black'}
-                    padding={2}
-                >
-                    {activeCodes.length === 0 && <Box>None Selected. Click to Edit.</Box>}
-                    {activeCodes
-                        .sort((a, b) => {
-                            if (a[1] < b[1]) return -1
-                            if (a[1] > b[1]) return 1
-                            if (a[0] < b[0]) return -1
-                            if (a[0] > b[0]) return 1
-                            return 0
-                        })
-                        .map((code, n) => (
-                            <Box key={code}>
-                                {activeCodes.length > 0 && (n === 0 || code[0] !== activeCodes[n - 1][0]) && (
-                                    <Box
-                                        color={'white'}
-                                        bgcolor={theme.palette.secondary.dark}
-                                        padding={0.5}
-                                        marginTop={1}
-                                    >
-                                        {ioaCategories[Number(code[0]) - 1]}
-                                    </Box>
-                                )}
-                                <b>{code}</b>: {ioaCodes.find((c) => c[0] === code)?.[1]}
-                            </Box>
-                        ))}
-                </Box>
-            </RoundedContainer>
+            <Box>
+                <TextField
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    label={'Description'}
+                    fullWidth
+                    multiline
+                    rows={3}
+                />
+            </Box>
+
+            <CodeSetterBox
+                activeCodeIds={activeIoaCodes}
+                setActiveCodeIds={setActiveIoaCodes}
+                organizationId={ioaId}
+            />
+            <CodeSetterBox
+                activeCodeIds={activeOrgCodes}
+                setActiveCodeIds={setActiveOrgCodes}
+                organizationId={organizationId}
+            />
             <SaveCancel
                 onSave={save}
                 onCancel={cancel}

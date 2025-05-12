@@ -5,8 +5,9 @@ import { useNavigate } from 'react-router-dom'
 import img1 from '../assets/images/add_entry.png'
 import img2 from '../assets/images/cases.png'
 import img3 from '../assets/images/report.png'
+import img4 from '../assets/images/profile.png'
 
-type LinkButtonType = { name: string; url: string; image: any; description: string }
+type LinkButtonType = { name: string; url: string; image: string; description: string }
 
 export function HomePage() {
     const navigate = useNavigate()
@@ -15,6 +16,7 @@ export function HomePage() {
         { name: 'Add Entry', url: '/add_entry', image: img1, description: 'Record a Meeting or Contact' },
         { name: 'Cases', url: '/cases', image: img2, description: 'View Active Cases' },
         { name: 'Report', url: '/report', image: img3, description: 'Generate A Yearly Report' },
+        { name: 'Profile', url: '/profile', image: img4, description: 'View and Edit Your Profile' },
     ]
 
     function LinkButton(props: LinkButtonType) {

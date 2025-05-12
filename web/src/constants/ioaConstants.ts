@@ -99,3 +99,17 @@ export const ioaCategories = [
     'Organizational, Strategic, and Mission Related',
     'Values, Ethics, and Standards',
 ]
+
+// "0242a3b4-5de0-466f-9d83-71617b687928"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Safety, Health, and Physical Environment"	false	5
+// "1b5420ce-dcf3-49bd-81a3-1ac83a05329b"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Legal, Regulatory, Financial, and Compliance"	false	4
+// "24bb359d-f246-468f-96d1-c7f9df9ec682"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Compensation & Benefits"	false	0
+// "2f1fcb9f-3829-415a-aef3-e6eaf58596ea"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Evaluative Relationships"	false	1
+// "4839c4cd-a9f0-4561-a996-dc12a56fa0fd"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Peer and Colleague Relationships"	false	2
+// "61160fee-1dd5-4547-ae91-cef0d5a721bd"	"ac314522-27f8-42e1-8bd5-6ff68d6b3e9d"	"Sandwiches"	false	2
+// "645d96c4-ecc8-4fae-8561-6cb1a1dade92"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Services/Administrative Issues"	false	6
+// "69cd06fd-9e48-43a6-8e32-7c0275562042"	"ac314522-27f8-42e1-8bd5-6ff68d6b3e9d"	"Supernatural"	false	0
+// "b4302695-d225-4795-93fd-66ed5426a5c0"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Career Progression and Development"	false	3
+// "bd48316d-a347-4ed4-87a8-b0ac6bd21484"	"ac314522-27f8-42e1-8bd5-6ff68d6b3e9d"	"Supranatural"	false	1
+// "d229ffc5-d52a-4d47-92bb-b4e370dee5b2"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Values, Ethics, and Standards"	false	8
+// "f3d3abd8-64cf-4dca-8950-f22dfa0b38a1"	"ac314522-27f8-42e1-8bd5-6ff68d6b3e9d"	"Sandwiches"	true	2
+// "fc9fa222-fa23-4c5d-a2e0-eec6c96c9b39"	"628b5737-43e6-49c7-a632-2f723a455e59"	"Organizational, Strategic, and Mission Related"	false	7

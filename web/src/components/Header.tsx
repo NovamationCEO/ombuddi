@@ -61,7 +61,7 @@ export function Header() {
                 spacing={2}
                 direction={'row'}
             >
-                {/* <AccountButton /> */}
+                <AccountButton />
             </Stack>
         </Box>
     )
