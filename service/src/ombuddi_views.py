@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, send_file, request
 from utils import add_one, get_many, get_one, update_one
+from hash_name import hash_name
 
 ombuddi_views = Blueprint('ombuddi_views', __name__)
 
@@ -106,3 +107,5 @@ def get_code_by_id(id):
 def get_all_codes_by_organization_id(code):
     constraints = {'organization_id': code}
     return get_many('codes', code_model, constraints)
+
+

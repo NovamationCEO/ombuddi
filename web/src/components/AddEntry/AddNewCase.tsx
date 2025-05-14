@@ -1,8 +1,8 @@
-import { Button, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Button, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { RoundButton } from '../../trusted-components/RoundButton'
-import { Lock } from '@mui/icons-material'
+import { Add, Lock } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { useSnack } from '../../libraries/useSnack'
 import { creator } from '../../tools/db_tools/creator'
@@ -10,13 +10,10 @@ import { useUserId } from '../../tools/useUserId'
 import { useGetter } from '../../tools/db_tools/useGetter'
 import { CodeSetterBox } from '../CodeSetterBox'
 import { useIoaOrgId } from '../../tools/useIoaOrgId'
-import { OmbudsType } from '../../types/majorTypes'
+import { OmbudsType, PersonType } from '../../types/majorTypes'
+import { RoundedContainer } from '../RoundedContainer'
+import { useNavigate } from 'react-router-dom'
 
-type CaseType = {
-    id: string
-    name: string
-    codes: string[]
-}
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
     const [imageUrl, setImageUrl] = React.useState('')
@@ -29,6 +26,13 @@ export function AddNewCase() {
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
     const ioaId = useIoaOrgId()
+    const navigate = useNavigate()
+    const [personName, setPersonName] = React.useState('')
+    const [hash, setHash] = React.useState('')
+
+    const hashedName = personName + hash
+
+    const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
     async function getRandomName() {
         const newRandomName = await fetch('https://random-word-api.herokuapp.com/word?number=3')
@@ -60,7 +64,7 @@ export function AddNewCase() {
             codes: activeIoaCodes,
             status: 'active',
         }
-        await creator<CaseType>('create_case', payload).then((response) => {
+        await creator<{ id: string; status: string; success: boolean }>('create_case', payload).then((response) => {
             console.log(response)
             if (response.success) {
                 setSnack({
@@ -76,17 +80,16 @@ export function AddNewCase() {
         })
     }
 
+    function search() {
+        if (!personName || !personName.length) {
+            return
+        }
+    }
+
     function cancel() {}
 
     return (
         <Stack spacing={2}>
-            {/* <IoaCodeSetter
-                showCodeSetter={showIoaCodeSetter}
-                setShowCodeSetter={setShowIoaCodeSetter}
-                activeCodes={activeIoaCodes}
-                setActiveCodes={setActiveIoaCodes}
-            /> */}
-
             <Box>
                 <Typography variant={'h5'}>Add New Case</Typography>
             </Box>
@@ -165,6 +168,36 @@ export function AddNewCase() {
                 setActiveCodeIds={setActiveOrgCodes}
                 organizationId={organizationId}
             />
+            <RoundedContainer title={'Associated People'}>
+                <Box>
+                    <Stack spacing={2}>
+                        <TextField
+                            value={personName}
+                            onChange={(e) => setPersonName(e.target.value)}
+                            label={'Person Name'}
+                            fullWidth
+                        />
+                        <TextField
+                            value={hash}
+                            onChange={(e) => setHash(e.target.value)}
+                            label={'Hash'}
+                            fullWidth
+                        />
+                        <Button
+                            onClick={search}
+                            variant={'contained'}
+                        >
+                            Search
+                        </Button>
+
+                        <Box>
+                            <RoundButton onClick={() => navigate('/add_person')}>
+                                <Add />
+                            </RoundButton>
+                        </Box>
+                    </Stack>
+                </Box>
+            </RoundedContainer>
             <SaveCancel
                 onSave={save}
                 onCancel={cancel}

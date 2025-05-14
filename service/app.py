@@ -3,10 +3,12 @@
 from flask import Flask, request, Response
 from flask_cors import CORS
 from src.ombuddi_views import ombuddi_views
+from src.person_views import person_views
 
 app = Flask(__name__)
 app.debug = True
 app.register_blueprint(ombuddi_views)
+app.register_blueprint(person_views)
 
 CORS(app)
 

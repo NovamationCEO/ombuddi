@@ -23,6 +23,7 @@ services:
       DB_PASS: ${DB_PASS}
       DB_NAME: ${DB_NAME}
       DATABASE_URL: ${DB_URL}
+      SALT: ${SALT}
     ports:
       - "5002:5000"
     # volumes:

@@ -34,3 +34,16 @@ export type CodeType = {
     code: string
     description: string
 }
+
+export type PersonType = {
+    id: string
+    hashedName: string
+    gender: string
+    generation: string
+    race: string
+    primaryRole: string
+    isInternational: boolean
+    category1: string
+    category2: string
+    category3: string
+}

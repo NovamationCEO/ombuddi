@@ -14,6 +14,11 @@ import React from 'react'
 import { MySwitch } from '../MySwitch'
 import { RoundedContainer } from '../RoundedContainer'
 import { Lock, LockOpen } from '@mui/icons-material'
+import { SaveCancel } from '../../trusted-components/SaveCancel'
+import { creator } from '../../tools/db_tools/creator'
+import { useSnack } from '../../libraries/useSnack'
+import { PersonType } from '../../types/majorTypes'
+import { useHashName } from '../../tools/useHashName'
 
 function Title(props: { children: React.ReactNode }) {
     const { children } = props
@@ -41,9 +46,39 @@ export function AddPerson() {
     const [gender, setGender] = React.useState('N/A')
     const [race, setRace] = React.useState('unknown')
     const [isInternational, setIsInternational] = React.useState(false)
+    const [primaryRole, setPrimaryRole] = React.useState('unknown')
     const [category1, setCategory1] = React.useState('')
     const [category2, setCategory2] = React.useState('')
     const [category3, setCategory3] = React.useState('')
+    const setSnack = useSnack((state) => state.setSnack)
+
+    const hashedName = useHashName(name, hash)
+
+    async function save() {
+        const payload = {
+            hashedName,
+            gender,
+            generation,
+            race,
+            primaryRole,
+            isInternational,
+            category1: category1?.length ? category1 : undefined,
+            category2: category2?.length ? category2 : undefined,
+            category3: category3?.length ? category3 : undefined,
+        }
+        console.log(payload)
+        try {
+            const res = await creator<PersonType>('add_person', payload)
+            console.log(res)
+            setSnack({
+                message: 'Person added successfully',
+                severity: 'success',
+            })
+        } catch (e) {
+            console.error(e)
+            setSnack({ message: e.message(), severity: 'error' })
+        }
+    }
 
     return (
         <Box>
@@ -257,8 +292,8 @@ export function AddPerson() {
                         <Box flex={1}>
                             <Title>Primary Role</Title>
                             <RadioGroup
-                                value={race}
-                                onChange={(evt) => setRace(evt.target.value)}
+                                value={primaryRole}
+                                onChange={(evt) => setPrimaryRole(evt.target.value)}
                             >
                                 <FormControlLabel
                                     value={'unknown'}
@@ -381,6 +416,10 @@ export function AddPerson() {
                             </Stack>
                         </Box>
                     </Box>
+                    <SaveCancel
+                        onSave={save}
+                        onCancel={() => null}
+                    />
                 </RoundedContainer>
             </Stack>
         </Box>
