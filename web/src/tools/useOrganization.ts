@@ -8,5 +8,5 @@ export function useOrganization(): OrganizationType {
     const organizationId = ombudRes.data?.organizationId
     const organizationRes = useGetter<OrganizationType>(['get_organization_by_id', organizationId])
 
-    return organizationRes.data
+    return organizationRes.data || ({} as OrganizationType)
 }

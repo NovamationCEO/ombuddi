@@ -1,1 +1,5 @@
 node_modules
+web/node_modules
+web/dist
+web/build
+web/node_modules/*

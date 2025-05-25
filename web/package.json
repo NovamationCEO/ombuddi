@@ -65,7 +65,7 @@
     "vite": "^5.2.0",
     "vitest": "^1.5.0"
   },
-  "packageManager": "yarn@4.1.1",
+  "packageManager": "yarn@4.9.1",
   "resolutions": {
     "proj4-fully-loaded": "^0.2.0"
   }

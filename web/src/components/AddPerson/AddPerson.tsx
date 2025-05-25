@@ -13,12 +13,13 @@ import {
 import React from 'react'
 import { MySwitch } from '../MySwitch'
 import { RoundedContainer } from '../RoundedContainer'
-import { Lock, LockOpen } from '@mui/icons-material'
+import { Lock, LockOpen, QuestionMark } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { creator } from '../../tools/db_tools/creator'
 import { useSnack } from '../../libraries/useSnack'
 import { PersonType } from '../../types/majorTypes'
 import { useHashName } from '../../tools/useHashName'
+import { RoundButton } from '../../trusted-components/RoundButton'
 
 function Title(props: { children: React.ReactNode }) {
     const { children } = props
@@ -40,7 +41,7 @@ function Title(props: { children: React.ReactNode }) {
 
 export function AddPerson() {
     const [name, setName] = React.useState('')
-    const [hash, setHash] = React.useState('')
+    const [salt, setHash] = React.useState('')
     const [isSecure, setIsSecure] = React.useState(true)
     const [generation, setGeneration] = React.useState('unknown')
     const [gender, setGender] = React.useState('N/A')
@@ -52,7 +53,7 @@ export function AddPerson() {
     const [category3, setCategory3] = React.useState('')
     const setSnack = useSnack((state) => state.setSnack)
 
-    const hashedName = useHashName(name, hash)
+    const hashedName = useHashName(name, salt)
 
     async function save() {
         const payload = {
@@ -95,13 +96,84 @@ export function AddPerson() {
                         <TextField
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            label="Name"
+                            label="Full Name"
                         />
-                        <TextField
-                            value={hash}
-                            onChange={(e) => setHash(e.target.value)}
-                            label="Hash"
-                        />
+                        <Box display={'flex'}>
+                            <Box flex={1}>
+                                <TextField
+                                    value={salt}
+                                    onChange={(e) => setHash(e.target.value)}
+                                    label="Salt Phrase"
+                                    fullWidth
+                                />
+                            </Box>
+                            <Box
+                                ml={1}
+                                display={'flex'}
+                                alignItems={'center'}
+                            >
+                                <RoundButton
+                                    onClick={() => null}
+                                    tooltipText={
+                                        <Box>
+                                            Security: Salt Phrase. <br />
+                                            For additional security, a salt phrase acts as an additional password
+                                            required to access this person.
+                                            <Box>You may consider using:</Box>
+                                            <Box>
+                                                <ul>
+                                                    <li>An organizational Salt.</li>
+                                                    <ul>
+                                                        <li>
+                                                            Ombuds in your organization share this password, as an extra
+                                                            layer of security and anonymity. Accessing this record would
+                                                            take an active organizational license, a valid Ombuddi
+                                                            username and password associated with that organization, the
+                                                            exact spelling of the person's name, AND the correct Salt.
+                                                        </li>
+                                                    </ul>
+                                                    <li>A Salt unique to you.</li>
+                                                    <ul>
+                                                        <li>
+                                                            This will hide this person even from other Ombuddi-licensed
+                                                            ombuds in your organization.
+                                                        </li>
+                                                    </ul>
+                                                    <li>A Salt that changes yearly.</li>
+                                                    <ul>
+                                                        <li>
+                                                            A person with two (or more) different Salts is the same as
+                                                            two (or more) entirely different people for all purposes.
+                                                        </li>
+                                                    </ul>
+                                                    <li>A Salt per case.</li>
+                                                    <ul>
+                                                        <li>
+                                                            No cross-referencing is possible; a person attached to
+                                                            multiple cases is a 'new' person each time with no
+                                                            connection to any previous records.
+                                                        </li>
+                                                    </ul>
+                                                    <li>
+                                                        A 'blank' Salt.
+                                                        <ul>
+                                                            <li>
+                                                                This is still locked behind your personal username and
+                                                                password, and still requires searching for the exact
+                                                                spelling of the person's full name by someone with a
+                                                                valid Ombuddi account within your organization.
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                </ul>
+                                            </Box>
+                                        </Box>
+                                    }
+                                >
+                                    <QuestionMark />
+                                </RoundButton>
+                            </Box>
+                        </Box>
                     </Stack>
                     <Box
                         flex={1}

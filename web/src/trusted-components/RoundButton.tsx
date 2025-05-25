@@ -1,12 +1,13 @@
-import { Box, IconButton, Tooltip} from '@mui/material'
+import { Box, IconButton, Tooltip } from '@mui/material'
 import { useStyles } from '../tools/useStyles'
+import React from 'react'
 
 export function RoundButton(props: {
     onClick?: (evt: React.MouseEvent<HTMLButtonElement>) => void
     children: JSX.Element
     size?: number
     disabled?: boolean
-    tooltipText?: string
+    tooltipText?: string | React.ReactNode
 }) {
     const { onClick = () => null, children, size = 41, disabled = false } = props
     const style = useStyles()
@@ -24,7 +25,6 @@ export function RoundButton(props: {
                     {children}
                 </IconButton>
             </Box>
-
         </Tooltip>
     )
 }

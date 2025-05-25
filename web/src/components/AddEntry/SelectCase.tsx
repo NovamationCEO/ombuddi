@@ -2,6 +2,7 @@ import { Accordion, AccordionDetails, AccordionSummary, Box, Button, ButtonGroup
 import React from 'react'
 import { AddNewCase } from './AddNewCase'
 import { LoadAllCases } from '../LoadAllCases/LoadAllCases'
+import { PersonFinder } from '../PersonFinder'
 
 export function SelectCase() {
     const [caseId, setCaseId] = React.useState('')
@@ -67,7 +68,11 @@ export function SelectCase() {
                     <AccordionDetails>
                         {tab === 0 && <AddNewCase />}
                         {tab === 1 && <LoadAllCases />}
-                        {tab === 2 && <Box>Skip</Box>}
+                        {tab === 2 && (
+                            <Box>
+                                <PersonFinder />
+                            </Box>
+                        )}
                     </AccordionDetails>
                 </Accordion>
             </Stack>

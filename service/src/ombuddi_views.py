@@ -108,4 +108,33 @@ def get_all_codes_by_organization_id(code):
     constraints = {'organization_id': code}
     return get_many('codes', code_model, constraints)
 
+primary_role_model = {
+    'id': 'id',
+    'organizationId': 'organization_id',
+    'name': 'name',
+    'index': 'index',
+    'softDelete': 'soft_delete'
+}
 
+@ombuddi_views.route('/api/v1/get_primary_roles_by_organization_id/<id>')
+def get_primary_roles_by_organization_id(id):
+    constraints = {'organization_id': id, 'soft_delete': False}
+    return get_many('primary_roles', primary_role_model, constraints)
+
+@ombuddi_views.route('/api/v1/get_primary_role_by_id/<id>')
+def get_primary_role_by_id(id):
+    constraints = {'id': id}
+    return get_one('primary_roles', primary_role_model, constraints)
+
+@ombuddi_views.route('/api/v1/add_primary_role', methods=['POST'])
+def add_primary_role():
+    return add_one('primary_roles', primary_role_model, request)
+
+@ombuddi_views.route('/api/v1/update_primary_role', methods=['PUT'])
+def update_primary_role():
+    return update_one('primary_roles', primary_role_model, request)
+
+@ombuddi_views.route('/api/v1/get_all_primary_roles_by_organization_id/<id>')
+def get_all_primary_roles_by_organization_id(id):
+    constraints = {'organization_id': id}
+    return get_many('primary_roles', primary_role_model, constraints)

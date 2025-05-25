@@ -1,5 +1,4 @@
-import os
-from flask import Blueprint, jsonify, send_file, request
+from flask import Blueprint, request
 from utils import add_one, get_many, get_one, update_one
 from hash_name import hash_name
 import logging
@@ -23,11 +22,10 @@ person_model = {
 
 @person_views.before_request
 def _salt_name():
-    logger.info('Salting Name')
+    #  Does not target URL params
     payload = request.get_json(silent=True) or {}
     if 'hashedName' in payload:
-        payload['hashedName'] = hash_name(payload['hashedName'] + '_' + os.getenv('SALT'))
-        # override Flask’s cached JSON
+        payload['hashedName'] = hash_name(payload['hashedName'])
         request._cached_json = {
             False: payload,
             True:  payload,
@@ -38,10 +36,10 @@ def get_person_by_id(id):
     constraints = {'id': id}
     return get_one('person', person_model, constraints)
 
-@person_views.route('/api/v1/get_persons_by_hashed_name/<hashed_name>')
-def get_persons_by_hashed_name(hashed_name):
-    constraints = {'hashed_name': hash_name(hashed_name)}
-    return get_many('person', person_model, constraints)
+@person_views.route('/api/v1/get_persons_by_hashed_name/<raw_hash>')
+def get_persons_by_hashed_name(raw_hash):
+    final_hash = hash_name(raw_hash)
+    return get_many('person', person_model, {'hashed_name': final_hash})
 
 @person_views.route('/api/v1/add_person', methods=['POST'])
 def add_person():

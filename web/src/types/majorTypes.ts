@@ -47,3 +47,11 @@ export type PersonType = {
     category2: string
     category3: string
 }
+
+export type PrimaryRoleType = {
+    id: string
+    organizationId: string
+    name: string
+    index: string
+    softDelete: boolean
+}
