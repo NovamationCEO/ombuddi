@@ -1,0 +1,68 @@
+:root {
+    --bg: #EBEBEB;
+    --fg: #6a6969;
+    --accent: #A4B7BE;
+}
+
+.person-finder {
+    width: 80%;
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--bg);
+    box-shadow: 20px 20px 60px #c8c8c8, -20px -20px 60px #ffffff;
+    border-radius: 15px;
+    border: 1px solid #dfdfdf;
+}
+
+.person-finder .search-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    grid-gap: 1rem;
+    align-items: end;
+    margin-bottom: 2rem;
+}
+
+.person-finder .search-panel .MuiTextField-root {
+    background: white;
+    border-radius: 6px;
+    box-shadow: inset 5px 5px 10px #a5a5a5, inset -5px -5px 10px #ffffff;
+}
+
+.person-finder .search-panel .MuiButton-contained {
+    height: 3.5rem;
+    align-self: start;
+    background: linear-gradient(145deg, #fbfbfb, #d4d4d4);
+    box-shadow: 4px 4px 7px #cccccc, -4px -4px 7px #ffffff;
+    color: var(--fg);
+    text-transform: none;
+    font-weight: 500;
+}
+
+.person-finder .results-panel {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: inset 5px 5px 10px #a5a5a5, inset -5px -5px 10px #ffffff;
+}
+
+.person-finder .result-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 4px 4px 7px #e0e0e0, -4px -4px 7px #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid #37993a
+}
+
+.person-finder .result-item.create {
+    border: 2px dashed var(--accent);
+    color: var(--accent);
+    justify-content: center;
+}
+
+.person-finder .result-item:last-child {
+    margin-bottom: 0;
+}
