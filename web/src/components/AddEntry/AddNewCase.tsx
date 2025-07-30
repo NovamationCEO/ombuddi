@@ -1,8 +1,8 @@
-import { Button, IconButton, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Button, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { RoundButton } from '../../trusted-components/RoundButton'
-import { Add, Lock } from '@mui/icons-material'
+import { Lock } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { useSnack } from '../../libraries/useSnack'
 import { creator } from '../../tools/db_tools/creator'
@@ -10,9 +10,8 @@ import { useUserId } from '../../tools/useUserId'
 import { useGetter } from '../../tools/db_tools/useGetter'
 import { CodeSetterBox } from '../CodeSetterBox'
 import { useIoaOrgId } from '../../tools/useIoaOrgId'
-import { OmbudsType, PersonType } from '../../types/majorTypes'
-import { RoundedContainer } from '../RoundedContainer'
-import { useNavigate } from 'react-router-dom'
+import { OmbudsType } from '../../types/majorTypes'
+import { PersonFinder } from '../PersonFinder'
 
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
@@ -26,13 +25,12 @@ export function AddNewCase() {
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
     const ioaId = useIoaOrgId()
-    const navigate = useNavigate()
-    const [personName, setPersonName] = React.useState('')
-    const [hash, setHash] = React.useState('')
+    // const [personName, setPersonName] = React.useState('')
+    // const [hash, setHash] = React.useState('')
 
-    const hashedName = personName + hash
+    // const hashedName = personName + hash
 
-    const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
+    // const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
     async function getRandomName() {
         const newRandomName = await fetch('https://random-word-api.herokuapp.com/word?number=3')
@@ -78,12 +76,6 @@ export function AddNewCase() {
                 })
             }
         })
-    }
-
-    function search() {
-        if (!personName || !personName.length) {
-            return
-        }
     }
 
     function cancel() {}
@@ -158,17 +150,23 @@ export function AddNewCase() {
                 />
             </Box>
 
-            <CodeSetterBox
-                activeCodeIds={activeIoaCodes}
-                setActiveCodeIds={setActiveIoaCodes}
-                organizationId={ioaId}
-            />
-            <CodeSetterBox
-                activeCodeIds={activeOrgCodes}
-                setActiveCodeIds={setActiveOrgCodes}
-                organizationId={organizationId}
-            />
-            <RoundedContainer title={'Associated People'}>
+            <Stack
+                display={'flex'}
+                spacing={2}
+                direction={'row'}
+            >
+                <CodeSetterBox
+                    activeCodeIds={activeIoaCodes}
+                    setActiveCodeIds={setActiveIoaCodes}
+                    organizationId={ioaId}
+                />
+                <CodeSetterBox
+                    activeCodeIds={activeOrgCodes}
+                    setActiveCodeIds={setActiveOrgCodes}
+                    organizationId={organizationId}
+                />
+            </Stack>
+            {/* <RoundedContainer title={'Associated People'}>
                 <Box>
                     <Stack spacing={2}>
                         <TextField
@@ -197,7 +195,8 @@ export function AddNewCase() {
                         </Box>
                     </Stack>
                 </Box>
-            </RoundedContainer>
+            </RoundedContainer> */}
+            <PersonFinder />
             <SaveCancel
                 onSave={save}
                 onCancel={cancel}

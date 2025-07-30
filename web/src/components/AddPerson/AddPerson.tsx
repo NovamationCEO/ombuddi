@@ -196,7 +196,6 @@ export function AddPerson() {
                                 display={'flex'}
                                 justifyContent={'center'}
                                 alignItems={'center'}
-                                // display={'flex'}
                             >
                                 <Box
                                     width={100}

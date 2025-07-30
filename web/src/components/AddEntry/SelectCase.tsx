@@ -5,7 +5,6 @@ import { LoadAllCases } from '../LoadAllCases/LoadAllCases'
 import { PersonFinder } from '../PersonFinder'
 
 export function SelectCase() {
-    const [caseId, setCaseId] = React.useState('')
     const [tab, setTab] = React.useState(0)
 
     const caseButtonTitles = ['Create New Case', 'Load Existing Case', 'Log Without Case']

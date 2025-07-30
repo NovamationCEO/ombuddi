@@ -4,6 +4,7 @@ import { useGetter } from '../tools/db_tools/useGetter'
 import { PersonType } from '../types/majorTypes'
 import { useHashName } from '../tools/useHashName'
 import './PersonFinder.css'
+import { useNavigate } from 'react-router-dom'
 
 export function PersonFinder() {
     const [name, setName] = React.useState<string>('')
@@ -11,6 +12,7 @@ export function PersonFinder() {
     const [results, setResults] = React.useState<PersonType[]>([])
     const hashedName = useHashName(name, salt)
     const [showBottom, setShowBottom] = React.useState<boolean>(false)
+    const navigate = useNavigate()
 
     const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
@@ -29,6 +31,7 @@ export function PersonFinder() {
             elevation={3}
             className="person-finder"
         >
+            <Box>Person Finder</Box>
             <div className="search-panel">
                 <TextField
                     value={name}
@@ -49,7 +52,7 @@ export function PersonFinder() {
             </div>
 
             <Box
-                height={showBottom ? 80 : 0}
+                height={showBottom && name.length > 0 ? 80 : 0}
                 overflow={'hidden'}
                 sx={{ transition: 'height 0.3s ease-in-out' }}
             >
@@ -75,7 +78,7 @@ export function PersonFinder() {
                 ) : (
                     <div
                         className="result-item create"
-                        onClick={() => null}
+                        onClick={() => navigate('/add_person')}
                     >
                         ✚ Create new user “{name}”
                     </div>
