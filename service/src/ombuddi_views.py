@@ -10,8 +10,8 @@ case_model = {
     'description': 'description',
     'codes': 'codes',
     'status': 'status',
-    'created_at': 'created_at',
-    'updated_at': 'updated_at',
+    'createdAt': 'created_at',
+    'updatedAt': 'updated_at',
 }
 
 @ombuddi_views.route('/api/v1/create_case', methods=['POST'])
