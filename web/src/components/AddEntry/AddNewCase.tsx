@@ -53,6 +53,8 @@ export function AddNewCase() {
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
     const ioaId = useIoaOrgId()
+
+    const [activeReferralSourceIds, setActiveReferralSourceIds] = React.useState<string[]>([])
     // const [personName, setPersonName] = React.useState('')
     // const [hash, setHash] = React.useState('')
 
