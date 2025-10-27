@@ -276,7 +276,7 @@ export function AddNewCase() {
                     </Stack>
                 </Box>
             </RoundedContainer> */}
-            <PersonFinder />
+
             <SaveCancel
                 onSave={save}
                 onCancel={cancel}
