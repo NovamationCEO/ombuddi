@@ -132,8 +132,10 @@ export function AddNewCase() {
                             <Box>
                                 <Box fontWeight={'bold'}>Choose a name to identify this case.</Box>
                                 <Box>
-                                    Security: This name is visible within your organization. It is saved in plaintext.
+                                    Security:{' '}
+                                    <em>This name is visible within your organization. It is saved in plaintext.</em>
                                 </Box>
+                                <Box>Security 0: Choose a descriptive name.</Box>
                                 <Box>Security +1: Choose a name without sensitive information.</Box>
                                 <Box>
                                     Security +2: Randomize the title; it will be recognizable to you but meaningless to
