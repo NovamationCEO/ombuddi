@@ -2,9 +2,10 @@ export type CaseType = {
     id: string
     name: string
     description: string
-    imageSeed: string
-    startDate: Date
-    isClosed: boolean
+    codes: string[]
+    status: string
+    createdAt: Date
+    updatedAt: Date
 }
 
 export type OrganizationType = {
