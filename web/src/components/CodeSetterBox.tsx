@@ -14,23 +14,6 @@ export function CodeSetterBox(props: {
     const [showModal, setShowModal] = React.useState(false)
     const theme = useTheme()
 
-    // const referralOptionsRes = {
-    //     data: [
-    //         { id: '1', name: 'HR' },
-    //         { id: '2', name: 'Employee assistance program' },
-    //         { id: '3', name: 'External resource' },
-    //         { id: '4', name: 'General counsel' },
-    //         { id: '5', name: 'Supervisor' },
-    //         { id: '6', name: 'Peer or colleague' },
-    //         { id: '7', name: 'Friend or family member' },
-    //         { id: '8', name: 'Presentation or event' },
-    //         { id: '9', name: 'Poster or brochure' },
-    //         { id: '10', name: 'Internet search' },
-    //         { id: '11', name: 'Other (please specify)' },
-    //         { id: '12', name: 'Unknown' },
-    //     ],
-    // }
-
     const orgRes = useGetter<OrganizationType>(['get_organization_by_id', organizationId])
 
     const orgCodesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', organizationId])
@@ -100,34 +83,6 @@ export function CodeSetterBox(props: {
                         </Box>
                     ))}
                 </Box>
-            </RoundedContainer>
-            <RoundedContainer title="Referral Sources">
-                {/* <Autocomplete
-                    multiple
-                    options={referralOptionsRes.data || []}
-                    getOptionLabel={(opt) => opt.name}
-                    value={referralOptionsRes.data?.filter((opt) => activeReferralSourceIds.includes(opt.id)) || []}
-                    onChange={(_, newVals) => {
-                        setActiveReferralSourceIds(newVals.map((opt) => opt.id))
-                    }}
-                    renderTags={(selected, getTagProps) =>
-                        selected.map((opt, idx) => (
-                            <Chip
-                                key={opt.id}
-                                label={opt.name}
-                                {...getTagProps({ index: idx })}
-                            />
-                        ))
-                    }
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            variant="outlined"
-                            label="Select one or more"
-                            placeholder="Referral sources"
-                        />
-                    )}
-                /> */}
             </RoundedContainer>
         </Box>
     )
