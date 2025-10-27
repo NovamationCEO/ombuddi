@@ -198,6 +198,54 @@ export function AddNewCase() {
                     organizationId={organizationId}
                 />
             </Stack>
+            <Stack
+                spacing={2}
+                direction={'row'}
+            >
+                <RoundedContainer title={'Referral Sources'}>
+                    <FormGroup>
+                        {referralOptionsRes.data.map((option) => (
+                            <FormControlLabel
+                                key={option.id}
+                                control={<Checkbox defaultChecked />}
+                                label={option.name}
+                            />
+                        ))}
+                    </FormGroup>
+                </RoundedContainer>
+                <RoundedContainer title={'Referral Sources'}>
+                    <Box>
+                        <Autocomplete
+                            multiple
+                            options={referralOptionsRes.data || []}
+                            getOptionLabel={(opt) => opt.name}
+                            value={
+                                referralOptionsRes.data?.filter((opt) => activeReferralSourceIds.includes(opt.id)) || []
+                            }
+                            onChange={(_, newVals) => {
+                                setActiveReferralSourceIds(newVals.map((opt) => opt.id))
+                            }}
+                            renderTags={(selected, getTagProps) =>
+                                selected.map((opt, idx) => (
+                                    <Chip
+                                        key={opt.id}
+                                        label={opt.name}
+                                        {...getTagProps({ index: idx })}
+                                    />
+                                ))
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    variant="outlined"
+                                    label="Select one or more"
+                                    placeholder="Referral sources"
+                                />
+                            )}
+                        />
+                    </Box>
+                </RoundedContainer>
+            </Stack>
             {/* <RoundedContainer title={'Associated People'}>
                 <Box>
                     <Stack spacing={2}>
