@@ -13,7 +13,7 @@ export function HomePage() {
     const navigate = useNavigate()
 
     const linkData: LinkButtonType[] = [
-        { name: 'Add Entry', url: '/add_entry', image: img1, description: 'Record a Meeting or Contact' },
+        { name: 'Add Entry', url: '/select_case', image: img1, description: 'Record a Meeting or Contact' },
         { name: 'Cases', url: '/cases', image: img2, description: 'View Active Cases' },
         { name: 'Report', url: '/report', image: img3, description: 'Generate A Yearly Report' },
         { name: 'Profile', url: '/profile', image: img4, description: 'View and Edit Your Profile' },
