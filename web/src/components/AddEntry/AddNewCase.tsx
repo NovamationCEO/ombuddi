@@ -11,7 +11,24 @@ import { useGetter } from '../../tools/db_tools/useGetter'
 import { CodeSetterBox } from '../CodeSetterBox'
 import { useIoaOrgId } from '../../tools/useIoaOrgId'
 import { OmbudsType } from '../../types/majorTypes'
-import { PersonFinder } from '../PersonFinder'
+import { RoundedContainer } from '../RoundedContainer'
+
+const referralOptionsRes = {
+    data: [
+        { id: '1', name: 'HR' },
+        { id: '2', name: 'Employee assistance program' },
+        { id: '3', name: 'External resource' },
+        { id: '4', name: 'General counsel' },
+        { id: '5', name: 'Supervisor' },
+        { id: '6', name: 'Peer or colleague' },
+        { id: '7', name: 'Friend or family member' },
+        { id: '8', name: 'Presentation or event' },
+        { id: '9', name: 'Poster or brochure' },
+        { id: '10', name: 'Internet search' },
+        { id: '11', name: 'Other (please specify)' },
+        { id: '12', name: 'Unknown' },
+    ],
+}
 
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
