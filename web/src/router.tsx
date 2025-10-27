@@ -10,6 +10,7 @@ import { ReportPage } from './pages/Report'
 import { AddPerson } from './components/AddPerson/AddPerson'
 import { Profile } from './pages/Profile'
 import { Organization } from './pages/Organization'
+import { SelectCase } from './components/LoadAllCases/SelectCase'
 
 export const router = createBrowserRouter([
     {
@@ -18,7 +19,7 @@ export const router = createBrowserRouter([
         errorElement: <ErrorElement />,
     },
     { path: '/welcome', element: <PageAlternate element={<WelcomePage />} /> },
-    { path: '/add_entry', element: <Page element={<AddEntry />} /> },
+    { path: '/select_case', element: <Page element={<SelectCase />} /> },
     { path: '/cases', element: <Page element={<Cases />} /> },
     { path: '/report', element: <Page element={<ReportPage />} /> },
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
