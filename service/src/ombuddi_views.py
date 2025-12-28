@@ -138,3 +138,32 @@ def update_primary_role():
 def get_all_primary_roles_by_organization_id(id):
     constraints = {'organization_id': id}
     return get_many('primary_roles', primary_role_model, constraints)
+
+
+entry_model = {
+    'id': 'id',
+    'caseId': 'case_id',
+    'ombudsId': 'ombuds_id',
+    'date': 'date',
+    'medium': 'medium',
+    'duration': 'duration',
+    'notes': 'notes'
+}
+
+@ombuddi_views.route('/api/v1/get_entry_by_id/<id>')
+def get_entry_by_id(id):
+    constraints = {'id': id}
+    return get_one('entries', entry_model, constraints)
+
+@ombuddi_views.route('/api/v1/add_entry', methods=['POST'])
+def add_entry():
+    return add_one('entries', entry_model, request)
+
+@ombuddi_views.route('/api/v1/get_entries_by_case_id/<case_id>')
+def get_entries_by_case_id(case_id):
+    constraints = {'case_id': case_id}
+    return get_many('entries', entry_model, constraints)
+
+@ombuddi_views.route('/api/v1/update_entry', methods=['PUT'])
+def update_entry():
+    return update_one('entries', entry_model, request)

@@ -32,7 +32,7 @@ export function CaseCard(props: { caseItem: CaseType }) {
                 >
                     <Box
                         component={'img'}
-                        src={`https://picsum.photos/seed/${caseItem.name}/60/60`}
+                        src={`https://picsum.photos/seed/${caseItem.id}/60/60`}
                         alt={caseItem.name}
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />

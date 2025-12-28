@@ -23,6 +23,7 @@ import { CodeSetterBox } from '../CodeSetterBox'
 import { useIoaOrgId } from '../../tools/useIoaOrgId'
 import { OmbudsType } from '../../types/majorTypes'
 import { RoundedContainer } from '../RoundedContainer'
+import { randomUUID } from 'crypto'
 
 const referralOptionsRes = {
     data: [
@@ -53,6 +54,7 @@ export function AddNewCase() {
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
     const ioaId = useIoaOrgId()
+    const newId = randomUUID()
 
     const [activeReferralSourceIds, setActiveReferralSourceIds] = React.useState<string[]>([])
     // const [personName, setPersonName] = React.useState('')
@@ -78,15 +80,16 @@ export function AddNewCase() {
 
     React.useEffect(() => {
         const primaryColor = theme.palette.primary.main
-        if (!caseName || !caseName.length) {
+        if (!newId || !newId.length) {
             setImageUrl(`https://singlecolorimage.com/get/${primaryColor.slice(1, 7)}/60x60`)
             return
         }
-        setImageUrl(`https://picsum.photos/seed/${caseName}/60/60`)
-    }, [caseName])
+        setImageUrl(`https://picsum.photos/seed/${newId}/60/60`)
+    }, [newId])
 
     async function save() {
         const payload = {
+            id: newId,
             name: caseName,
             description: description,
             codes: activeIoaCodes,

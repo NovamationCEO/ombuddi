@@ -56,3 +56,13 @@ export type PrimaryRoleType = {
     index: string
     softDelete: boolean
 }
+
+export type EntryType = {
+    id: string
+    caseId: string
+    ombudsId: string
+    date: Date
+    medium: string
+    duration: number
+    notes: string
+}
