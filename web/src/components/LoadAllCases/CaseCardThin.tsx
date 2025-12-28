@@ -8,13 +8,12 @@ export function CaseCardThin(props: { Icon: ReactElement; text: string; link: st
     const { Icon, text, link } = props
     const navigate = useNavigate()
     return (
-        <CaseCardWrapper>
+        <CaseCardWrapper onClick={() => navigate(link)}>
             <Box
                 display={'flex'}
                 alignItems={'center'}
                 flex={1}
                 height={'100%'}
-                onClick={() => navigate(link)}
             >
                 <Box m={2}>
                     <RoundButton size={41}>{Icon}</RoundButton>

@@ -1,12 +1,14 @@
 import { useStyles } from '../../tools/useStyles'
 import { Card } from '@mui/material'
 
-export function CaseCardWrapper(props: { children: React.ReactNode }) {
+export function CaseCardWrapper(props: { children: React.ReactNode; onClick?: () => void }) {
     const style = useStyles()
+    const { children, onClick } = props
 
     return (
         <Card
             elevation={1}
+            onClick={onClick}
             sx={{
                 borderRadius: 2,
                 transition: 'transform 120ms ease, box-shadow 120ms ease, all 0.5s ease',
@@ -22,7 +24,7 @@ export function CaseCardWrapper(props: { children: React.ReactNode }) {
                 cursor: 'pointer',
             }}
         >
-            {props.children}
+            {children}
         </Card>
     )
 }

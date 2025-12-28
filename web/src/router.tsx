@@ -4,7 +4,6 @@ import { Page } from './components/Page'
 import { ErrorElement } from './trusted-components/ErrorElement'
 import { PageAlternate } from './components/PageAlternate'
 import { WelcomePage } from './pages/WelcomePage'
-import { AddEntry } from './pages/AddEntry'
 import { Cases } from './pages/Cases'
 import { ReportPage } from './pages/Report'
 import { AddPerson } from './components/AddPerson/AddPerson'
@@ -25,4 +24,5 @@ export const router = createBrowserRouter([
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
     { path: '/profile', element: <Page element={<Profile />} /> },
     { path: '/organization', element: <Page element={<Organization />} /> },
+    { path: '/case/:caseId', element: <Page element={<Cases />} /> },
 ])

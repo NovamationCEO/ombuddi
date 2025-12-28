@@ -1,5 +1,5 @@
-import { Box } from '@mui/system'
+import { SelectCase } from '../components/LoadAllCases/SelectCase'
 
 export function Cases() {
-    return <Box>Cases</Box>
+    return <SelectCase />
 }

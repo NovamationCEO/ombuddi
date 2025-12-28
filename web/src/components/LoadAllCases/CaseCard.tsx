@@ -11,14 +11,13 @@ export function CaseCard(props: { caseItem: CaseType }) {
         return null
     }
     return (
-        <CaseCardWrapper>
+        <CaseCardWrapper onClick={() => navigate(`/case/${caseItem.id}`)}>
             <CardContent
                 sx={{
                     display: 'flex',
                     flexDirection: { xs: 'column', sm: 'row' },
                     gap: 2,
                 }}
-                onClick={() => navigate(`/case/${caseItem.id}`)}
             >
                 <Box
                     sx={{
