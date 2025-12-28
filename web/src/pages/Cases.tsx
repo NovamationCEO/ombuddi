@@ -1,5 +1,39 @@
-import { SelectCase } from '../components/LoadAllCases/SelectCase'
+import { Add, Commit } from '@mui/icons-material'
+import { Box } from '@mui/material'
+import { CaseCard } from '../components/LoadAllCases/CaseCard'
+import { CaseCardThin } from '../components/LoadAllCases/CaseCardThin'
+import { useGetter } from '../tools/db_tools/useGetter'
+import { CaseType } from '../types/majorTypes'
 
 export function Cases() {
-    return <SelectCase />
+    const casesRes = useGetter<CaseType[]>(['get_all_cases'])
+
+    return (
+        <Box
+            display={'grid'}
+            gap={2}
+            gridTemplateColumns={{
+                xs: '1fr',
+                md: 'repeat(2, minmax(0, 1fr))',
+            }}
+        >
+            <CaseCardThin
+                Icon={<Add />}
+                text={'Add Case'}
+                link={'/add_case'}
+            />
+            <CaseCardThin
+                Icon={<Commit />}
+                text={'Log Without Case'}
+                link={'/log_without_case'}
+            />
+
+            {casesRes.data?.map((caseItem) => (
+                <CaseCard
+                    key={caseItem.id}
+                    caseItem={caseItem}
+                />
+            ))}
+        </Box>
+    )
 }

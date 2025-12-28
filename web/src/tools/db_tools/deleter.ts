@@ -1,4 +1,4 @@
-import { GenericResponse } from '../../types/standardTypes'
+import { GenericResponse } from '../../types/miscTypes'
 
 let host = window.location.host
 host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`

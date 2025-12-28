@@ -1,8 +1,8 @@
 import { Box, Button, FormControlLabel, Radio, RadioGroup, Stack, TextField, Tooltip } from '@mui/material'
 import { useState } from 'react'
-import { IoaCodeSetter } from '../components/IoaCodeSetter'
 import React from 'react'
 import { RoundedContainer } from '../components/RoundedContainer'
+import { useParams } from 'react-router-dom'
 
 export function AddEntryBackup() {
     const [contactName, setContactName] = useState('')
@@ -269,12 +269,12 @@ export function AddEntryBackup() {
                     </Stack>
                 </RoundedContainer>
                 <RoundedContainer title={'Codes'}>
-                    <IoaCodeSetter
+                    {/* <IoaCodeSetter
                         activeCodes={activeCodes}
                         setActiveCodes={setCodes}
                         openIndex={openIndex}
                         setOpenIndex={updateOpenIndex}
-                    />
+                    /> */}
                 </RoundedContainer>
                 <RoundedContainer title={'Tags'}></RoundedContainer>
             </Stack>

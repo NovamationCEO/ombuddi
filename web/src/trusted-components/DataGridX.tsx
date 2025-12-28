@@ -3,7 +3,6 @@ import { useStyles } from '../tools/useStyles'
 import { OverflowTip } from './OverflowTip'
 import React from 'react'
 import { Box, lighten } from '@mui/material'
-import { sourceThis } from '../tools/soureThis'
 
 type DataGridXProps = {
     columns: GridColDef[]
@@ -16,29 +15,8 @@ type DataGridXProps = {
 } & DataGridProps
 
 export function DataGridX(props: DataGridXProps) {
-    const {
-        columns,
-        rows,
-        showFooter = false,
-        title,
-        credit,
-        sourceIt = false,
-        pageSize = 100,
-        ...dataGridProps
-    } = props
+    const { columns, rows, showFooter = false, title, pageSize = 100, ...dataGridProps } = props
     const style = useStyles()
-
-    const [source, setSource] = React.useState(credit)
-
-    React.useEffect(() => {
-        if (!sourceIt) return
-        if (!sourceThis(rows).length) {
-            setSource('')
-            return
-        }
-
-        setSource('Source: ' + sourceThis(rows))
-    }, [sourceIt, rows])
 
     const newCols = columns.map((col) => {
         return {
@@ -129,7 +107,6 @@ export function DataGridX(props: DataGridXProps) {
                 }}
                 {...dataGridProps}
             />
-            <Box fontSize={'small'}>{source}</Box>
         </Box>
     )
 }
