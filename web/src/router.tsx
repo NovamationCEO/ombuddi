@@ -11,7 +11,7 @@ import { Profile } from './pages/Profile'
 import { Organization } from './pages/Organization'
 import { SelectCase } from './components/LoadAllCases/SelectCase'
 import { CaseSummary } from './pages/CaseSummary'
-import { AddEntryBackup } from './pages/AddEntryBackup'
+import { AddEntry } from './pages/AddEntry'
 
 export const router = createBrowserRouter([
     {
@@ -26,6 +26,6 @@ export const router = createBrowserRouter([
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
     { path: '/profile', element: <Page element={<Profile />} /> },
     { path: '/organization', element: <Page element={<Organization />} /> },
-    { path: '/case/:caseId/add_entry', element: <Page element={<AddEntryBackup />} /> },
+    { path: '/case/:caseId/add_entry', element: <Page element={<AddEntry />} /> },
     { path: '/case/:caseId', element: <Page element={<CaseSummary />} /> },
 ])
