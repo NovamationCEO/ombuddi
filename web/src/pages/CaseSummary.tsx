@@ -5,12 +5,16 @@ import { CaseType, EntryType } from '../types/majorTypes'
 import { CodeChip } from '../components/CodeChip'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import React from 'react'
+import { RoundButton } from '../trusted-components/RoundButton'
+import { Edit } from '@mui/icons-material'
+import { EditCodeDialog } from '../components/EditCodeDialog'
 
 export function CaseSummary() {
     const { caseId } = useParams()
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const navigate = useNavigate()
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
+    const [showEditCodes, setShowEditCodes] = React.useState(false)
 
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
 
@@ -44,14 +48,25 @@ export function CaseSummary() {
 
     return (
         <Box>
+            <EditCodeDialog
+                open={showEditCodes}
+                onClose={() => setShowEditCodes(false)}
+            />
             <Paper
                 elevation={2}
                 sx={{ p: 2 }}
             >
-                <Box display={'flex'}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: 2,
+                        alignItems: { xs: 'stretch', sm: 'flex-start' },
+                    }}
+                >
                     <Stack
                         spacing={1}
-                        flex={2}
+                        sx={{ flex: 2, minWidth: 0 }}
                     >
                         <Box fontWeight={'bold'}>{caseRes.data?.name}</Box>
                         {caseRes.data?.description?.length > 0 && (
@@ -64,22 +79,29 @@ export function CaseSummary() {
                         )}
                     </Stack>
                     <Box
-                        flex={1}
-                        ml={2}
-                        mr={2}
-                        border={'1px solid lightgray'}
-                        p={1}
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            border: '1px solid lightgray',
+                            p: 1,
+                        }}
                     >
-                        <Box><b>Status:</b> {caseRes.data?.status}</Box>
-                        <Box><b>Created:</b> {new Date(caseRes.data?.createdAt || '').toDateString()}</Box>
-                        <Box><b>Updated:</b> {new Date(caseRes.data?.updatedAt || '').toDateString()}</Box>
+                        <Box>
+                            <b>Status:</b> {caseRes.data?.status}
+                        </Box>
+                        <Box>
+                            <b>Created:</b> {new Date(caseRes.data?.createdAt || '').toDateString()}
+                        </Box>
+                        <Box>
+                            <b>Updated:</b> {new Date(caseRes.data?.updatedAt || '').toDateString()}
+                        </Box>
                     </Box>
-                    <Box>
+                    <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
                         <Box
                             component={'img'}
                             src={`https://picsum.photos/seed/${caseRes.data?.id}/60/60`}
                             alt={caseRes.data?.name}
-                            sx={{ width: '60px', height: '60px%', objectFit: 'cover' }}
+                            sx={{ width: '60px', height: 60, objectFit: 'cover' }}
                         />
                     </Box>
                 </Box>
@@ -89,8 +111,8 @@ export function CaseSummary() {
                     p={1}
                 >
                     <Stack
-                        spacing={1}
-                        direction={'row'}
+                        direction="row"
+                        sx={{ flexWrap: 'wrap', gap: 1, alignItems: 'center' }}
                     >
                         {caseRes.data?.codes?.map((code) => {
                             return (
@@ -100,6 +122,12 @@ export function CaseSummary() {
                                 />
                             )
                         })}
+                        <RoundButton
+                            onClick={() => setShowEditCodes(true)}
+                            size={27}
+                        >
+                            <Edit fontSize="small" />
+                        </RoundButton>
                     </Stack>
                 </Box>
                 <Box m={2}>
