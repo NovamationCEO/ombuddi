@@ -1,7 +1,8 @@
-import { Box, CardContent, Chip, Typography } from '@mui/material'
+import { Box, CardContent, Typography } from '@mui/material'
 import { CaseCardWrapper } from './CaseCardWrapper'
 import { CaseType } from '../../types/majorTypes'
 import { useNavigate } from 'react-router-dom'
+import { CodeChip } from '../CodeChip'
 
 export function CaseCard(props: { caseItem: CaseType }) {
     const { caseItem } = props
@@ -70,13 +71,9 @@ export function CaseCard(props: { caseItem: CaseType }) {
                     m={1}
                 >
                     {caseItem.codes.map((code: string) => (
-                        <Chip
+                        <CodeChip
                             key={code}
-                            label={code}
-                            color={'primary'}
-                            variant={'outlined'}
-                            size={'small'}
-                            sx={{ bgcolor: '#eeeeee' }}
+                            code={code}
                         />
                     ))}
                 </Box>

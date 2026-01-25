@@ -82,7 +82,6 @@ export function CodeSetterBox(props: {
                                 ))}
                         </Box>
                     ))}
-                    <Box>{JSON.stringify(activeCodes)}</Box>
                 </Box>
             </RoundedContainer>
         </Box>

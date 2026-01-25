@@ -2,7 +2,7 @@ import { Box, Stack } from '@mui/material'
 import monster from '../assets/images/monster.png'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import { useNavigate } from 'react-router-dom'
-import img1 from '../assets/images/add_entry.png'
+// import img1 from '../assets/images/add_entry.png'
 import img2 from '../assets/images/cases.png'
 import img3 from '../assets/images/report.png'
 import img4 from '../assets/images/profile.png'
@@ -13,7 +13,7 @@ export function HomePage() {
     const navigate = useNavigate()
 
     const linkData: LinkButtonType[] = [
-        { name: 'Add Entry', url: '/select_case', image: img1, description: 'Record a Meeting or Contact' },
+        // { name: 'Add Entry', url: '/select_case', image: img1, description: 'Record a Meeting or Contact' },
         { name: 'Cases', url: '/cases', image: img2, description: 'View Active Cases' },
         { name: 'Report', url: '/report', image: img3, description: 'Generate A Yearly Report' },
         { name: 'Profile', url: '/profile', image: img4, description: 'View and Edit Your Profile' },

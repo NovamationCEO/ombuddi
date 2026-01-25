@@ -50,7 +50,10 @@ export function CaseSummary() {
         <Box>
             <EditCodeDialog
                 open={showEditCodes}
-                onClose={() => setShowEditCodes(false)}
+                onClose={() => {
+                    setShowEditCodes(false)
+                    caseRes.refetch()
+                }}
             />
             <Paper
                 elevation={2}
@@ -153,26 +156,29 @@ export function CaseSummary() {
                                 p={2}
                             >
                                 {!entriesRes.data?.length && <Box>No entries for this case yet.</Box>}
-                                {entriesRes.data?.map((entry) => {
-                                    const d = new Date(entry.date)
-                                    return (
-                                        <Box
-                                            key={entry.id}
-                                            onMouseEnter={() => setHighlightedId(entry.id)}
-                                            // onMouseLeave={() => setHighlightedId(null)} // optional
-                                            sx={{
-                                                cursor: 'default',
-                                                px: 1,
-                                                py: 0.5,
-                                                borderRadius: 1,
-                                                bgcolor: highlightedId === entry.id ? 'action.hover' : 'transparent',
-                                                color: highlightedId === entry.id ? 'primary.main' : 'text.primary',
-                                            }}
-                                        >
-                                            {d.toISOString().slice(0, 10)}
-                                        </Box>
-                                    )
-                                })}
+                                {entriesRes.data
+                                    ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map((entry) => {
+                                        const d = new Date(entry.date)
+                                        return (
+                                            <Box
+                                                key={entry.id}
+                                                onMouseEnter={() => setHighlightedId(entry.id)}
+                                                // onMouseLeave={() => setHighlightedId(null)} // optional
+                                                sx={{
+                                                    cursor: 'default',
+                                                    px: 1,
+                                                    py: 0.5,
+                                                    borderRadius: 1,
+                                                    bgcolor:
+                                                        highlightedId === entry.id ? 'action.hover' : 'transparent',
+                                                    color: highlightedId === entry.id ? 'primary.main' : 'text.primary',
+                                                }}
+                                            >
+                                                {d.toISOString().slice(0, 10)}
+                                            </Box>
+                                        )
+                                    })}
                             </Box>
                         </Grid2>
                         <Grid2
