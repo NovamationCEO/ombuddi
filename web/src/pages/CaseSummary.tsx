@@ -188,7 +188,16 @@ export function CaseSummary() {
                             <Box
                                 border={'1px solid black'}
                                 p={2}
+                                position={'relative'}
                             >
+                                <Box
+                                    position={'absolute'}
+                                    top={0}
+                                    right={0}
+                                    border={'1px solid black'}
+                                >
+                                    Hi
+                                </Box>
                                 <Box>
                                     <b>Date:</b>{' '}
                                     {highlightedEntry ? new Date(highlightedEntry.date).toISOString().slice(0, 10) : ''}

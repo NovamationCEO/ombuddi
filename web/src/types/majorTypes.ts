@@ -47,6 +47,7 @@ export type PersonType = {
     category1: string
     category2: string
     category3: string
+    organizationId: string
 }
 
 export type PrimaryRoleType = {

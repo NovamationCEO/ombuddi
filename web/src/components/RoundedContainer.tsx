@@ -9,6 +9,7 @@ export function RoundedContainer(props: { title: string; children?: JSX.Element 
             borderRadius={2}
             overflow={'hidden'}
             boxShadow={2}
+            position={'relative'}
         >
             <Box
                 bgcolor={'#1976d2'}

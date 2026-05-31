@@ -6,7 +6,8 @@
 
 .person-finder {
     width: 80%;
-    max-width: 500px;
+    max-width: 800px;
+    min-width: 500px;
     margin: 2rem auto;
     padding: 2rem;
     background: var(--bg);

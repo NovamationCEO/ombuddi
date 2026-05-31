@@ -20,6 +20,7 @@ import { useSnack } from '../../libraries/useSnack'
 import { PersonType } from '../../types/majorTypes'
 import { useHashName } from '../../tools/useHashName'
 import { RoundButton } from '../../trusted-components/RoundButton'
+import { useOrganization } from '../../tools/useOrganization'
 
 function Title(props: { children: React.ReactNode }) {
     const { children } = props
@@ -52,6 +53,8 @@ export function AddPerson() {
     const [category2, setCategory2] = React.useState('')
     const [category3, setCategory3] = React.useState('')
     const setSnack = useSnack((state) => state.setSnack)
+    const organization = useOrganization()
+    const orgId = organization.id
 
     const hashedName = useHashName(name, salt)
 
@@ -66,8 +69,9 @@ export function AddPerson() {
             category1: category1?.length ? category1 : undefined,
             category2: category2?.length ? category2 : undefined,
             category3: category3?.length ? category3 : undefined,
+            organizationId: orgId,
         }
-        console.log(payload)
+        console.log({ payload })
         try {
             const res = await creator<PersonType>('add_person', payload)
             console.log(res)
