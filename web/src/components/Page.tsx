@@ -1,8 +1,6 @@
 import { useStyles } from '../tools/useStyles'
 import { Header } from './Header'
 
-import { SidebarLeft } from '../trusted-components/SidebarLeft'
-import { NavigationMenu } from './NavigationMenu'
 import { Box } from '@mui/material'
 import { headerHeight } from '../constants/uiSizes'
 // import { useKeycloak } from '@react-keycloak/web'

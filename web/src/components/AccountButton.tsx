@@ -1,5 +1,5 @@
 import { Person } from '@mui/icons-material'
-import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem, CircularProgress } from '@mui/material'
+import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem } from '@mui/material'
 import { Box } from '@mui/system'
 // import { useKeycloak } from '@react-keycloak/web'
 import React from 'react'
