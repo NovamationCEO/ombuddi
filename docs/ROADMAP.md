@@ -35,10 +35,7 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 **Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
 
-- [ ] Audit every Flask endpoint, list which lack an `organization_id` filter (see DATA_MODEL.md "Multi-tenancy gaps"). Convert generic CRUD helpers in `utils.py` to take an `owner_constraint` parameter that gets ANDed into every WHERE clause.
-- [ ] Add `organization_id` to `cases` (currently absent from the model — must add to support `get_all_cases` scoped to an org).
-- [ ] Add `organization_id` to `entries` (currently only joinable via `case_id`; redundancy is fine and lets us scope queries without a join).
-- [ ] Decide: do `code_category_id` / `category_id` on `codes` get renamed for consistency now too? (Probably yes — pick one form.)
+The full plan lives in `docs/MULTI_TENANCY.md` — endpoint-by-endpoint gaps, the `Principal` model, the `utils.py` wrapper, the IOA-cross-org-read exception, and a test scenario list. Pre-auth lift we can land safely under Principle 1 is called out at the bottom of that doc.
 
 ## Phase 1 — Entry flow complete  [not started]
 
