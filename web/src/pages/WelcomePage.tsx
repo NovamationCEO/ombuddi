@@ -12,7 +12,8 @@ export function WelcomePage() {
                     <Typography variant={'h6'}>What Is Ombuddi?</Typography>
                     <Box>
                         Ombuddi is an application that uses cryptographic hashing to provide Ombuds with secure logging
-                        and report-generation tools that adhere to the standards set by the International Ombuds Coven.
+                        and report-generation tools that adhere to the standards set by the International Ombuds
+                        Association.
                     </Box>
                 </Box>
                 <Box>

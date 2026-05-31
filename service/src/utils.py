@@ -40,54 +40,9 @@ def add_one(table, model, request, db_name="default", key='id'):
         if conn:
             conn.close()
 
-def add_many(table, model, request, db_name='default', key='id'):
-    conn = None
-    user_data_list = request.get_json()
-
-    if not isinstance(user_data_list, list):
-        return jsonify({'success': False, 'status': 'input error', 'error': 'Invalid input', 'message': 'Expected an array of objects'}), 400
-    if key not in model:
-        return jsonify({'success': False, 'status': 'input error', 'error': f'Missing {key}'}), 400
-
-    try:
-        conn = get_db_connection(db_name)
-        conn.autocommit = False  # Disable autocommit to start a transaction
-
-        with conn.cursor() as cur:
-            ids = []
-            for user_data in user_data_list:
-                valid_data = {k: v for k, v in user_data.items() if k in model}
-                if not valid_data:
-                    continue
-
-                set_clause = ', '.join([sql.Identifier(model[k]).as_string(conn) for k in valid_data])
-                values_clause = ', '.join(['%s' for _ in valid_data])
-                sql_command = f"INSERT INTO {sql.Identifier(table).as_string(conn)} ({set_clause}) VALUES ({values_clause}) RETURNING {model[key]};"
-
-                values = [v for k, v in valid_data.items()]
-
-                cur.execute(sql_command, values)
-                new_id = cur.fetchone()[0]
-                ids.append(new_id)
-
-            conn.commit()  # Commit the transaction
-            return jsonify({'success': True, 'status': 'success', 'ids': ids}), 200
-    
-    except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
-        if conn:
-            conn.rollback()  # Rollback the transaction on error
-        logging.error(f"Database error: {str(e)}")
-        return jsonify({'success': False, 'status': 'db error', 'error': 'Database error', 'message': str(e)}), 500
-    
-    except Exception as e:
-        if conn:
-            conn.rollback()  # Rollback the transaction on error
-        logging.error(f"Unexpected error: {str(e)}")
-        return jsonify({'success': False, 'status': 'unknown error', 'error': 'Unexpected error', 'message': str(e)}), 500
-    
-    finally:
-        if conn:
-            conn.close()
+# add_many was removed: it referenced psycopg2.sql.Identifier without importing it
+# and would NameError on first call. Reintroduce a properly-imported version when
+# a real batch-insert use case appears.
 
 ###
 # READ

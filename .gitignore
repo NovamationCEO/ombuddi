@@ -3,3 +3,13 @@ web/node_modules
 web/dist
 web/build
 web/node_modules/*
+
+# Secrets — copy .env.example to .env and keep .env local.
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# OS junk
+.DS_Store
+**/.DS_Store

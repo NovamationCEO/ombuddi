@@ -2,18 +2,43 @@
 
 > Phased plan. The order is "what unblocks the next thing", not strict priority. Confirm scope of each phase with the user before starting work in it. Update the [status] tags as we go.
 
-## Phase 0 — Plumbing & cleanup  [not started]
+## Phase 0 — Plumbing, schema redesign, cleanup  [in progress]
 
-Goal: make the codebase safe to build on top of.
+Goal: make the codebase safe to build on top of. Since the app has no real users yet (Principle 1), we use this phase aggressively — anything that would normally be a migration nightmare is just a code edit now.
 
-- [ ] Check in a `service/schema.sql` (or first Alembic migration) reflecting the current tables. Source of truth so far is the views + this repo's `DATA_MODEL.md` — write the DDL once, commit it.
-- [ ] Add `service/.env.example` and document required vars (`DB_*`, `NAME_SALT` aka `SALT`).
+**Tier 1 — trivial cleanups (no design decisions):**
+
 - [ ] Fix the `crypto.randomUUID` import in `web/src/components/AddEntry/AddNewCase.tsx` (use `uuid` from npm or `window.crypto.randomUUID()`).
 - [ ] Fix `service/src/ombuddi_views.py::get_codes_by_category_id` — column is `category_id`, not `code_category_id`.
 - [ ] Either delete or fix `service/src/utils.py::add_many` (currently `NameError` on `sql.Identifier`).
-- [ ] Remove `web/src/pages/AddEntryBackup copy.tsx` once confirmed obsolete.
-- [ ] Define the two missing routes from `Cases.tsx`: `/add_case` (point at `AddNewCase`) and `/log_without_case` (TBD: probably "open the AddEntry form with a hidden catch-all case").
-- [ ] Decide: revive keycloak scaffolding or rip it out for now (recommend: rip out, add real auth in Phase 4).
+- [ ] Remove `web/src/pages/AddEntryBackup copy.tsx`.
+- [ ] WelcomePage: "International Ombuds Coven" → "International Ombuds Association".
+
+**Tier 2 — small additions:**
+
+- [ ] `service/.env.example` mirroring `.env` with placeholder values.
+- [ ] `service/schema.sql` (or first Alembic migration) as the source of truth for DDL. Write *after* Tier 3 lands so we capture the renamed/redesigned shape.
+- [ ] Define the two missing routes from `Cases.tsx`: `/add_case` (point at `AddNewCase`). `/log_without_case` semantics TBD — likely "open AddEntry against a hidden per-ombuds catch-all case."
+
+**Tier 3 — schema and identity redesign (the "pre-production freedom" cluster):**
+
+- [ ] Rename DB table `person` → `persons` (and table-name string in `person_views.py`). Wipe + recreate dev DB.
+- [ ] Switch hashing input from `organization.name` to `organization.id` in `web/src/tools/useHashName.ts`. Org names become decorative (Principle: Settled Decisions in CONTEXT.md).
+- [ ] Remove the keycloak imports that are currently commented out, OR fully revive them — pick one. (Decision: revive in Phase 4; for now, delete the commented blocks to reduce noise.)
+- [ ] Strip dead utilities from `web/src/tools/` (Jenks, mapping leftovers) and the unused `trusted-components/` modules. Defer until we read them on demand.
+
+**Tier 4 — dependency upgrades:**
+
+- [ ] MUI v5 → latest (v6 or v7, whichever is current). Includes `Grid2` move out of `Unstable_`. Breaking changes around theming/styling — read MUI's migration guide before starting.
+- [ ] React Query, react-router-dom, Vite, TypeScript, Zustand to current.
+- [ ] Drop unused deps: leaflet/react-leaflet, georaster, proj4-fully-loaded, chroma-js, simple-statistics, html-to-image, jsdom — all look like leftovers from another project. Confirm by grepping for usage.
+
+**Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
+
+- [ ] Audit every Flask endpoint, list which lack an `organization_id` filter (see DATA_MODEL.md "Multi-tenancy gaps"). Convert generic CRUD helpers in `utils.py` to take an `owner_constraint` parameter that gets ANDed into every WHERE clause.
+- [ ] Add `organization_id` to `cases` (currently absent from the model — must add to support `get_all_cases` scoped to an org).
+- [ ] Add `organization_id` to `entries` (currently only joinable via `case_id`; redundancy is fine and lets us scope queries without a join).
+- [ ] Decide: do `code_category_id` / `category_id` on `codes` get renamed for consistency now too? (Probably yes — pick one form.)
 
 ## Phase 1 — Contact (entry) flow complete  [not started]
 
@@ -45,8 +70,11 @@ Goal: respect IOA confidentiality on identity.
 Goal: aggregate trend reports that an org leader can act on, with no identity leakage.
 
 - [ ] Report builder UI under `/report`. Filters: date range, code, code category, primary role, demographic axis, medium, ombuds.
-- [ ] Backend report endpoints. Use `GROUP BY` queries on `entries`, `cases.codes`, `person` (joined through `entry_person`). Return raw bucketed counts plus computed shares.
-- [ ] **Minimum cell size**: suppress (or merge into "Other") any bucket smaller than N (start at 5; org-configurable). This is the single most important confidentiality feature in reporting.
+- [ ] Backend report endpoints. Use `GROUP BY` queries on `entries`, `cases.codes`, `persons` (joined through `entry_person`). Return raw bucketed counts plus computed shares.
+- [ ] **Dual-mode rendering toggle** (see CONTEXT.md "Settled decisions"):
+  - *Full mode* — every bucket as-is. Ombuds-only, not exportable, no share affordance in the UI.
+  - *Shareable mode* — enforce minimum cell size (default 5, org-configurable). Below-threshold buckets merge into "Other" or are suppressed. Exports and external-sharing flows are gated to this mode.
+  - The toggle should be visually unambiguous; a small lock icon on Full mode plus a "Ombuds eyes only" banner is a good starting point.
 - [ ] Highcharts is already in deps — use it for the chart layer.
 - [ ] Export: PDF + .docx via the user's "skills" pipeline so the ombuds can drop a yearly summary into a memo.
 - [ ] Stretch: year-over-year comparisons and "topic spike" alerts.
@@ -55,11 +83,10 @@ Goal: aggregate trend reports that an org leader can act on, with no identity le
 
 Goal: keep org A from ever seeing org B's data.
 
-- [ ] Pick an auth approach. Options:
-  1. Revive Keycloak (already scaffolded — feels heavy for a SaaS launch but flexible).
-  2. Auth0 / Clerk / WorkOS — fastest path to SSO for enterprise customers.
-  3. Roll our own JWT on top of Flask-Login — cheapest, most maintenance.
-  Recommendation: option 2 for v1 to unblock IOA submission and pilot customers.
+- [ ] Auth approach: **Keycloak** (decided — see CONTEXT.md "Settled decisions"). Self-hosted in the same docker-compose stack as Postgres and the Flask app.
+  - Add a `keycloak` service to `service/docker-compose.yml`.
+  - Revive `web/src/constants/keycloak.ts` and the `ReactKeycloakProvider` in `App.tsx` / route guards in `Page.tsx`.
+  - Flask side: validate the access token's `iss`, `aud`, signature against Keycloak's JWKS on every request; derive `organization_id` and `ombuds_id` from the token claims.
 - [ ] Every Flask endpoint must derive the calling ombuds' `organization_id` from the token and enforce it as a WHERE constraint. Stop trusting `<organization_id>` URL params.
 - [ ] Centralize ownership checks. Convert generic CRUD helpers to take an `owner_org_id` constraint that gets ANDed in. Or write per-entity handler classes.
 - [ ] Replace `useUserId.ts` and `useOrganization.ts` with the JWT-derived identity.

@@ -23,7 +23,6 @@ import { CodeSetterBox } from '../CodeSetterBox'
 import { useIoaOrgId } from '../../tools/useIoaOrgId'
 import { OmbudsType } from '../../types/majorTypes'
 import { RoundedContainer } from '../RoundedContainer'
-import { randomUUID } from 'crypto'
 
 const referralOptionsRes = {
     data: [
@@ -54,7 +53,9 @@ export function AddNewCase() {
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
     const ioaId = useIoaOrgId()
-    const newId = randomUUID()
+    // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
+    // useMemo so the id is stable across re-renders while the user is filling out the form.
+    const newId = React.useMemo(() => crypto.randomUUID(), [])
 
     const [activeReferralSourceIds, setActiveReferralSourceIds] = React.useState<string[]>([])
     // const [personName, setPersonName] = React.useState('')

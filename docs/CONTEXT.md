@@ -2,6 +2,14 @@
 
 > Working document for the AI assistant. Keep updated as decisions land. Companion files: `ROADMAP.md`, `DATA_MODEL.md`, `LESSONS.md`.
 
+## Guiding principles
+
+1. **Pre-production freedom.** The app has never had real users. Backwards compatibility is not a concern and should be actively avoided as a justification for keeping bad choices around. Until we have a paying customer, schema changes, table renames, and breaking API edits are cheap — take them.
+2. **Confidentiality is the product.** Every design decision is evaluated first against "does this protect a visitor's identity from a hostile party with broad access?" Convenience features lose if they erode this.
+3. **Ombuds-first defaults, organization-customizable.** Ship sensible defaults (university-ombuds-shaped, IOA-aligned), but let every taxonomy — codes, roles, mediums, priorities — be replaced by the org without code changes.
+4. **Aggregate by design, identifiable only when absolutely necessary.** Demographics, codes, mediums, and durations exist precisely so reports can be useful. Names, salt phrases, and notes are the only intentionally-identifying surface; everything else is bucketable.
+5. **Ombuddi the company must not be able to read visitor data.** No support backdoor, no "we'll just take a look" mode, no admin override that decrypts. If a feature would require this, redesign the feature.
+
 ## What Ombuddi is
 
 The first SaaS record-keeping product built specifically for Organizational Ombuds. Ombuds are neutral, confidential, non-mandated, off-hierarchy conflict-resolution professionals who meet with "visitors" (clients) and help them work through concerns about the organization, coworkers, or their role. Ombuds follow the **International Ombuds Association (IOA)** Standards of Practice and Code of Ethics, which include:
@@ -28,7 +36,8 @@ A logged-in ombuds, working under their organization's seat, can:
 Two layered protections:
 
 1. **Cryptographic name-hashing.** A "person" is stored only as `hashed_name = sha256(name + salt + org_name + server_salt)`. The user must re-supply the exact `name + salt` to retrieve. There is no way to enumerate visitors from the database. Server-side `NAME_SALT` (env var, see `service/hash_name.py`) prevents rainbow-table attacks against a stolen DB.
-2. **Plaintext circumspection.** Even for fields that must be plaintext (case names, notes), the UI nudges toward randomized/non-identifying titles, a random "security image" per case for visual recognition, and minimal demographic capture.
+2. **Plaintext circumspection.** Even for fields that must be plaintext (case names, notes), the UI nudges toward randomized/non-identifying titles, and a random "security image" per case for visual recognition.
+3. **Demographics are collected, not minimized.** Useful trend reporting requires generation, race, gender, primary role, international/domestic, etc. The protection lives in *aggregation* (bucketing on report) plus the lookup gate (no one without the salt phrase ever pulls these rows back). Edge cases — e.g. an org with only one male employee — collapse to identifying through process of elimination; that's an ombuds-judgment problem we surface in the UI rather than try to algorithmically solve.
 
 Important nuance the user described and we should preserve: an ombuds can choose **how granular** their salt phrases are — one per org, one per ombuds, one per month, one per case, blank, or even with deliberate per-instance spelling variations. Two records of "the same person" under two salts are mathematically two different people. This is a feature, not a bug.
 
@@ -97,13 +106,21 @@ Not yet working / stubbed:
 
 A university ombuds. Defaults should reflect higher-ed reality: primary roles already include exempt, non-exempt, tenure/non-tenure faculty, undergrad/grad, alumni, parent, etc. IOA codes are the categorization backbone.
 
+## Settled decisions (track here so we don't re-relitigate)
+
+- **Org name is decorative.** Hashing, lookups, and any "is this row mine" checks key off `organization_id` (UUID). Org names are display-only and can be changed at any time.
+- **Reports run in two modes**, toggled per render:
+  - *Full mode* (ombuds-only): every bucket visible, no suppression. The ombuds can see narrow bands their own memory might be missing.
+  - *Shareable mode* (for leadership): minimum cell size enforced (default 5, org-configurable); below-threshold buckets are merged into "Other" or suppressed entirely. This is the only version that can be exported / shared.
+- **Authentication: Keycloak.** The scaffolding is partly in place, the user knows the system, the audience is bounded (rare profession), so the per-seat economics of managed providers don't pay back. Self-hosted Keycloak in the same compose stack.
+- **No backwards compatibility constraints** while pre-production. See Guiding Principle 1.
+
 ## Open product questions (resolve before/with the user)
 
 - Tags on **contacts** in addition to cases? Probable yes; need UI and a `entry_codes` join (vs. reusing `cases.codes` only).
 - Contact medium and priority: org-customizable lists, or stay hard-coded? Likely customizable.
 - Salt-phrase UX: how strongly do we guide ombuds toward a sensible default (per-org? per-ombuds? per-month?) without locking them into one?
 - Per-case salt for **entry notes** (encrypted at rest) — phase 2 or phase 1?
-- Minimum cell size for report aggregation (e.g., suppress any bucket < 5)?
 - Public Persons UX: where do they show up vs. visitors? Likely a separate "Public People" admin pane, plus a checkbox in the AddPerson flow.
 - Court-order / legal-hold flow: who can pause purges, how is it audited, and is that audit itself outside the standard purge?
 

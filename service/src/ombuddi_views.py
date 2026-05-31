@@ -86,7 +86,7 @@ code_model = {
 
 @ombuddi_views.route('/api/v1/get_codes_by_category_id/<id>')
 def get_codes_by_category_id(id):
-    constraints = {'code_category_id': id, 'soft_delete': False}
+    constraints = {'category_id': id, 'soft_delete': False}
     return get_many('codes', code_model, constraints)
 
 @ombuddi_views.route('/api/v1/get_codes_by_organization_id/<id>')

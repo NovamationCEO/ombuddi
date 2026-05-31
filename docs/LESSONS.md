@@ -1,12 +1,14 @@
 # Ombuddi — Lessons, Patterns, and Gotchas
 
 > Running log. Add to this file whenever a non-obvious shape of the codebase bites or pays off.
+>
+> **Note:** Items marked **[FIX QUEUED]** are scheduled in ROADMAP.md Phase 0 and don't need defensive coding around them — just fix them when you're touching that area.
 
 ## Naming & conventions
 
 - **Wire format is camelCase, DB is snake_case.** The `*_model` dicts in `service/src/*_views.py` map between them (e.g. `{'caseId': 'case_id'}`). When you add a new column, you must add it to the model dict AND the TS type in `web/src/types/majorTypes.ts` or the round-trip silently drops it.
 - **"Entry" (code) == "Contact" (product).** Don't rename without doing both sides. The user uses "Contact" in conversation; the schema/UI mostly say "Entry".
-- **`person` is singular**, while `entries`, `cases`, `organizations`, `codes`, `code_categories`, `primary_roles` are plural. Likely an oversight; plural would be more consistent, but renaming is not free.
+- **`person` is singular**, while `entries`, `cases`, `organizations`, `codes`, `code_categories`, `primary_roles` are plural. **[FIX QUEUED]** Rename to `persons` in Phase 0; no production data to migrate.
 
 ## Backend (Flask)
 
@@ -25,18 +27,18 @@
 - `creator`, `updater`, `deleter` are imperative — they do NOT invalidate React Query caches on success. Callers refetch by hand (e.g. `caseRes.refetch()`). When adding new mutations, remember to refetch or wire up `useMutation` + `queryClient.invalidateQueries`.
 - The hard-coded `useUserId` returns the same UUID always. Many other components compute the org by chaining `useUserId -> get_ombuds_by_id -> get_organization_by_id`. The two requests run on every page that wants the org. There's an opportunity to centralize this in a `useCurrentUser` once auth lands.
 - Keycloak scaffolding is everywhere (commented out) — `App.tsx`, `Page.tsx`, `constants/keycloak.ts`, deps in `package.json`. We can either revive it or rip it out, but the half-state is confusing.
-- `useHashName` includes `organization.name` (not id) in the hash. **Renaming an org would break every existing visitor record.** Either lock org-name edits, or switch to org id, or both.
+- `useHashName` includes `organization.name` (not id) in the hash. **[FIX QUEUED]** Switching to `organization.id` in Phase 0. Org name becomes decorative.
 - MUI's `Grid2` is imported from `@mui/material/Unstable_Grid2`. That'll move when MUI v6 lands; track for upgrade.
-- `randomUUID` is imported from `crypto` (Node) in `AddNewCase.tsx`. In the browser this should be `crypto.randomUUID()` off `window.crypto`, or `uuid` from `@types/uuid` (already in deps). Likely throws at runtime. **Check this before relying on Add Case.**
+- `randomUUID` is imported from `crypto` (Node) in `AddNewCase.tsx`. In the browser this should be `crypto.randomUUID()` off `window.crypto`, or `uuid` from npm. Likely throws at runtime. **[FIX QUEUED]**
 
 ## Known bugs / smells
 
-- `get_codes_by_category_id` queries `code_category_id` but the column is `category_id`. The route is currently unused on the frontend, so this hasn't bitten yet — fix when wiring up code-by-category fetch.
+- `get_codes_by_category_id` queries `code_category_id` but the column is `category_id`. **[FIX QUEUED]**
 - `caseRes.data?.codes` is treated as a string array in TS, but the SQL `codes` column type is undocumented. Confirm it's `text[]` (or `uuid[]`) in DDL; if it's TEXT (comma-separated), the array operations will silently break.
 - `PersonFinder` calls the `Select` button but doesn't wire it up. The "Add Person to Entry" save likewise does nothing. The path "person picked in dialog → attached to the entry on save" is unimplemented.
 - `Cases.tsx` links to `/add_case` and `/log_without_case`, neither of which is in `router.tsx`. Click leads to 404.
-- `AddEntry.tsx` exists as both `AddEntry.tsx` (current) and `AddEntryBackup copy.tsx` (stale). Delete the backup once you're sure.
-- `WelcomePage.tsx` says "International Ombuds **Coven**" — typo for "Association". Probably intentional joke, but worth confirming before the IOA reviewers see it.
+- `AddEntry.tsx` exists as both `AddEntry.tsx` (current) and `AddEntryBackup copy.tsx` (stale). **[FIX QUEUED]** Delete.
+- `WelcomePage.tsx` says "International Ombuds **Coven**" — typo for "Association". **[FIX QUEUED]**
 
 ## Security pitfalls to keep top of mind
 
