@@ -7,6 +7,8 @@
 --   docker compose down -v
 --   docker compose up -d db
 --   docker exec -i $(docker compose ps -q db) psql -U "$DB_USER" -d "$DB_NAME" < service/schema.sql
+--   python service/scripts/seed_ioa.py | docker compose exec -T db \
+--     psql -U "$DB_USER" -d "$DB_NAME"
 --
 -- Pre-production: feel free to drop and recreate. See docs/CONTEXT.md
 -- "Guiding principles" — backwards compatibility is not a concern yet.
@@ -190,6 +192,7 @@ INSERT INTO organizations (id, name) VALUES
   ('628b5737-43e6-49c7-a632-2f723a455e59', 'International Ombuds Association')
 ON CONFLICT (id) DO NOTHING;
 
--- Code categories and codes for the IOA org are seeded out of band today;
--- when we move them under version control we'll either generate them here
--- from the constants file or expose a one-shot seed script.
+-- Code categories and codes for the IOA org are emitted by
+-- service/scripts/seed_ioa.py, which reads web/src/constants/ioaConstants.ts
+-- so the frontend display and the DB seed stay in lockstep. Run that script
+-- after applying this schema (see header for the exact command).
