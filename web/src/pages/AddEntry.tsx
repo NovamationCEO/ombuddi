@@ -1,4 +1,17 @@
-import { Box, Button, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material'
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
+    Radio,
+    RadioGroup,
+    Stack,
+    TextField,
+    Typography,
+} from '@mui/material'
 import { useState } from 'react'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -6,6 +19,11 @@ import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { useUserId } from '../tools/useUserId'
+import { PersonFinder } from '../components/PersonFinder'
+import { RoundButton } from '../trusted-components/RoundButton'
+import { Add } from '@mui/icons-material'
+import React from 'react'
+import Grid2 from '@mui/material/Unstable_Grid2'
 
 export function AddEntry() {
     const { caseId } = useParams()
@@ -15,6 +33,7 @@ export function AddEntry() {
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
     const ombudsId = useUserId()
+    const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
 
     const [medium, setMedium] = useState('inPerson')
     const contactTypes = [
@@ -41,10 +60,76 @@ export function AddEntry() {
 
     return (
         <Box>
+            <Dialog
+                open={showPeopleDialog}
+                onClose={() => setShowPeopleDialog(false)}
+                fullScreen
+            >
+                <DialogTitle>Add Person to Entry</DialogTitle>
+                <DialogContent sx={{ height: '70vh' }}>
+                    <Grid2
+                        container
+                        spacing={2}
+                        alignItems="stretch"
+                        sx={{ height: '100%' }}
+                    >
+                        <Grid2
+                            xs={12}
+                            sm={4}
+                            md={3}
+                            sx={{ display: 'flex' }}
+                        >
+                            <Box
+                                sx={{ border: '1px solid green', flex: 1, width: '100%' }}
+                                p={1}
+                            >
+                                <Box>
+                                    <Typography variant={'h6'}>Associated with Case</Typography>
+                                </Box>
+                            </Box>
+                        </Grid2>
+
+                        <Grid2
+                            xs={12}
+                            sm={8}
+                            md={9}
+                            sx={{ display: 'flex' }}
+                        >
+                            <Box sx={{ border: '1px solid blue', flex: 1, width: '100%' }}>
+                                <PersonFinder />
+                            </Box>
+                        </Grid2>
+                    </Grid2>
+                </DialogContent>
+
+                <DialogActions>
+                    <Stack
+                        spacing={2}
+                        direction={'row'}
+                    >
+                        <Button
+                            variant={'outlined'}
+                            onClick={() => setShowPeopleDialog(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant={'contained'}
+                            onClick={() => {
+                                setShowPeopleDialog(false)
+                            }}
+                        >
+                            Save
+                        </Button>
+                    </Stack>
+                </DialogActions>
+            </Dialog>
             <Stack spacing={2}>
                 <Box display={'flex'}>
                     <Box>
-                        <Typography variant={'h5'}>Add Entry to Case: {caseRes.data?.name}</Typography>
+                        <Typography variant={'h5'}>
+                            Add Entry to Case: <em>{caseRes.data?.name}</em>
+                        </Typography>
                     </Box>
                     <Stack
                         spacing={2}
@@ -128,13 +213,20 @@ export function AddEntry() {
                         </RadioGroup>
                     </RoundedContainer>
 
-                    <RoundedContainer title={'Codes'}>
-                        {/* <IoaCodeSetter
-                        activeCodes={activeCodes}
-                        setActiveCodes={setCodes}
-                        openIndex={openIndex}
-                        setOpenIndex={updateOpenIndex}
-                    /> */}
+                    <RoundedContainer title={'People'}>
+                        <Box
+                            position={'absolute'}
+                            bottom={8}
+                            right={8}
+                        >
+                            <RoundButton
+                                bgcolor={'white'}
+                                size={27}
+                                onClick={() => setShowPeopleDialog(true)}
+                            >
+                                <Add fontSize={'small'} />
+                            </RoundButton>
+                        </Box>
                     </RoundedContainer>
                 </Stack>
                 <Box>

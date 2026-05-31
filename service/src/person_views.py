@@ -1,5 +1,6 @@
-from flask import Blueprint, request
-from utils import add_one, get_many, get_one, update_one
+from flask import Blueprint, request, jsonify
+from src.connection import get_db_connection
+from utils import add_one, get_many, get_one, return_many, update_one
 from hash_name import hash_name
 import logging
 
@@ -18,6 +19,7 @@ person_model = {
     'category1': 'category_1',
     'category2': 'category_2',
     'category3': 'category_3',
+    'organizationId': 'organization_id',
 }
 
 @person_views.before_request
@@ -31,9 +33,9 @@ def _salt_name():
             True:  payload,
         }
 
-@person_views.route('/api/v1/get_person_by_id/<id>')
-def get_person_by_id(id):
-    constraints = {'id': id}
+@person_views.route('/api/v1/get_person_by_id/<person_id>')
+def get_person_by_id(person_id):
+    constraints = {'id': person_id}
     return get_one('person', person_model, constraints)
 
 @person_views.route('/api/v1/get_persons_by_hashed_name/<raw_hash>')
@@ -48,3 +50,62 @@ def add_person():
 @person_views.route('/api/v1/update_person', methods=['PUT'])
 def update_person():
     return update_one('person', person_model, request)
+
+@person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
+def get_persons_by_organization_id(organization_id):
+    constraints = {'organization_id': organization_id} 
+    return get_many('person', person_model, constraints)
+
+def _get_persons_by_sql(sql: str, params: tuple):
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                rows = cur.fetchall()
+                return return_many(person_model, rows)
+    except Exception as e:
+        logger.exception("Person query failed")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "status": "db error",
+                    "error": "Database error",
+                    "message": str(e),
+                }
+            ),
+            500,
+        )
+
+SQL_PERSONS_BY_CASE_ID = """
+    SELECT p.*
+    FROM person p
+    WHERE EXISTS (
+        SELECT 1
+        FROM entry_person ep
+        JOIN entries e ON e.id = ep.entry_id
+        WHERE e.case_id = %s
+          AND ep.person_id = p.id
+    )
+    ORDER BY p.id;
+"""
+
+SQL_PERSONS_BY_ENTRY_ID = """
+    SELECT p.*
+    FROM person p
+    WHERE EXISTS (
+        SELECT 1
+        FROM entry_person ep
+        WHERE ep.entry_id = %s
+          AND ep.person_id = p.id
+    )
+    ORDER BY p.id;
+"""
+
+@person_views.route("/api/v1/get_persons_by_case_id/<case_id>")
+def get_persons_by_case_id(case_id):
+    return _get_persons_by_sql(SQL_PERSONS_BY_CASE_ID, (case_id,))
+
+@person_views.route("/api/v1/get_persons_by_entry_id/<entry_id>")
+def get_persons_by_entry_id(entry_id):
+    return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (entry_id,))
