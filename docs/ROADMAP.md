@@ -40,7 +40,7 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 - [ ] Add `organization_id` to `entries` (currently only joinable via `case_id`; redundancy is fine and lets us scope queries without a join).
 - [ ] Decide: do `code_category_id` / `category_id` on `codes` get renamed for consistency now too? (Probably yes — pick one form.)
 
-## Phase 1 — Contact (entry) flow complete  [not started]
+## Phase 1 — Entry flow complete  [not started]
 
 Goal: an ombuds can fully log a meeting and associate people with it.
 
@@ -53,7 +53,7 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 - [ ] Show people currently on a case in the left panel of the AddEntry people dialog (the box that already says "Associated with Case" — pull from `get_persons_by_case_id`).
 - [ ] CaseSummary: surface people on the highlighted entry alongside notes/duration.
 - [ ] Decide: tags on entries (separate `entry_codes`?) or rely on case-level codes only. Implement chosen path.
-- [ ] Org-customizable contact `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
+- [ ] Org-customizable entry `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
 
 ## Phase 2 — Persons & visitors hardening  [not started]
 

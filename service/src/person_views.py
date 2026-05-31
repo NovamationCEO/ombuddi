@@ -36,25 +36,25 @@ def _salt_name():
 @person_views.route('/api/v1/get_person_by_id/<person_id>')
 def get_person_by_id(person_id):
     constraints = {'id': person_id}
-    return get_one('person', person_model, constraints)
+    return get_one('persons', person_model, constraints)
 
 @person_views.route('/api/v1/get_persons_by_hashed_name/<raw_hash>')
 def get_persons_by_hashed_name(raw_hash):
     final_hash = hash_name(raw_hash)
-    return get_many('person', person_model, {'hashed_name': final_hash})
+    return get_many('persons', person_model, {'hashed_name': final_hash})
 
 @person_views.route('/api/v1/add_person', methods=['POST'])
 def add_person():
-    return add_one('person', person_model, request)
+    return add_one('persons', person_model, request)
 
 @person_views.route('/api/v1/update_person', methods=['PUT'])
 def update_person():
-    return update_one('person', person_model, request)
+    return update_one('persons', person_model, request)
 
 @person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
 def get_persons_by_organization_id(organization_id):
     constraints = {'organization_id': organization_id} 
-    return get_many('person', person_model, constraints)
+    return get_many('persons', person_model, constraints)
 
 def _get_persons_by_sql(sql: str, params: tuple):
     try:
@@ -79,7 +79,7 @@ def _get_persons_by_sql(sql: str, params: tuple):
 
 SQL_PERSONS_BY_CASE_ID = """
     SELECT p.*
-    FROM person p
+    FROM persons p
     WHERE EXISTS (
         SELECT 1
         FROM entry_person ep
@@ -92,7 +92,7 @@ SQL_PERSONS_BY_CASE_ID = """
 
 SQL_PERSONS_BY_ENTRY_ID = """
     SELECT p.*
-    FROM person p
+    FROM persons p
     WHERE EXISTS (
         SELECT 1
         FROM entry_person ep

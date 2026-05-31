@@ -25,9 +25,9 @@ Existing tools are bad fits: paper, spreadsheets, student-conduct software, doct
 A logged-in ombuds, working under their organization's seat, can:
 
 1. Create **cases** (one issue / one cluster of related concerns).
-2. Add **contacts** ("entries" in the code) to a case — meeting date, duration, medium, notes, optional tags, optional people.
+2. Add **entries** to a case — meeting date, duration, medium, notes, optional tags, optional people.
 3. Search for / create **persons** (visitors and public persons), where visitor identity is gated behind a salt phrase the ombuds chose.
-4. Tag cases/contacts with **codes**, organized into customizable **categories**. IOA's nine Uniform Reporting Categories are seeded as a shared "IOA org".
+4. Tag cases/entries with **codes**, organized into customizable **categories**. IOA's nine Uniform Reporting Categories are seeded as a shared "IOA org".
 5. Generate **aggregate reports** (trends, demographics, role mix, code mix) without revealing identities.
 6. Trust that records auto-purge on a configurable schedule, with hooks to pause on legal hold.
 
@@ -71,7 +71,7 @@ Working / wired:
 - Organization page: edit org name (UI only), manage **Codes** and **Code Categories** (create, rename, soft-delete, reorder). Manage **Primary Roles** (org-customizable). IOA's 9 categories + ~70 subcodes seeded as a separate "IOA" org so they appear in the Code picker alongside the user's own codes.
 - Cases list, case create (`AddNewCase` — has IOA + org code selection, referral source UI scaffolded, randomized name button, picsum-seeded security image).
 - Case summary page: shows case, codes (with `EditCodeDialog`), list of entries by date, hover-to-preview entry details. "Add Entry" button.
-- Add entry form: date, duration, medium, contact priority radios, notes, and a People dialog that includes the `PersonFinder` (name + salt → hashed search) — but the Save button on the people dialog currently only closes; selected people aren't yet stored on the entry.
+- Add entry form: date, duration, medium, entry priority radios, notes, and a People dialog that includes the `PersonFinder` (name + salt → hashed search) — but the Save button on the people dialog currently only closes; selected people aren't yet stored on the entry.
 - Add person form: full demographics + salt phrase + secure/insecure toggle. Posts to `add_person` (the backend `_salt_name` hook re-hashes `hashedName` before insert).
 
 Not yet working / stubbed:
@@ -79,7 +79,7 @@ Not yet working / stubbed:
 - `/add_case` and `/log_without_case` routes referenced by `Cases.tsx` are NOT defined in `router.tsx`.
 - Entry ↔ Person association: the schema includes `entry_person` (a join used by `SQL_PERSONS_BY_CASE_ID`), but there is no `add_entry_person` endpoint yet and the Add Entry dialog never persists the selection.
 - Codes on entries (vs. only on cases): undecided. User leans toward allowing.
-- Contact priority and medium customization at the org level: not implemented.
+- Entry priority and medium customization at the org level: not implemented.
 - Timed record purge: not implemented.
 - Real authentication, multi-tenancy enforcement, subscription/billing: not implemented.
 
@@ -117,8 +117,8 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 
 ## Open product questions (resolve before/with the user)
 
-- Tags on **contacts** in addition to cases? Probable yes; need UI and a `entry_codes` join (vs. reusing `cases.codes` only).
-- Contact medium and priority: org-customizable lists, or stay hard-coded? Likely customizable.
+- Tags on **entries** in addition to cases? Probable yes; need UI and a `entry_codes` join (vs. reusing `cases.codes` only).
+- Entry medium and priority: org-customizable lists, or stay hard-coded? Likely customizable.
 - Salt-phrase UX: how strongly do we guide ombuds toward a sensible default (per-org? per-ombuds? per-month?) without locking them into one?
 - Per-case salt for **entry notes** (encrypted at rest) — phase 2 or phase 1?
 - Public Persons UX: where do they show up vs. visitors? Likely a separate "Public People" admin pane, plus a checkbox in the AddPerson flow.

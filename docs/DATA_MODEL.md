@@ -62,15 +62,14 @@ No `organization_id` column is referenced in the case model, but cases are per-o
 - `id` UUID, PK
 - `case_id` UUID, FK
 - `ombuds_id` UUID, FK
-- `date` DATE (the meeting/contact date)
+- `date` DATE (the meeting / entry date)
 - `medium` TEXT ('inPerson', 'phone', 'video', 'email', 'other')
 - `duration` INT (minutes)
 - `notes` TEXT
 
-"Entry" in code == "Contact" in product language. Keep that translation in mind when reading either side.
+"Entry" is the standardized term across DB, API, UI, and docs. Earlier drafts used "Contact" — retired.
 
-### `person`
-(Singular table name — note the inconsistency vs. plural `entries`, `cases`.)
+### `persons`
 - `id` UUID, PK
 - `hashed_name` TEXT (sha256 hex, see hashing pipeline below)
 - `gender` TEXT
@@ -84,7 +83,7 @@ No `organization_id` column is referenced in the case model, but cases are per-o
 ### `entry_person` (join table)
 Implied by the raw SQL in `person_views.py`:
 - `entry_id` UUID, FK -> entries.id
-- `person_id` UUID, FK -> person.id
+- `person_id` UUID, FK -> persons.id
 (Composite PK presumed.)
 
 No API endpoint adds rows here yet — see ROADMAP.md.
@@ -95,18 +94,18 @@ Two layers combined:
 
 1. **Client** (`web/src/tools/useHashName.ts`):
    ```
-   sha256( (name + salt + organization.name).trim().toLowerCase().normalize('NFC') )
+   sha256( (name + salt + organization.id).trim().toLowerCase().normalize('NFC') )
    ```
 2. **Server** (`service/src/hash_name.py`, applied via the `_salt_name` before_request hook and `get_persons_by_hashed_name`):
    ```
    sha256( client_hash + NAME_SALT_env )
    ```
 
-So the column `person.hashed_name` is `sha256( sha256(name+salt+orgname).norm() + SERVER_SALT )`.
+So the column `persons.hashed_name` is `sha256( sha256(name+salt+org_uuid).norm() + SERVER_SALT )`.
 
 Implications:
 - The `_salt_name` hook reaches into `request._cached_json`, a Flask internal — fragile, may break on Flask upgrade.
-- The org name is part of the client hash, so renaming an org would orphan every existing visitor row. **Treat org name as immutable for hashing purposes**, or move to org id as the stable factor.
+- The organization UUID is immutable; org name is purely decorative.
 - The server-side `NAME_SALT` env var must be rotated never (or migrated with a re-hash plan we don't have yet).
 
 ## Multi-tenancy gaps (must fix before real users)
@@ -115,6 +114,6 @@ Implications:
 - `get_case_by_id`, `get_entries_by_case_id`, `get_entry_by_id` — no ownership check.
 - `update_case`, `update_entry`, `update_code`, `update_code_category`, `update_primary_role` — no ownership check.
 - `get_codes_by_organization_id` is parameterized but trusts the URL.
-- `person` is filtered by `organization_id` on the list endpoint, but `get_person_by_id` is not.
+- `persons` is filtered by `organization_id` on the list endpoint, but `get_person_by_id` is not.
 
 Every endpoint needs to be wrapped in: "the calling principal is an ombuds whose `organization_id` matches the target row's." That happens at the same time as real auth.

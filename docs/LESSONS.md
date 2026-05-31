@@ -7,7 +7,7 @@
 ## Naming & conventions
 
 - **Wire format is camelCase, DB is snake_case.** The `*_model` dicts in `service/src/*_views.py` map between them (e.g. `{'caseId': 'case_id'}`). When you add a new column, you must add it to the model dict AND the TS type in `web/src/types/majorTypes.ts` or the round-trip silently drops it.
-- **"Entry" (code) == "Contact" (product).** Don't rename without doing both sides. The user uses "Contact" in conversation; the schema/UI mostly say "Entry".
+- **Standardized vocabulary:** a Case contains many **Entries**. The word "Contact" used to appear in some product descriptions and UI labels but has been retired — use "Entry" everywhere (DB, API, UI, docs, conversation).
 - **`person` is singular**, while `entries`, `cases`, `organizations`, `codes`, `code_categories`, `primary_roles` are plural. **[FIX QUEUED]** Rename to `persons` in Phase 0; no production data to migrate.
 
 ## Backend (Flask)

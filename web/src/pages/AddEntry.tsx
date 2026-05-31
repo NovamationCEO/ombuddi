@@ -36,14 +36,14 @@ export function AddEntry() {
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
 
     const [medium, setMedium] = useState('inPerson')
-    const contactTypes = [
+    const entryMediums = [
         { value: 'inPerson', label: 'In Person' },
         { value: 'phone', label: 'Phone' },
         { value: 'video', label: 'Videoconference' },
         { value: 'email', label: 'Email' },
         { value: 'other', label: 'Other' },
     ]
-    const [contactPriority, setContactPriority] = useState('primary')
+    const [entryPriority, setEntryPriority] = useState('primary')
 
     async function save() {
         const payload = {
@@ -178,10 +178,10 @@ export function AddEntry() {
                             />
                         </Stack>
                     </RoundedContainer>
-                    <RoundedContainer title={'Contact Priority'}>
+                    <RoundedContainer title={'Entry Priority'}>
                         <RadioGroup
-                            value={contactPriority}
-                            onChange={(evt) => setContactPriority(evt.target.value)}
+                            value={entryPriority}
+                            onChange={(evt) => setEntryPriority(evt.target.value)}
                         >
                             <FormControlLabel
                                 key={'priamry'}
@@ -197,12 +197,12 @@ export function AddEntry() {
                             />
                         </RadioGroup>
                     </RoundedContainer>
-                    <RoundedContainer title={'Contact Method'}>
+                    <RoundedContainer title={'Entry Method'}>
                         <RadioGroup
                             value={medium}
                             onChange={(evt) => setMedium(evt.target.value)}
                         >
-                            {contactTypes.map((type) => (
+                            {entryMediums.map((type) => (
                                 <FormControlLabel
                                     key={type.value}
                                     value={type.value}

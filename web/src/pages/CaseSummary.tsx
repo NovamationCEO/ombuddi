@@ -203,7 +203,7 @@ export function CaseSummary() {
                                     {highlightedEntry ? new Date(highlightedEntry.date).toISOString().slice(0, 10) : ''}
                                 </Box>
                                 <Box>
-                                    <b>Contact Type:</b> {highlightedEntry ? mediumText(highlightedEntry.medium) : ''}
+                                    <b>Entry Method:</b> {highlightedEntry ? mediumText(highlightedEntry.medium) : ''}
                                 </Box>
                                 <Box>
                                     <b>Duration:</b> {highlightedEntry ? formatMinutes(highlightedEntry.duration) : ''}

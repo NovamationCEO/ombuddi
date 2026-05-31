@@ -12,6 +12,7 @@ import { Organization } from './pages/Organization'
 import { SelectCase } from './components/LoadAllCases/SelectCase'
 import { CaseSummary } from './pages/CaseSummary'
 import { AddEntry } from './pages/AddEntry'
+import { AddNewCase } from './components/AddEntry/AddNewCase'
 
 export const router = createBrowserRouter([
     {
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
     { path: '/welcome', element: <PageAlternate element={<WelcomePage />} /> },
     { path: '/select_case', element: <Page element={<SelectCase />} /> },
     { path: '/cases', element: <Page element={<Cases />} /> },
+    { path: '/add_case', element: <Page element={<AddNewCase />} /> },
     { path: '/report', element: <Page element={<ReportPage />} /> },
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
     { path: '/profile', element: <Page element={<Profile />} /> },
