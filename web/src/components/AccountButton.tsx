@@ -51,7 +51,9 @@ export function AccountButton() {
                     >
                         <Paper>
                             <ClickAwayListener onClickAway={handleClose}>
-                                <Box zIndex={zIndex.popper}>
+                                <Box sx={{
+                                    zIndex: zIndex.popper
+                                }}>
                                     <MenuList
                                         autoFocusItem={open}
                                         id="composition-menu"
@@ -85,5 +87,5 @@ export function AccountButton() {
                 )}
             </Popper>
         </>
-    )
+    );
 }

@@ -17,39 +17,45 @@ export function BottomBar(props: { children?: React.ReactNode }) {
 
     return (
         <Box
-            position={'relative'}
-            height={sidebarBottomHeight}
-            marginBottom={sidebarOpen ? 0 : `${sidebarBottomHeight * -1}px`}
-            sx={{ transition: '0.3s ease all' }}
-            marginTop={2}
-        >
+            sx={{
+                position: 'relative',
+                height: sidebarBottomHeight,
+                marginBottom: sidebarOpen ? 0 : `${sidebarBottomHeight * -1}px`,
+                marginTop: 2,
+                transition: '0.3s ease all'
+            }}>
             <Box
                 {...style.bottomBar}
-                position={'fixed'}
-                bottom={0}
-                left={leftOpen ? sidebarLeftWidth + 20 : 20}
-                right={rightOpen ? sidebarRightWidth + 20 : 20}
-                mb={sidebarOpen ? style.sidebar.margin : offscreen}
-                height={sidebarBottomHeight}
-            >
+                sx={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: leftOpen ? sidebarLeftWidth + 20 : 20,
+                    right: rightOpen ? sidebarRightWidth + 20 : 20,
+                    mb: sidebarOpen ? style.sidebar.margin : offscreen,
+                    height: sidebarBottomHeight
+                }}>
                 <Box
-                    position={'absolute'}
-                    left={'50%'}
-                    top={-15}
-                    bgcolor={style.sidebar.bgcolor}
-                    borderRadius={'50%'}
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    sx={{ transition: '0.5s ease all', rotate: sidebarOpen ? '0deg' : '360deg' }}
-                    width={'25px'}
-                    height={'25px'}
-                    display={'flex'}
-                    justifyContent={'center'}
-                    alignItems={'center'}
-                >
+                    sx={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: -15,
+                        bgcolor: style.sidebar.bgcolor,
+                        borderRadius: '50%',
+                        width: '25px',
+                        height: '25px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        transition: '0.5s ease all',
+                        rotate: sidebarOpen ? '0deg' : '360deg'
+                    }}>
                     <ArrowUpward sx={{ transition: '0.3s ease all', rotate: sidebarOpen ? '180deg' : '0deg' }} />
                 </Box>
-                <Box padding={1}>{children}</Box>
+                <Box sx={{
+                    padding: 1
+                }}>{children}</Box>
             </Box>
         </Box>
-    )
+    );
 }

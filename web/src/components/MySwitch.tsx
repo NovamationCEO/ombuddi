@@ -5,7 +5,7 @@ export const MySwitch = React.memo(function MySwitch(props: {
     value: boolean
     setValue: (b: boolean) => void
     disabled?: boolean
-    label: string | JSX.Element
+    label: React.ReactNode
 }) {
     const { value, setValue, disabled = false, label } = props
 

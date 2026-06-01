@@ -38,7 +38,9 @@ export function CaseCard(props: { caseItem: CaseType }) {
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                 </Box>
-                <Box flex={1}>
+                <Box sx={{
+                    flex: 1
+                }}>
                     <Typography
                         variant={'h6'}
                         component={'h3'}
@@ -48,28 +50,37 @@ export function CaseCard(props: { caseItem: CaseType }) {
                     {caseItem.description && (
                         <Typography
                             variant={'body2'}
-                            color={'text.secondary'}
-                            sx={{ fontStyle: 'italic', mt: 0.5 }}
-                        >
+                            sx={{
+                                color: 'text.secondary',
+                                fontStyle: 'italic',
+                                mt: 0.5
+                            }}>
                             {caseItem.description}
                         </Typography>
                     )}
                 </Box>
-                <Box textAlign={'right'}>
-                    <Box fontSize={'small'}>Updated {new Date(caseItem.updatedAt).toDateString()}</Box>
-                    <Box fontSize={'small'}>
+                <Box sx={{
+                    textAlign: 'right'
+                }}>
+                    <Box sx={{
+                        fontSize: 'small'
+                    }}>Updated {new Date(caseItem.updatedAt).toDateString()}</Box>
+                    <Box sx={{
+                        fontSize: 'small'
+                    }}>
                         <em>Created {new Date(caseItem.createdAt).toDateString()}</em>
                     </Box>
                 </Box>
             </CardContent>
             {!!caseItem.codes?.length && (
                 <Box
-                    mt={2}
-                    display={'flex'}
-                    flexWrap={'wrap'}
-                    gap={1}
-                    m={1}
-                >
+                    sx={{
+                        mt: 2,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        m: 1
+                    }}>
                     {caseItem.codes.map((code: string) => (
                         <CodeChip
                             key={code}
@@ -79,5 +90,5 @@ export function CaseCard(props: { caseItem: CaseType }) {
                 </Box>
             )}
         </CaseCardWrapper>
-    )
+    );
 }

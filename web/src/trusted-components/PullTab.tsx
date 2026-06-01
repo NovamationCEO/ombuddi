@@ -16,24 +16,23 @@ export function PullTab(props: { invert?: boolean; sidebarOpen: boolean; setSide
 
     return (
         <Box
-            position={'absolute'}
-            {...myPosition}
-            top={'50%'}
-            width={25}
-            height={25}
-            borderRadius={'50%'}
-            bgcolor={style.sidebar.bgcolor}
-            display={'flex'}
-            justifyContent={'center'}
-            alignItems={'center'}
             onClick={toggleOpen}
             sx={{
+                ...myPosition,
+                position: 'absolute',
+                top: '50%',
+                width: 25,
+                height: 25,
+                borderRadius: '50%',
+                bgcolor: style.sidebar.bgcolor,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: zIndex.header,
                 cursor: 'pointer',
                 transform: sidebarOpen ? `rotate(${transform}deg)` : `rotate(${transform - 360}deg)`,
-                transition: '0.3s ease all',
-            }}
-            zIndex={zIndex.header}
-        >
+                transition: '0.3s ease all'
+            }}>
             <ArrowBack
                 fontSize={'small'}
                 sx={{
@@ -42,5 +41,5 @@ export function PullTab(props: { invert?: boolean; sidebarOpen: boolean; setSide
                 }}
             />
         </Box>
-    )
+    );
 }

@@ -6,11 +6,12 @@ import { zIndex } from '../constants/zIndex'
 export function NavigationMenu() {
     return (
         <Box
-            padding={1}
-            textOverflow={'wrap'}
-            zIndex={zIndex.sidenav}
-            fontSize={'small'}
-        >
+            sx={{
+                padding: 1,
+                textOverflow: 'wrap',
+                zIndex: zIndex.sidenav,
+                fontSize: 'small'
+            }}>
             <MenuList
                 dense
                 sx={{
@@ -34,5 +35,5 @@ export function NavigationMenu() {
                 <Divider />
             </MenuList>
         </Box>
-    )
+    );
 }

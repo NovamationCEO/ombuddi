@@ -1,5 +1,5 @@
 // ThemeContext.tsx
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { Theme } from '@mui/material'
 import { themes } from '../theme/themes'
 
@@ -17,7 +17,7 @@ const ThemingContext = createContext<ThemingContextType>({
 // eslint-disable-next-line react-refresh/only-export-components
 export const useThemingContext = () => useContext(ThemingContext)
 
-export const ThemingProvider = (props: { children: JSX.Element }) => {
+export const ThemingProvider = (props: { children: ReactNode }) => {
     const [theme, setTheme] = useState(themes.light.theme)
 
     return <ThemingContext.Provider value={{ theme, setTheme }}>{props.children}</ThemingContext.Provider>

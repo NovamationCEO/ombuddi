@@ -30,55 +30,61 @@ export function SortableLayer<T extends { id: string; title: string }>({
             <Box
                 {...listeners}
                 {...color.primary}
-                marginRight={1}
-                sx={{ cursor: 'grab' }}
-                display={'flex'}
-                height={'100%'}
-                paddingLeft={1}
-                paddingRight={1}
-                flex={1}
-                padding={0.5}
-                margin={0.5}
-            >
+                sx={{
+                    marginRight: 1,
+                    display: 'flex',
+                    height: '100%',
+                    paddingLeft: 1,
+                    paddingRight: 1,
+                    flex: 1,
+                    padding: 0.5,
+                    margin: 0.5,
+                    cursor: 'grab'
+                }}>
                 {!disabled && (
                     <Box
-                        display={'flex'}
-                        height={'100%'}
-                        alignItems={'center'}
-                    >
+                        sx={{
+                            display: 'flex',
+                            height: '100%',
+                            alignItems: 'center'
+                        }}>
                         <Box
-                            marginRight={1}
-                            display={'flex'}
-                            alignItems={'center'}
-                        >
+                            sx={{
+                                marginRight: 1,
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}>
                             <DragIndicator />
                         </Box>
                     </Box>
                 )}
                 <Box
-                    display={'flex'}
-                    flex={1}
-                    alignItems={'center'}
-                    fontWeight={'bold'}
-                >
+                    sx={{
+                        display: 'flex',
+                        flex: 1,
+                        alignItems: 'center',
+                        fontWeight: 'bold'
+                    }}>
                     {item.title}
                 </Box>
                 {trash && (
                     <Box
-                        display={'flex'}
-                        height={'100%'}
-                        alignItems={'center'}
-                    >
+                        sx={{
+                            display: 'flex',
+                            height: '100%',
+                            alignItems: 'center'
+                        }}>
                         <Box
-                            marginLeft={1}
-                            display={'flex'}
-                            alignItems={'center'}
-                        >
+                            sx={{
+                                marginLeft: 1,
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}>
                             <Delete />
                         </Box>
                     </Box>
                 )}
             </Box>
         </>
-    )
+    );
 }

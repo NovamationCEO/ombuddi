@@ -45,9 +45,10 @@ export function CodeSetterBox(props: {
 
     return (
         <Box
-            maxWidth={'1000px'}
-            flex={1}
-        >
+            sx={{
+                maxWidth: '1000px',
+                flex: 1
+            }}>
             <OrgCodeSetter
                 showCodeSetter={showModal}
                 setShowCodeSetter={setShowModal}
@@ -58,18 +59,20 @@ export function CodeSetterBox(props: {
             <RoundedContainer title={orgRes.data?.name + ' Codes'}>
                 <Box
                     onClick={() => setShowModal(true)}
-                    border={'1px solid black'}
-                    padding={2}
-                >
+                    sx={{
+                        border: '1px solid black',
+                        padding: 2
+                    }}>
                     {activeCodes?.length === 0 && <Box>None Selected. Click to Edit.</Box>}
                     {activeCategories.map((category) => (
                         <Box key={category.id}>
                             <Box
-                                color={'white'}
-                                bgcolor={theme.palette.secondary.dark}
-                                padding={0.5}
-                                marginTop={1}
-                            >
+                                sx={{
+                                    color: 'white',
+                                    bgcolor: theme.palette.secondary.dark,
+                                    padding: 0.5,
+                                    marginTop: 1
+                                }}>
                                 {category.name}
                             </Box>
                             {activeCodes
@@ -85,5 +88,5 @@ export function CodeSetterBox(props: {
                 </Box>
             </RoundedContainer>
         </Box>
-    )
+    );
 }

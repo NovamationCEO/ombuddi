@@ -31,7 +31,7 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 - [ ] MUI v5 → latest (v6 or v7, whichever is current). Includes `Grid2` move out of `Unstable_`. Breaking changes around theming/styling — read MUI's migration guide before starting.
 - [ ] React Query, react-router-dom, Vite, TypeScript, Zustand to current.
-- [ ] Drop unused deps: leaflet/react-leaflet, georaster, proj4-fully-loaded, chroma-js, simple-statistics, html-to-image, jsdom — all look like leftovers from another project. Confirm by grepping for usage.
+- [ ] Drop unused deps: html-to-image, jsdom — both look like leftovers from another project. Confirm by grepping for usage.
 
 **Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
 

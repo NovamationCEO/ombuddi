@@ -5,10 +5,10 @@ import React from 'react'
 export function OverflowTip(props: { children: React.ReactNode }) {
     const { children } = props
     const [overflowed, setOverflowed] = React.useState(true)
-    const boxRef = React.useRef<HTMLDivElement>()
+    const boxRef = React.useRef<HTMLDivElement | null>(null)
 
     React.useEffect(() => {
-        if (!boxRef || !boxRef.current) return
+        if (!boxRef.current) return
         setOverflowed(boxRef.current.scrollWidth > boxRef.current.clientWidth)
     }, [boxRef.current?.clientWidth])
 

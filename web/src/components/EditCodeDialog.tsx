@@ -50,9 +50,11 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
             <DialogTitle>Edit Codes</DialogTitle>
             <DialogContent>
                 <Stack
-                    display={'flex'}
                     spacing={2}
                     direction={'row'}
+                    sx={{
+                        display: 'flex'
+                    }}
                 >
                     <CodeSetterBox
                         activeCodeIds={activeIoaCodes}
@@ -62,7 +64,7 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
                     <CodeSetterBox
                         activeCodeIds={activeOrgCodes}
                         setActiveCodeIds={setActiveOrgCodes}
-                        organizationId={organizationId}
+                        organizationId={organizationId ?? ''}
                     />
                 </Stack>
             </DialogContent>
@@ -81,5 +83,5 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
                 </Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 }

@@ -4,7 +4,7 @@ import React from 'react'
 
 export function RoundButton(props: {
     onClick?: (evt: React.MouseEvent<HTMLButtonElement>) => void
-    children: JSX.Element
+    children: React.ReactNode
     size?: number
     disabled?: boolean
     tooltipText?: string | React.ReactNode
@@ -16,10 +16,11 @@ export function RoundButton(props: {
         <Tooltip title={props.tooltipText ? props.tooltipText : ''}>
             <Box
                 {...style.roundButton}
-                width={size + 'px'}
-                height={size + 'px'}
-                bgcolor={bgcolor}
-            >
+                sx={{
+                    width: size + 'px',
+                    height: size + 'px',
+                    bgcolor: bgcolor
+                }}>
                 <IconButton
                     onClick={onClick}
                     disabled={disabled}
@@ -28,5 +29,5 @@ export function RoundButton(props: {
                 </IconButton>
             </Box>
         </Tooltip>
-    )
+    );
 }

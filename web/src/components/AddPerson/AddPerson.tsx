@@ -28,16 +28,17 @@ function Title(props: { children: React.ReactNode }) {
 
     return (
         <Box
-            padding={1}
-            bgcolor={theme.palette.primary.main}
-            color={'white'}
-            borderRadius={1}
-            marginRight={1}
-            fontWeight={'bold'}
-        >
+            sx={{
+                padding: 1,
+                bgcolor: theme.palette.primary.main,
+                color: 'white',
+                borderRadius: 1,
+                marginRight: 1,
+                fontWeight: 'bold'
+            }}>
             {children}
         </Box>
-    )
+    );
 }
 
 export function AddPerson() {
@@ -81,7 +82,7 @@ export function AddPerson() {
             })
         } catch (e) {
             console.error(e)
-            setSnack({ message: e.message(), severity: 'error' })
+            setSnack({ message: e instanceof Error ? e.message : 'Unable to add person', severity: 'error' })
         }
     }
 
@@ -90,20 +91,27 @@ export function AddPerson() {
             <Stack spacing={2}>
                 <Typography variant="h4">Add Person</Typography>
                 <Box
-                    display={'flex'}
-                    alignItems="center"
-                >
+                    sx={{
+                        display: 'flex',
+                        alignItems: "center"
+                    }}>
                     <Stack
                         spacing={2}
-                        flex={1}
+                        sx={{
+                            flex: 1
+                        }}
                     >
                         <TextField
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             label="Full Name"
                         />
-                        <Box display={'flex'}>
-                            <Box flex={1}>
+                        <Box sx={{
+                            display: 'flex'
+                        }}>
+                            <Box sx={{
+                                flex: 1
+                            }}>
                                 <TextField
                                     value={salt}
                                     onChange={(e) => setHash(e.target.value)}
@@ -112,10 +120,11 @@ export function AddPerson() {
                                 />
                             </Box>
                             <Box
-                                ml={1}
-                                display={'flex'}
-                                alignItems={'center'}
-                            >
+                                sx={{
+                                    ml: 1,
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}>
                                 <RoundButton
                                     onClick={() => null}
                                     tooltipText={
@@ -180,36 +189,40 @@ export function AddPerson() {
                         </Box>
                     </Stack>
                     <Box
-                        flex={1}
-                        padding={1}
-                    >
+                        sx={{
+                            flex: 1,
+                            padding: 1
+                        }}>
                         <Box
-                            border={'1px solid gray'}
-                            width={135}
-                            height={135}
-                            sx={{ cursor: 'pointer' }}
                             onClick={() => setIsSecure(!isSecure)}
-                            display={'flex'}
-                            flexDirection={'column'}
-                            alignItems={'center'}
-                            justifyContent={'center'}
-                            borderRadius={1}
-                        >
+                            sx={{
+                                border: '1px solid gray',
+                                width: 135,
+                                height: 135,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 1,
+                                cursor: 'pointer'
+                            }}>
                             <Box
-                                flex={1}
-                                display={'flex'}
-                                justifyContent={'center'}
-                                alignItems={'center'}
-                            >
+                                sx={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center'
+                                }}>
                                 <Box
-                                    width={100}
-                                    height={100}
-                                    borderRadius={'50%'}
-                                    border={'1px solid gray'}
-                                    display={'flex'}
-                                    justifyContent={'center'}
-                                    alignItems={'center'}
-                                >
+                                    sx={{
+                                        width: 100,
+                                        height: 100,
+                                        borderRadius: '50%',
+                                        border: '1px solid gray',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}>
                                     {isSecure ? <Lock fontSize={'large'} /> : <LockOpen fontSize={'large'} />}
                                 </Box>
                             </Box>
@@ -218,13 +231,19 @@ export function AddPerson() {
                     </Box>
                 </Box>
                 <RoundedContainer title={'Demographics'}>
-                    <Box display={'flex'}>
+                    <Box sx={{
+                        display: 'flex'
+                    }}>
                         <Stack
-                            flex={1}
                             spacing={2}
                             direction={'row'}
+                            sx={{
+                                flex: 1
+                            }}
                         >
-                            <Box flex={1}>
+                            <Box sx={{
+                                flex: 1
+                            }}>
                                 <Title>Gender</Title>
                                 <RadioGroup
                                     value={gender}
@@ -263,7 +282,9 @@ export function AddPerson() {
                                 </RadioGroup>
                             </Box>
                         </Stack>
-                        <Box flex={1}>
+                        <Box sx={{
+                            flex: 1
+                        }}>
                             <Title>Generation</Title>
                             <RadioGroup
                                 value={generation}
@@ -312,7 +333,9 @@ export function AddPerson() {
                                 </Tooltip>
                             </RadioGroup>
                         </Box>
-                        <Box flex={1}>
+                        <Box sx={{
+                            flex: 1
+                        }}>
                             <Title>Race</Title>
                             <RadioGroup
                                 value={race}
@@ -363,8 +386,12 @@ export function AddPerson() {
                     </Box>
                 </RoundedContainer>
                 <RoundedContainer title={'Role'}>
-                    <Box display={'flex'}>
-                        <Box flex={1}>
+                    <Box sx={{
+                        display: 'flex'
+                    }}>
+                        <Box sx={{
+                            flex: 1
+                        }}>
                             <Title>Primary Role</Title>
                             <RadioGroup
                                 value={primaryRole}
@@ -432,7 +459,9 @@ export function AddPerson() {
                                 />
                             </RadioGroup>
                         </Box>
-                        <Box flex={1}>
+                        <Box sx={{
+                            flex: 1
+                        }}>
                             <Stack spacing={2}>
                                 <Title>Categorization</Title>
                                 <MySwitch
@@ -443,7 +472,7 @@ export function AddPerson() {
                                 <Autocomplete
                                     value={category1}
                                     onChange={(_event, newValue) => {
-                                        setCategory1(newValue)
+                                        setCategory1(newValue ?? '')
                                     }}
                                     freeSolo
                                     disablePortal
@@ -459,7 +488,7 @@ export function AddPerson() {
                                 <Autocomplete
                                     value={category2}
                                     onChange={(_event, newValue) => {
-                                        setCategory2(newValue)
+                                        setCategory2(newValue ?? '')
                                     }}
                                     freeSolo
                                     disablePortal
@@ -475,7 +504,7 @@ export function AddPerson() {
                                 <Autocomplete
                                     value={category3}
                                     onChange={(_event, newValue) => {
-                                        setCategory3(newValue)
+                                        setCategory3(newValue ?? '')
                                     }}
                                     freeSolo
                                     disablePortal
@@ -498,5 +527,5 @@ export function AddPerson() {
                 </RoundedContainer>
             </Stack>
         </Box>
-    )
+    );
 }

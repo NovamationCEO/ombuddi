@@ -25,34 +25,39 @@ export function Header() {
 
     return (
         <Box
-            padding={1}
-            height={`${headerHeight}px`}
-            textAlign={'center'}
-            display={'flex'}
-            alignItems={'center'}
-            justifyContent={'center'}
-            fontSize={'large'}
             {...style.header}
-            sx={{ transition: '0.2s ease all', userSelect: 'none' }}
-            position={'fixed'}
-            left={0}
-            right={0}
-            top={0}
-            zIndex={zIndex.header}
-        >
+            sx={{
+                padding: 1,
+                height: `${headerHeight}px`,
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'large',
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                top: 0,
+                zIndex: zIndex.header,
+                transition: '0.2s ease all',
+                userSelect: 'none'
+            }}>
             {/* <Box>
                 <RoundButton onClick={toggleTheme}>
                     {themeName === 'light' ? <FlashlightOff /> : <FlashlightOn />}
                 </RoundButton>
             </Box> */}
             <Box
-                flex={1}
                 onClick={() => navigate('/')}
-                sx={{ cursor: 'pointer' }}
-            >
+                sx={{
+                    flex: 1,
+                    cursor: 'pointer'
+                }}>
                 <Typography
                     variant={'h6'}
-                    fontWeight={'bold'}
+                    sx={{
+                        fontWeight: 'bold'
+                    }}
                 >
                     OMBUDDI
                 </Typography>
@@ -64,5 +69,5 @@ export function Header() {
                 <AccountButton />
             </Stack>
         </Box>
-    )
+    );
 }

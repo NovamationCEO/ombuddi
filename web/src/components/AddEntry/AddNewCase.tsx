@@ -120,10 +120,11 @@ export function AddNewCase() {
                 <Typography variant={'h5'}>Add New Case</Typography>
             </Box>
             <Box
-                display={'flex'}
-                alignItems={'center'}
-                gap={2}
-            >
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2
+                }}>
                 <TextField
                     value={caseName}
                     onChange={(e) => setCaseName(e.target.value)}
@@ -134,7 +135,9 @@ export function AddNewCase() {
                     <Tooltip
                         title={
                             <Box>
-                                <Box fontWeight={'bold'}>Choose a name to identify this case.</Box>
+                                <Box sx={{
+                                    fontWeight: 'bold'
+                                }}>Choose a name to identify this case.</Box>
                                 <Box>
                                     Security:{' '}
                                     <em>This name is visible within your organization. It is saved in plaintext.</em>
@@ -163,11 +166,12 @@ export function AddNewCase() {
                 </Button>
                 <Tooltip title={'A random security image, based on the case name, to make identifying easier.'}>
                     <Box
-                        padding={1}
-                        width={60}
-                        height={60}
-                        border={'1px solid black'}
-                    >
+                        sx={{
+                            padding: 1,
+                            width: 60,
+                            height: 60,
+                            border: '1px solid black'
+                        }}>
                         <img
                             src={imageUrl}
                             alt={caseName}
@@ -185,11 +189,12 @@ export function AddNewCase() {
                     rows={3}
                 />
             </Box>
-
             <Stack
-                display={'flex'}
                 spacing={2}
                 direction={'row'}
+                sx={{
+                    display: 'flex'
+                }}
             >
                 <CodeSetterBox
                     activeCodeIds={activeIoaCodes}
@@ -199,7 +204,7 @@ export function AddNewCase() {
                 <CodeSetterBox
                     activeCodeIds={activeOrgCodes}
                     setActiveCodeIds={setActiveOrgCodes}
-                    organizationId={organizationId}
+                    organizationId={organizationId ?? ''}
                 />
             </Stack>
             <Stack
@@ -229,12 +234,11 @@ export function AddNewCase() {
                             onChange={(_, newVals) => {
                                 setActiveReferralSourceIds(newVals.map((opt) => opt.id))
                             }}
-                            renderTags={(selected, getTagProps) =>
+                            renderValue={(selected, getItemProps) =>
                                 selected.map((opt, idx) => (
                                     <Chip
-                                        key={opt.id}
                                         label={opt.name}
-                                        {...getTagProps({ index: idx })}
+                                        {...getItemProps({ index: idx })}
                                     />
                                 ))
                             }
@@ -280,11 +284,10 @@ export function AddNewCase() {
                     </Stack>
                 </Box>
             </RoundedContainer> */}
-
             <SaveCancel
                 onSave={save}
                 onCancel={cancel}
             />
         </Stack>
-    )
+    );
 }

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType, EntryType } from '../types/majorTypes'
 import { CodeChip } from '../components/CodeChip'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Edit } from '@mui/icons-material'
@@ -71,12 +71,15 @@ export function CaseSummary() {
                         spacing={1}
                         sx={{ flex: 2, minWidth: 0 }}
                     >
-                        <Box fontWeight={'bold'}>{caseRes.data?.name}</Box>
+                        <Box sx={{
+                            fontWeight: 'bold'
+                        }}>{caseRes.data?.name}</Box>
                         {caseRes.data?.description?.length > 0 && (
                             <Box
-                                p={1}
-                                bgcolor={'whitesmoke'}
-                            >
+                                sx={{
+                                    p: 1,
+                                    bgcolor: 'whitesmoke'
+                                }}>
                                 {caseRes.data?.description}
                             </Box>
                         )}
@@ -109,10 +112,11 @@ export function CaseSummary() {
                     </Box>
                 </Box>
                 <Box
-                    m={2}
-                    border={'1px solid gray'}
-                    p={1}
-                >
+                    sx={{
+                        m: 2,
+                        border: '1px solid gray',
+                        p: 1
+                    }}>
                     <Stack
                         direction="row"
                         sx={{ flexWrap: 'wrap', gap: 1, alignItems: 'center' }}
@@ -133,15 +137,18 @@ export function CaseSummary() {
                         </RoundButton>
                     </Stack>
                 </Box>
-                <Box m={2}>
+                <Box sx={{
+                    m: 2
+                }}>
                     <Grid2
                         container
                         spacing={2}
                     >
                         <Grid2
-                            xs={12}
-                            sm={6}
-                        >
+                            size={{
+                                xs: 12,
+                                sm: 6
+                            }}>
                             <Box>
                                 <Button
                                     variant="contained"
@@ -152,9 +159,10 @@ export function CaseSummary() {
                                 </Button>
                             </Box>
                             <Box
-                                border={'1px solid black'}
-                                p={2}
-                            >
+                                sx={{
+                                    border: '1px solid black',
+                                    p: 2
+                                }}>
                                 {!entriesRes.data?.length && <Box>No entries for this case yet.</Box>}
                                 {entriesRes.data
                                     ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -182,20 +190,23 @@ export function CaseSummary() {
                             </Box>
                         </Grid2>
                         <Grid2
-                            xs={12}
-                            sm={6}
-                        >
+                            size={{
+                                xs: 12,
+                                sm: 6
+                            }}>
                             <Box
-                                border={'1px solid black'}
-                                p={2}
-                                position={'relative'}
-                            >
+                                sx={{
+                                    border: '1px solid black',
+                                    p: 2,
+                                    position: 'relative'
+                                }}>
                                 <Box
-                                    position={'absolute'}
-                                    top={0}
-                                    right={0}
-                                    border={'1px solid black'}
-                                >
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        border: '1px solid black'
+                                    }}>
                                     Hi
                                 </Box>
                                 <Box>
@@ -217,5 +228,5 @@ export function CaseSummary() {
                 </Box>
             </Paper>
         </Box>
-    )
+    );
 }

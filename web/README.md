@@ -24,6 +24,15 @@ This template provides a minimal setup to create an ER3 app, with much of the ba
 
 Open two terminals, and Docker Desktop (or equivalent). Be connected through the school's proxy, if you have any database needs.
 
+Frontend prerequisites:
+
+-   Node.js `22.12.0` (or newer in the 22.x/24.x line)
+-   Yarn `4.9.1` or newer
+
+If using `nvm`, from `/web` run:
+
+`nvm use`
+
 `/er3_base/web $ yarn dev`
 
 `/er3_base/service $ docker-compose down --remove-orphans; docker-compose build; docker-compose up`
@@ -265,128 +274,9 @@ Basically, the same as Create, except that the payload **must** include an 'id.'
 
 -   In this example, `petRes.refetch()` will manually force the query to be run a second time. This is particularly useful after creating, updating, or deleting, to avoid waiting until the information is 'stale' enough to automatically requery the new values.
 
-## Creating Maps
+## Mapping
 
-Creating a map is incredibly simple. Just add `<LeafletWrapper></LeafletWrapper>`.
-
-Useful parameters:
-
-```
-origin?: LatLngExpression // Initial center point
-zoom?: number // Usually 5 - 8
-maxBounds?: LatLngBoundsExpression // Prevents scrolling beyond these boundaries
-children?: React.ReactNode // Can be just about anything to draw above or on the map
-height?: number | string // If not set, the MapPriority button in the Header controls the map size.
-```
-
-The LeafMark component creates a clickable marker on the map, which then displays a popup.
-
-## Map Layers
-
-Maps can handle geoJson and geoTif files. Raw shapefiles appear to be incompatible, but free converters exist online to create geoJson files. To add layers, create an array of one type or the other.
-
-geoTif files have the type
-
-```
-type GeoTifLayerType = {
-    url: string
-    id: string
-    title: string
-    converter?: (pixelValues: number[]) => string
-}
-```
-
-'url' is the local or online location of the file.
-
-'id' is a unique identifier that could also be used to programmatically change visibility.
-
-'title' will be visible to the user as the name of the layer.
-
-'converter' will recolor the data to match various standards. If not included, a default colorizer will be used automatically. Don't worry about the fact that pixelValues is an array - just figure out how to convert a specific number to a (stringified) color. [chroma-js](https://gka.github.io/chroma.js/) has lots of useful tools to help with that.
-
-```
-// geo/tif/converters/nlcdConverter.ts
-import nlcdColorizer from './nlcd.json'
-
-export function nlcdConverter(pixelValues: number[]) {
-    const pixelValue = pixelValues[0]
-    if (pixelValue === 0) return null
-    const item = nlcdColorizer.default[pixelValue.toString()]
-    return item.color
-}
-```
-
-geoJson files seem to require asynchonous loading, unless anyone can figure out a way around that. Here's a minimum loading solution:
-
-```
-const [layers, setLayers] = React.useState<GeoJsonLayerType[]>([])
-
-async function load() {
-    const links = [
-        '/src/geo/json/CDPHE_Arkansas_2023_Streams_mainstem.json',
-        '/src/geo/json/CDPHE_Arkansas_2023_Streams_tribs4.json',
-    ]
-
-    const files = await Promise.all(links.map((link) => fetch(link).then((res) => res.json())))
-
-    setLayers([
-        { id: 'mainstem', layer: files[0], title: 'Main Stem' },
-        { id: 'tribs4', layer: files[1], title: 'Tribs4' }
-    ])
-}
-
-```
-
-GeoJsonLayerType looks like this:
-
-```
-type GeoJsonLayerType = {
-    id: string
-    layer: GeoJsonObject
-    title: string
-    style?: PathOptions | ((feature) => PathOptions)
-    tooltip?: (feature: FeatureType) => React.ReactNode
-}
-```
-
-'id' is a unique identifier that can also be used to programmatically change visibility.
-'layer' is what gets loaded from the given address.
-'title' will be visible to the end user as the name of layer.
-'style' can accept an object of PathOptions. Not every typical styling function is implemented, unfortunately. weight, color, fillColor, opacity, fillOpacity, and fill all appear to be fully functional.
-
-Note that a function can be used to access the 'feature.properties' value of a given feature, allowing for more advanced conditional formatting.
-
-```
-style: (feature): PathOptions =>
-    feature.properties.MajorBasin === 2
-        ? { color: style.title.color, fill: true }
-        : { fill: false, weight: 1 },
-```
-
-'tooltip', similarly, uses a function to access feature.properties and can be used to attach a floating Box to the cursor on mouseover of features.
-
-```
-tooltip: (feature) => 'Population: ' + feature.properties.total
-```
-
-Once you have your layers loaded, all you need to do is:
-
-```
-<LeafletWrapper>
-    <MapLayers
-        geoJson={layers}
-        tif={tifs}
-    />
-</LeafletWrapper>
-```
-
-## Map Layers - Visibility
-
-MapLayers also can take three optional parameters: initialState, layerVisibility and setLayerVisibility. initialState takes an object with the format `{[layerId]: boolean}` and sets the toggle state of each layer, by layer ID.
-
-layerVisibility should initially be set to equal 'initialState,' then can be edited by the user to provide their customized view.
-
-This allows both user control of layer visibility (by interacting with the 'local' layerVisibility), and the ability to programmatically override the state to a specific combination of active layers (by updating or overriding initialState).
+Map and layer tooling (Leaflet / React-Leaflet) has been removed from Ombuddi and is no longer part of this frontend template.
 
 ## Snackbars
 

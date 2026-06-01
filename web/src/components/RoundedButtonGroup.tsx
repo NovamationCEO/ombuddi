@@ -20,10 +20,11 @@ export function RoundedButtonGroup(props: {
 
     return (
         <Box
-            display={'flex'}
-            flex={1}
-            justifyContent={'center'}
-        >
+            sx={{
+                display: 'flex',
+                flex: 1,
+                justifyContent: 'center'
+            }}>
             <ButtonGroup
                 variant="outlined"
                 sx={{
@@ -53,5 +54,5 @@ export function RoundedButtonGroup(props: {
                 ))}
             </ButtonGroup>
         </Box>
-    )
+    );
 }

@@ -15,38 +15,45 @@ export function SidebarLeft(props: { children?: React.ReactNode }) {
 
     return (
         <Box
-            position={'relative'}
-            sx={{ transition: '0.3s ease all' }}
-            ml={sidebarOpen ? style.sidebar.margin : offscreen}
-            width={`${sidebarLeftWidth + 30}px`}
-            maxHeight={'100vh'}
-        >
-            <Box height={headerHeight} />
+            sx={{
+                position: 'relative',
+                ml: sidebarOpen ? style.sidebar.margin : offscreen,
+                width: `${sidebarLeftWidth + 30}px`,
+                maxHeight: '100vh',
+                transition: '0.3s ease all'
+            }}>
+            <Box sx={{
+                height: headerHeight
+            }} />
             <Box
                 {...style.sidebar}
-                width={`${sidebarLeftWidth}px`}
-                left={0}
-                ml={sidebarOpen ? style.sidebar.margin : offscreen}
-                sx={{ ...style.sidebar.sx, overflowY: 'scroll', overflowX: 'clip', transform: 'scaleX(-1)' }}
-                flex={1}
-                display={'flex'}
-                flexDirection={'column'}
-            >
+                sx={{
+                    width: `${sidebarLeftWidth}px`,
+                    left: 0,
+                    ml: sidebarOpen ? style.sidebar.margin : offscreen,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    ...style.sidebar.sx,
+                    overflowY: 'scroll',
+                    overflowX: 'clip',
+                    transform: 'scaleX(-1)'
+                }}>
                 <Box
-                    padding={1}
-                    sx={{ transform: 'scaleX(-1)' }}
-                    display={'flex'}
-                    flexDirection={'column'}
-                    flex={1}
-                >
+                    sx={{
+                        padding: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                        transform: 'scaleX(-1)'
+                    }}>
                     {children}
                 </Box>
             </Box>
-
             <PullTab
                 sidebarOpen={sidebarOpen}
                 setSidebarOpen={setSidebarOpen}
             />
         </Box>
-    )
+    );
 }

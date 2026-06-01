@@ -50,12 +50,12 @@ export function PersonFinder() {
                     Search
                 </Button>
             </div>
-
             <Box
-                height={showBottom && name.length > 0 ? 80 : 0}
-                overflow={'hidden'}
-                sx={{ transition: 'height 0.3s ease-in-out' }}
-            >
+                sx={{
+                    height: showBottom && name.length > 0 ? 80 : 0,
+                    overflow: 'hidden',
+                    transition: 'height 0.3s ease-in-out'
+                }}>
                 {results.length > 0 ? (
                     results.map((person) => (
                         <div
@@ -63,14 +63,21 @@ export function PersonFinder() {
                             className="result-item"
                         >
                             <Box
-                                display={'flex'}
-                                justifyContent={'space-between'}
-                                width={'100%'}
-                                alignItems={'center'}
-                            >
-                                <Box flex={1}>{person.gender}</Box>
-                                <Box flex={1}>{person.generation}</Box>
-                                <Box flex={1}>{person.primaryRole}</Box>
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    width: '100%',
+                                    alignItems: 'center'
+                                }}>
+                                <Box sx={{
+                                    flex: 1
+                                }}>{person.gender}</Box>
+                                <Box sx={{
+                                    flex: 1
+                                }}>{person.generation}</Box>
+                                <Box sx={{
+                                    flex: 1
+                                }}>{person.primaryRole}</Box>
                                 <Button size="small">Select</Button>
                             </Box>
                         </div>
@@ -85,5 +92,5 @@ export function PersonFinder() {
                 )}
             </Box>
         </Paper>
-    )
+    );
 }

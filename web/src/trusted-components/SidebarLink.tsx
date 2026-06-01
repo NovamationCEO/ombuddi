@@ -32,8 +32,10 @@ export function SidebarLink(props: {
                 <Icon fontSize="small" />
             </ListItemIcon>
             <ListItemText>
-                <Box fontSize={'small'}>{label}</Box>
+                <Box sx={{
+                    fontSize: 'small'
+                }}>{label}</Box>
             </ListItemText>
         </MenuItem>
-    )
+    );
 }

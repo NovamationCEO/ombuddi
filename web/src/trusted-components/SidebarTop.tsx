@@ -17,23 +17,27 @@ export function SidebarTop() {
 
     return (
         <Box
-            position={'relative'}
-            height={sidebarHeight}
-            marginTop={0}
-            sx={{ transition: '0.3s ease all' }}
-            marginBottom={2}
-        >
+            sx={{
+                position: 'relative',
+                height: sidebarHeight,
+                marginTop: 0,
+                marginBottom: 2,
+                transition: '0.3s ease all'
+            }}>
             <Box
                 {...style.topBar}
-                position={'fixed'}
-                left={leftOpen ? sidebarLeftWidth + 20 : 20}
-                right={rightOpen ? sidebarRightWidth + 20 : 20}
-                mt={style.sidebar.margin}
-                height={sidebarHeight}
-                overflow={'hidden'}
-            >
-                <Box padding={1}>{content}</Box>
+                sx={{
+                    position: 'fixed',
+                    left: leftOpen ? sidebarLeftWidth + 20 : 20,
+                    right: rightOpen ? sidebarRightWidth + 20 : 20,
+                    mt: style.sidebar.margin,
+                    height: sidebarHeight,
+                    overflow: 'hidden'
+                }}>
+                <Box sx={{
+                    padding: 1
+                }}>{content}</Box>
             </Box>
         </Box>
-    )
+    );
 }

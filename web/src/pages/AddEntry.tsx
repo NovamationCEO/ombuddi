@@ -23,7 +23,7 @@ import { PersonFinder } from '../components/PersonFinder'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Add } from '@mui/icons-material'
 import React from 'react'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid'
 
 export function AddEntry() {
     const { caseId } = useParams()
@@ -70,19 +70,22 @@ export function AddEntry() {
                     <Grid2
                         container
                         spacing={2}
-                        alignItems="stretch"
-                        sx={{ height: '100%' }}
+                        sx={{ height: '100%', alignItems: 'stretch' }}
                     >
                         <Grid2
-                            xs={12}
-                            sm={4}
-                            md={3}
                             sx={{ display: 'flex' }}
-                        >
+                            size={{
+                                xs: 12,
+                                sm: 4,
+                                md: 3
+                            }}>
                             <Box
-                                sx={{ border: '1px solid green', flex: 1, width: '100%' }}
-                                p={1}
-                            >
+                                sx={{
+                                    p: 1,
+                                    border: '1px solid green',
+                                    flex: 1,
+                                    width: '100%'
+                                }}>
                                 <Box>
                                     <Typography variant={'h6'}>Associated with Case</Typography>
                                 </Box>
@@ -90,11 +93,12 @@ export function AddEntry() {
                         </Grid2>
 
                         <Grid2
-                            xs={12}
-                            sm={8}
-                            md={9}
                             sx={{ display: 'flex' }}
-                        >
+                            size={{
+                                xs: 12,
+                                sm: 8,
+                                md: 9
+                            }}>
                             <Box sx={{ border: '1px solid blue', flex: 1, width: '100%' }}>
                                 <PersonFinder />
                             </Box>
@@ -125,7 +129,9 @@ export function AddEntry() {
                 </DialogActions>
             </Dialog>
             <Stack spacing={2}>
-                <Box display={'flex'}>
+                <Box sx={{
+                    display: 'flex'
+                }}>
                     <Box>
                         <Typography variant={'h5'}>
                             Add Entry to Case: <em>{caseRes.data?.name}</em>
@@ -134,10 +140,11 @@ export function AddEntry() {
                     <Stack
                         spacing={2}
                         direction={'row'}
-                        display={'flex'}
-                        flex={1}
-                        justifyContent={'flex-end'}
-                    >
+                        sx={{
+                            display: 'flex',
+                            flex: 1,
+                            justifyContent: 'flex-end'
+                        }}>
                         <Button
                             variant={'outlined'}
                             onClick={() => navigate(`/case/${caseId}`)}
@@ -174,7 +181,9 @@ export function AddEntry() {
                                 value={duration}
                                 onChange={(evt) => setDuration(Number(evt.target.value))}
                                 fullWidth
-                                inputProps={{ min: 0, step: 15 }}
+                                slotProps={{
+                                    htmlInput: { min: 0, step: 15 }
+                                }}
                             />
                         </Stack>
                     </RoundedContainer>
@@ -215,10 +224,11 @@ export function AddEntry() {
 
                     <RoundedContainer title={'People'}>
                         <Box
-                            position={'absolute'}
-                            bottom={8}
-                            right={8}
-                        >
+                            sx={{
+                                position: 'absolute',
+                                bottom: 8,
+                                right: 8
+                            }}>
                             <RoundButton
                                 bgcolor={'white'}
                                 size={27}
@@ -241,5 +251,5 @@ export function AddEntry() {
                 </Box>
             </Stack>
         </Box>
-    )
+    );
 }

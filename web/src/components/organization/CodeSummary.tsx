@@ -25,11 +25,11 @@ export function CodeSummary() {
     const organization = useOrganization()
     const codeCategoryRes = useGetter<CodeCategoryType[]>(['get_code_categories_by_organization_id', organization.id])
     const [codeCategories, setCodeCategories] = React.useState<{ id: string; name: string; index: number }[]>([])
-    const [editCodeCategoryId, setEditCodeCategoryId] = React.useState<string>(undefined)
+    const [editCodeCategoryId, setEditCodeCategoryId] = React.useState<string | undefined>(undefined)
     const [dialogText, setDialogText] = React.useState<string>('')
     const [confirmDelete, setConfirmDelete] = React.useState(false)
     const codesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', organization.id])
-    const [editCodeId, setEditCodeId] = React.useState<string>(undefined)
+    const [editCodeId, setEditCodeId] = React.useState<string | undefined>(undefined)
     const [editCodeCode, setEditCodeCode] = React.useState<string>('')
     const [editCodeDescription, setEditCodeDescription] = React.useState<string>('')
     const [showConfirmCodeDelete, setShowConfirmCodeDelete] = React.useState(false)
@@ -44,7 +44,7 @@ export function CodeSummary() {
             setDialogText('')
             return
         }
-        setDialogText(codeCategories.find((cc) => cc.id === editCodeCategoryId)?.name)
+        setDialogText(codeCategories.find((cc) => cc.id === editCodeCategoryId)?.name ?? '')
     }, [editCodeCategoryId])
 
     React.useEffect(() => {
@@ -55,8 +55,8 @@ export function CodeSummary() {
         }
         const code = codesRes.data?.find((code) => code.id === editCodeId)
         if (!code) return
-        setEditCodeCode(code.code)
-        setEditCodeDescription(code.description)
+        setEditCodeCode(code.code ?? '')
+        setEditCodeDescription(code.description ?? '')
     }, [editCodeId])
 
     async function updateCodeCategory() {
@@ -262,7 +262,9 @@ export function CodeSummary() {
                     >
                         Delete Category
                     </Button>
-                    <Box flex={1} />
+                    <Box sx={{
+                        flex: 1
+                    }} />
                     <Button
                         variant={'outlined'}
                         onClick={() => setEditCodeCategoryId(undefined)}
@@ -280,11 +282,14 @@ export function CodeSummary() {
             <Stack spacing={2}>
                 <RoundedContainer title={'Codes'}>
                     <Stack spacing={2}>
-                        <Box display={'flex'}>
+                        <Box sx={{
+                            display: 'flex'
+                        }}>
                             <Box
-                                flex={1}
-                                fontWeight={'bold'}
-                            >
+                                sx={{
+                                    flex: 1,
+                                    fontWeight: 'bold'
+                                }}>
                                 Categories
                             </Box>
                             <Box>
@@ -303,12 +308,15 @@ export function CodeSummary() {
                                     <Accordion key={cc.id}>
                                         <AccordionSummary>
                                             <Box
-                                                display={'flex'}
-                                                fontWeight={'bold'}
-                                                flex={1}
-                                                alignItems={'center'}
-                                            >
-                                                <Box flex={1}>{cc.name}</Box>
+                                                sx={{
+                                                    display: 'flex',
+                                                    fontWeight: 'bold',
+                                                    flex: 1,
+                                                    alignItems: 'center'
+                                                }}>
+                                                <Box sx={{
+                                                    flex: 1
+                                                }}>{cc.name}</Box>
                                                 <RoundButton
                                                     size={40}
                                                     onClick={(e) => {
@@ -320,9 +328,10 @@ export function CodeSummary() {
                                                     <Edit />
                                                 </RoundButton>
                                                 <Box
-                                                    marginLeft={1}
-                                                    marginRight={1}
-                                                >
+                                                    sx={{
+                                                        marginLeft: 1,
+                                                        marginRight: 1
+                                                    }}>
                                                     <RoundButton
                                                         size={40}
                                                         onClick={(e) => {
@@ -352,18 +361,21 @@ export function CodeSummary() {
                                                     ?.filter((code) => code.categoryId === cc.id)
                                                     ?.map((code) => (
                                                         <Box
-                                                            display={'flex'}
-                                                            alignItems={'center'}
-                                                            margin={1}
                                                             key={code.id}
-                                                        >
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                margin: 1
+                                                            }}>
                                                             <RoundButton
                                                                 size={30}
                                                                 onClick={() => setEditCodeId(code.id)}
                                                             >
                                                                 <Edit fontSize="small" />
                                                             </RoundButton>
-                                                            <Box width={10} />
+                                                            <Box sx={{
+                                                                width: 10
+                                                            }} />
                                                             <b>{code.code}</b>
                                                             {code.code.length > 0 &&
                                                                 code.description.length > 0 &&
@@ -372,10 +384,11 @@ export function CodeSummary() {
                                                         </Box>
                                                     ))}
                                                 <Box
-                                                    display={'flex'}
-                                                    justifyContent={'flex-end'}
-                                                    flex={1}
-                                                >
+                                                    sx={{
+                                                        display: 'flex',
+                                                        justifyContent: 'flex-end',
+                                                        flex: 1
+                                                    }}>
                                                     <RoundButton
                                                         size={40}
                                                         onClick={(e) => {
@@ -396,5 +409,5 @@ export function CodeSummary() {
                 </RoundedContainer>
             </Stack>
         </Box>
-    )
+    );
 }

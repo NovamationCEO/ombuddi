@@ -1,119 +1,21 @@
 {
-  "env": {
-    "jest": true,
-    "browser": true
-  },
-  "globals": {
-    "APP_VERSION": false,
-    "PRODUCTION": false,
-    "window": true
-  },
-  "settings": {
-    "react": {
-      "version": "detect"
-    }
-  },
-  "types": [
-    "@mui/types"
-  ],
   "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
     "resolveJsonModule": true,
-    "lib": [
-      "ES2021.String",
-      "DOM"
-    ],
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
-    "target": "ES6",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "useUnknownInCatchVariables": false,
+    "skipLibCheck": true,
+    "types": ["node", "react", "react-dom", "@mui/types"]
   },
-  "include": [
-    "src/**/*"
-  ],
-  "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "ecmaVersion": 2020,
-    "babelOptions": {
-      "presets": [
-        "@babel/preset-react"
-      ],
-    },
-    "requireConfigFile": false,
-    "ecmaFeatures": {
-      "jsx": true
-    }
-  },
-  "rules": {
-    "react-hooks/exhaustive-deps": "off",
-    "semi": [
-      2,
-      "never"
-    ],
-    "quotes": [
-      2,
-      "single",
-      "avoid-escape"
-    ],
-    "no-extra-semi": 2,
-    "indent": [
-      "error",
-      4
-    ],
-    "import/no-extraneous-dependencies": "off",
-    "import/no-unresolved": 0,
-    "import/extensions": 0,
-    "object-curly-spacing": [
-      "error",
-      "always"
-    ],
-    "array-bracket-spacing": [
-      "error",
-      "always"
-    ],
-    "space-in-parens": [
-      "error",
-      "always",
-      {
-        "exceptions": [
-          "()",
-          "{}"
-        ]
-      }
-    ],
-    "no-param-reassign": [
-      2,
-      {
-        "props": false
-      }
-    ],
-    "radix": [
-      "error",
-      "as-needed"
-    ],
-    "class-methods-use-this": 0,
-    "react/no-unused-prop-types": 0,
-    "no-unused-vars": 0,
-    "max-len": [
-      0,
-      120,
-      4
-    ],
-    "import/prefer-default-export": 0,
-    "no-return-assign": [
-      2,
-      "except-parens"
-    ],
-    "no-console": [
-      "warn",
-      {
-        "allow": [
-          "warn",
-          "error"
-        ]
-      }
-    ]
-  }
+  "include": ["src/**/*", "vite.config.ts"]
 }

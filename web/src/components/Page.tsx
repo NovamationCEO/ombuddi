@@ -1,5 +1,6 @@
 import { useStyles } from '../tools/useStyles'
 import { Header } from './Header'
+import type { ReactNode } from 'react'
 
 import { Box } from '@mui/material'
 import { headerHeight } from '../constants/uiSizes'
@@ -7,7 +8,7 @@ import { headerHeight } from '../constants/uiSizes'
 // import { useNavigate } from 'react-router'
 // import React from 'react'
 
-export function Page(props: { element: JSX.Element }) {
+export function Page(props: { element: ReactNode }) {
     const style = useStyles()
 
     // const { keycloak } = useKeycloak()
@@ -26,36 +27,40 @@ export function Page(props: { element: JSX.Element }) {
 
     return (
         <Box
-            width={'100vw'}
-            height={'100vh'}
-            position={'relative'}
-            display={'flex'}
-            flexDirection={'column'}
-            color={style.contrast}
-        >
+            sx={{
+                width: '100vw',
+                height: '100vh',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                color: style.contrast
+            }}>
             <Header />
             <Box
-                height={`calc(100% - ${headerHeight}px)`}
-                flex={1}
-                position={'relative'}
-                display={'flex'}
-            >
+                sx={{
+                    height: `calc(100% - ${headerHeight}px)`,
+                    flex: 1,
+                    position: 'relative',
+                    display: 'flex'
+                }}>
                 {/* <SidebarLeft>
                     <NavigationMenu />
                 </SidebarLeft> */}
                 <Box
-                    flex={1}
-                    display={'flex'}
-                    flexDirection={'column'}
-                >
+                    sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
                     {/* <SidebarTop /> */}
 
                     <Box
-                        flex={1}
                         {...style.mainContainer}
-                        marginTop={`${headerHeight + 20}px`}
-                        overflow={'auto'}
-                    >
+                        sx={{
+                            flex: 1,
+                            marginTop: `${headerHeight + 20}px`,
+                            overflow: 'auto'
+                        }}>
                         {props.element}
                     </Box>
                     {/* <SidebarBottom></SidebarBottom> */}
@@ -63,5 +68,5 @@ export function Page(props: { element: JSX.Element }) {
                 {/* <SidebarRight></SidebarRight> */}
             </Box>
         </Box>
-    )
+    );
 }

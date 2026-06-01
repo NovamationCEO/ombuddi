@@ -15,24 +15,28 @@ export function SidebarRight(props: { children?: React.ReactNode }) {
 
     return (
         <Box
-            position={'relative'}
-            sx={{ transition: '0.3s ease all' }}
-            mr={sidebarOpen ? style.sidebar.margin : offscreen}
-            width={`${sidebarRightWidth + 30}px`}
-        >
+            sx={{
+                position: 'relative',
+                mr: sidebarOpen ? style.sidebar.margin : offscreen,
+                width: `${sidebarRightWidth + 30}px`,
+                transition: '0.3s ease all'
+            }}>
             <Box
                 {...style.sidebar}
-                width={sidebarRightWidth}
-                right={0}
-                mr={sidebarOpen ? style.sidebar.margin : offscreen}
-            >
+                sx={{
+                    width: sidebarRightWidth,
+                    right: 0,
+                    mr: sidebarOpen ? style.sidebar.margin : offscreen
+                }}>
                 <PullTab
                     invert
                     sidebarOpen={sidebarOpen}
                     setSidebarOpen={setSidebarOpen}
                 />
-                <Box padding={1}>{children}</Box>
+                <Box sx={{
+                    padding: 1
+                }}>{children}</Box>
             </Box>
         </Box>
-    )
+    );
 }

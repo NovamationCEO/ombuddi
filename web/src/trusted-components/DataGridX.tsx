@@ -46,9 +46,10 @@ export function DataGridX(props: DataGridXProps) {
     return (
         <Box>
             <Box
-                fontWeight={'bold'}
-                color={style.title.color}
-            >
+                sx={{
+                    fontWeight: 'bold',
+                    color: style.title.color
+                }}>
                 {title}
             </Box>
             <DataGrid
@@ -108,5 +109,5 @@ export function DataGridX(props: DataGridXProps) {
                 {...dataGridProps}
             />
         </Box>
-    )
+    );
 }

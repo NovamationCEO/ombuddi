@@ -1,6 +1,6 @@
 import { Box, Stack } from '@mui/material'
 import monster from '../assets/images/monster.png'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid'
 import { useNavigate } from 'react-router-dom'
 // import img1 from '../assets/images/add_entry.png'
 import img2 from '../assets/images/cases.png'
@@ -23,60 +23,64 @@ export function HomePage() {
         const { name, url, image, description } = props
         return (
             <Grid2
-                xs={12}
-                sm={6}
-                md={4}
-                display={'flex'}
-            >
+                size={{
+                    xs: 12,
+                    sm: 6,
+                    md: 4
+                }}
+                sx={{
+                    display: 'flex'
+                }}>
                 <Box
-                    border={'1px solid black'}
-                    borderRadius={2}
                     onClick={() => navigate(url)}
-                    textAlign={'center'}
-                    overflow={'hidden'}
                     sx={{
+                        border: '1px solid black',
+                        borderRadius: 2,
+                        textAlign: 'center',
+                        overflow: 'hidden',
                         cursor: 'pointer',
                         filter: 'sepia(1)',
-                        '&:hover': { backgroundColor: '#f0f0f0', filter: 'sepia(0)' },
-                    }}
-                >
+                        '&:hover': { backgroundColor: '#f0f0f0', filter: 'sepia(0)' }
+                    }}>
                     <Stack spacing={2}>
                         <img
                             src={image}
                             width={'100%'}
                         />
                         <Box
-                            fontSize={'large'}
-                            fontWeight={'bold'}
-                        >
+                            sx={{
+                                fontSize: 'large',
+                                fontWeight: 'bold'
+                            }}>
                             {name}
                         </Box>
                         <Box
-                            p={1}
-                            mb={1}
-                        >
+                            sx={{
+                                p: 1,
+                                mb: 1
+                            }}>
                             {description}
                         </Box>
                     </Stack>
                 </Box>
             </Grid2>
-        )
+        );
     }
 
     return (
         <Box>
             <Box
-                position={'absolute'}
-                right={20}
-                top={50}
-            >
+                sx={{
+                    position: 'absolute',
+                    right: 20,
+                    top: 50
+                }}>
                 <img
                     src={monster}
                     width={100}
                     height={100}
                 />
             </Box>
-
             <Grid2
                 container
                 spacing={2}
@@ -91,5 +95,5 @@ export function HomePage() {
                 })}
             </Grid2>
         </Box>
-    )
+    );
 }

@@ -56,10 +56,12 @@ export function NumberField(props: {
             type={forceText ? 'text' : 'number'}
             fullWidth
             disabled={disabled}
-            inputProps={{ step: step ? step : 1, max: max, min: min }}
             helperText={
                 helperText || (multiple && multiple > 1) ? 'Rounded down to nearest multiple of ' + multiple : undefined
             }
+            slotProps={{
+                htmlInput: { step: step ? step : 1, max: max, min: min }
+            }}
         />
-    )
+    );
 }

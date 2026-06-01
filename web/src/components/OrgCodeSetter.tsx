@@ -1,4 +1,4 @@
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid'
 import { Box } from '@mui/system'
 import { MySwitch } from './MySwitch'
 import {
@@ -50,9 +50,10 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
     const getLabel = React.useCallback(
         (codeId: string, codeLabel: string, isMatch: boolean) => (
             <Box
-                color={isMatch ? 'forestgreen' : 'black'}
-                sx={{ userSelect: 'none' }}
-            >
+                sx={{
+                    color: isMatch ? 'forestgreen' : 'black',
+                    userSelect: 'none'
+                }}>
                 {codeId + ': ' + codeLabel}
             </Box>
         ),
@@ -77,7 +78,9 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                                     disableGutters
                                 >
                                     <AccordionSummary>
-                                        <Box fontWeight="bold">{category.name}</Box>
+                                        <Box sx={{
+                                            fontWeight: "bold"
+                                        }}>{category.name}</Box>
                                     </AccordionSummary>
                                     <AccordionDetails>
                                         <Grid2
@@ -90,8 +93,8 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                                                     const isMatch = localCodes.includes(code.id)
                                                     return (
                                                         <Grid2
-                                                            xs={12}
                                                             key={code.id}
+                                                            size={12}
                                                         >
                                                             <Box onClick={(e) => e.stopPropagation()}>
                                                                 <MySwitch
@@ -105,12 +108,12 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                                                                 />
                                                             </Box>
                                                         </Grid2>
-                                                    )
+                                                    );
                                                 })}
                                         </Grid2>
                                     </AccordionDetails>
                                 </Accordion>
-                            )
+                            );
                         })}
                 </Grid2>
             </DialogContent>
@@ -124,5 +127,5 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                 </Button>
             </DialogActions>
         </Dialog>
-    )
+    );
 })

@@ -9,7 +9,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { showDevtools } from './constants/showDevtools'
 import { Snack } from './trusted-components/Snack'
 import { Background } from './trusted-components/Background'
-import { Box, BoxProps, ThemeProvider } from '@mui/material'
+import { Box, ThemeProvider, SxProps } from '@mui/material'
+import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
 const App: React.FC = () => {
     return (
@@ -29,17 +30,17 @@ const QueryWrap: React.FC = () => {
         //     onTokens={tokenLogger}
         //     authClient={keycloak}
         // >
+        // </ReactKeycloakProvider>
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
                 {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}
                 <InnerApp />
             </QueryClientProvider>
         </React.StrictMode>
-        // </ReactKeycloakProvider>
-    )
+    );
 }
 
-const outerBoxStyle: BoxProps = {
+const outerBoxStyle: SxProps<Theme> = {
     display: 'flex',
     flexDirection: 'column',
     position: 'relative',
@@ -47,7 +48,7 @@ const outerBoxStyle: BoxProps = {
     overflow: 'hidden',
 }
 
-const innerBoxStyle: BoxProps = {
+const innerBoxStyle: SxProps<Theme> = {
     flexDirection: 'column',
     position: 'relative',
     flex: 1,
@@ -60,9 +61,9 @@ const InnerApp: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <Snack snack={snack} />
-            <Box {...outerBoxStyle}>
+            <Box sx={outerBoxStyle}>
                 <Background />
-                <Box {...innerBoxStyle}>
+                <Box sx={innerBoxStyle}>
                     <RouterProvider router={router} />
                 </Box>
             </Box>

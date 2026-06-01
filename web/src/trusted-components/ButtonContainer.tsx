@@ -5,11 +5,12 @@ export function ButtonContainer(props: { children: React.ReactNode }) {
 
     return (
         <Box
-            display={'flex'}
-            flex={1}
-            flexDirection={'row-reverse'}
-            mt={1}
-        >
+            sx={{
+                display: 'flex',
+                flex: 1,
+                flexDirection: 'row-reverse',
+                mt: 1
+            }}>
             <Stack
                 spacing={2}
                 direction={'row'}
@@ -17,5 +18,5 @@ export function ButtonContainer(props: { children: React.ReactNode }) {
                 {children}
             </Stack>
         </Box>
-    )
+    );
 }
