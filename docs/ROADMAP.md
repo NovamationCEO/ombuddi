@@ -37,7 +37,10 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 **Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
 
-The full plan lives in `docs/MULTI_TENANCY.md` — endpoint-by-endpoint gaps, the `Principal` model, the `utils.py` wrapper, and a test scenario list. Pre-auth lift we can land safely under Principle 1 is called out at the bottom of that doc.
+- [x] Pre-auth lift complete: `organization_id NOT NULL` on `cases` and `entries`; `owner_constraint` parameter on `utils.py` helpers (default `None`); create-payload sources wired up on the frontend; `update_one` returns 404 when owner-scoped and zero rows match.
+- [ ] Enforcement pending Phase 4: `Principal` decoder, `@requires_principal` decorator, per-view adoption.
+
+The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/MULTI_TENANCY.md`.
 
 ## Phase 1 — Entry flow complete  [not started]
 

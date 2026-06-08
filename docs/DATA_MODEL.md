@@ -45,19 +45,21 @@ Org-customizable replacement / extension of the hard-coded role list in `AddPers
 
 ### `cases`
 - `id` UUID, PK
+- `organization_id` UUID, FK -> organizations.id
 - `name` TEXT (often randomized for security)
 - `description` TEXT
-- `codes` TEXT[] (UUIDs of `codes.id`, stored as a Postgres array — see `EditCodeDialog.save()` which sends `codes: string[]`)
+- `codes` UUID[] (ids of `codes` rows or IOA reference codes; not FK-enforced because Postgres arrays)
 - `status` TEXT ('active', etc.; `get_all_cases` filters on `'active'`)
 - `created_at` TIMESTAMPTZ
-- `updated_at` TIMESTAMPTZ
+- `updated_at` TIMESTAMPTZ (auto via trigger)
 
-No `organization_id` column is referenced in the case model, but cases are per-org by transitivity through the logged-in ombuds. **This is a multi-tenancy hole**: `get_all_cases` has no org filter — any caller gets every active case in the DB. Fix when auth lands.
+The `organization_id` column exists; the API does not yet *enforce* that the caller owns the row. Enforcement lands with Phase 4 auth — see `docs/MULTI_TENANCY.md`.
 
 ### `entries`
 - `id` UUID, PK
-- `case_id` UUID, FK
-- `ombuds_id` UUID, FK
+- `case_id` UUID, FK -> cases.id
+- `ombuds_id` UUID, FK -> ombuds.id
+- `organization_id` UUID, FK -> organizations.id  *(denormalized — must match the parent case's org; application code is responsible for the invariant)*
 - `date` DATE (the meeting / entry date)
 - `medium` TEXT ('inPerson', 'phone', 'video', 'email', 'other')
 - `duration` INT (minutes)
@@ -104,12 +106,9 @@ Implications:
 - The organization UUID is immutable; org name is purely decorative.
 - The server-side `NAME_SALT` env var must be rotated never (or migrated with a re-hash plan we don't have yet).
 
-## Multi-tenancy gaps (must fix before real users)
+## Multi-tenancy
 
-- `get_all_cases` — no org/ombuds filter.
-- `get_case_by_id`, `get_entries_by_case_id`, `get_entry_by_id` — no ownership check.
-- `update_case`, `update_entry`, `update_code`, `update_code_category`, `update_primary_role` — no ownership check.
-- `get_codes_by_organization_id` is parameterized but trusts the URL.
-- `persons` is filtered by `organization_id` on the list endpoint, but `get_person_by_id` is not.
+The full plan, gap list, and test scenarios live in `docs/MULTI_TENANCY.md`. Short version:
 
-Every endpoint needs to be wrapped in: "the calling principal is an ombuds whose `organization_id` matches the target row's." That happens at the same time as real auth.
+- Pre-auth lift is **done**: every table has an `organization_id` column (denormalized on `entries` for query simplicity), and `utils.py` helpers now accept an `owner_constraint` parameter that the auth layer will pass through.
+- Enforcement is **pending Phase 4** (Keycloak). Until then, endpoints trust the org id supplied in the request body / URL.

@@ -87,8 +87,10 @@ export function AddNewCase() {
     }, [newId])
 
     async function save() {
+        if (!organizationId) return
         const payload = {
             id: newId,
+            organizationId,
             name: caseName,
             description: description,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],

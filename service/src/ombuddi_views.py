@@ -6,6 +6,7 @@ ombuddi_views = Blueprint('ombuddi_views', __name__)
 
 case_model = {
     'id': 'id',
+    'organizationId': 'organization_id',
     'name': 'name',
     'description': 'description',
     'codes': 'codes',
@@ -148,10 +149,11 @@ entry_model = {
     'id': 'id',
     'caseId': 'case_id',
     'ombudsId': 'ombuds_id',
+    'organizationId': 'organization_id',
     'date': 'date',
     'medium': 'medium',
     'duration': 'duration',
-    'notes': 'notes'
+    'notes': 'notes',
 }
 
 @ombuddi_views.route('/api/v1/get_entry_by_id/<id>')

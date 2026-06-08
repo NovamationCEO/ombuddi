@@ -1,5 +1,6 @@
 export type CaseType = {
     id: string
+    organizationId: string
     name: string
     description: string
     codes: string[]
@@ -62,6 +63,7 @@ export type EntryType = {
     id: string
     caseId: string
     ombudsId: string
+    organizationId: string
     date: Date
     medium: string
     duration: number

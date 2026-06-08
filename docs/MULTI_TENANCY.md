@@ -58,18 +58,18 @@ Sourced from `service/src/ombuddi_views.py` and `service/src/person_views.py`. "
 | `GET /get_persons_by_case_id/<case_id>` | None | Verify case belongs to principal.org. |
 | `GET /get_persons_by_entry_id/<entry_id>` | None | Verify entry's case belongs to principal.org. |
 
-## Schema changes the plan requires
+## Schema changes the plan requires  *(complete)*
 
-1. **`cases.organization_id UUID NOT NULL`** (FK to organizations). Today, cases have no org column at all and inherit org by transitivity through the entries' ombuds. That's not enforceable. Add the column; populate at case-create time from the principal.
-2. **`entries.organization_id UUID NOT NULL`** (FK to organizations). Strictly speaking redundant with `cases.organization_id`, but it lets every `entries`-touching query AND in the org constraint without a join. The redundancy is worth it for query simplicity and for the `utils.py` generic helpers, which don't currently support joins.
-3. **No changes to `persons`, `codes`, `code_categories`, `primary_roles`, `ombuds`** — they already carry `organization_id`.
+1. **`cases.organization_id UUID NOT NULL`** (FK to organizations). Populated at case-create time from the frontend's `useOrganization()`; will be force-stamped from the principal once auth lands.
+2. **`entries.organization_id UUID NOT NULL`** (FK to organizations). Denormalized from `cases.organization_id`; lets every `entries`-touching query AND in the org constraint without a join. Frontend source is `caseRes.data?.organizationId` so the invariant `case.org_id === entry.org_id` is explicit.
+3. **No changes to `persons`, `codes`, `code_categories`, `primary_roles`, `ombuds`** — they already carried `organization_id`.
 4. **`entry_person`** — pure join table, no org column needed; ownership is verified via the parent `entries` row.
 
-Both column additions are pre-production-safe (Principle 1). They can land *before* auth — the columns just won't be enforced as a filter until then.
+The columns exist now. Enforcement (refusing reads/writes that don't match the principal's org) lands with Phase 4 auth.
 
-## The wrapper approach
+## The wrapper approach  *(parameter shape done; enforcement pending)*
 
-Rather than retrofit every endpoint by hand, modify `service/src/utils.py` so each generic CRUD helper takes an `owner_constraint` parameter that gets ANDed into every WHERE clause:
+Each generic CRUD helper in `service/src/utils.py` now accepts an `owner_constraint` parameter (default `None` → behavior unchanged). Once the auth layer exists, every view will pass the principal's `{'organization_id': principal.organization_id}` and the WHERE / INSERT clauses will close around it automatically:
 
 ```python
 def get_one(table, model, constraints, owner_constraint, db_name="default"):
@@ -125,12 +125,11 @@ There are none. IOA reference codes are loaded from `web/src/constants/ioaConsta
 5. Frontend: replace `useUserId.ts` and `useOrganization.ts` with hooks that read claims off the Keycloak token instead of fetching `/get_ombuds_by_id`.
 6. Manual run-through of the test scenarios above. Convert to automated tests when we add a test harness (Phase 0 follow-up).
 
-## Pre-auth lift we can do now (safe under Principle 1)
+## Pre-auth lift  *(complete)*
 
-If we want to chip away before Keycloak lands:
+- [x] `cases.organization_id NOT NULL` added; `AddNewCase.tsx` passes it from `useOrganization()`.
+- [x] `entries.organization_id NOT NULL` added; `AddEntry.tsx` passes it from `caseRes.data?.organizationId`.
+- [x] `owner_constraint` parameter on `get_one` / `get_many` / `add_one` / `update_one`; default `None` preserves current behavior; non-empty ANDs into WHERE (read/update) or merges into INSERT (add).
+- [x] `update_one` returns 404 when an `owner_constraint` is supplied and zero rows match (ambiguous-by-design — doesn't leak that the row exists in another tenant).
 
-- [ ] Add `organization_id NOT NULL` to `cases` in `schema.sql` and the create-case payload. The frontend already computes the principal's org (via the chained `useUserId → ombuds → organization`); just pass it through.
-- [ ] Add `organization_id NOT NULL` to `entries`. Same pattern.
-- [ ] Add the `owner_constraint` parameter to `get_one` / `get_many` / `add_one` / `update_one` with a default of `{}` so existing call sites still work. Endpoints opt in to passing it.
-
-Doing those three things ahead of time makes Phase 4 a smaller, lower-risk change.
+What remains for Phase 4: the `Principal` decoder, the `@requires_principal` decorator, and per-view adoption of the new parameter shape.

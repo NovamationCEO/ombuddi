@@ -108,18 +108,22 @@ CREATE INDEX primary_roles_organization_id_idx ON primary_roles (organization_id
 -- with one or more code ids (UUID[]). Status is currently a free TEXT
 -- field ('active', etc.); could become an enum later.
 --
--- NOTE: `organization_id` is intentionally absent in the current DB but
--- will be added in Phase 0 Tier 5 (multi-tenancy) — see ROADMAP.md. Once
--- added, `get_all_cases` filters on it.
+-- `organization_id` is the canonical ownership column. Today the API does
+-- not enforce that the caller's principal matches it; enforcement lands
+-- with Phase 4 auth (see docs/MULTI_TENANCY.md). The column exists now so
+-- that landing is a small change.
 CREATE TABLE cases (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    codes       UUID[] NOT NULL DEFAULT '{}',   -- references codes.id; not enforced by FK because arrays
-    status      TEXT NOT NULL DEFAULT 'active',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    description     TEXT NOT NULL DEFAULT '',
+    codes           UUID[] NOT NULL DEFAULT '{}',   -- references codes.id; not enforced by FK because arrays
+    status          TEXT NOT NULL DEFAULT 'active',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX cases_organization_id_idx ON cases (organization_id);
 
 CREATE TRIGGER cases_set_updated_at
     BEFORE UPDATE ON cases
@@ -132,18 +136,27 @@ CREATE TRIGGER cases_set_updated_at
 -- The unit of work. One meeting, phone call, email, etc. attached to
 -- exactly one case (the "catch-all" case exists per ombuds for entries
 -- without a real case home).
+--
+-- `organization_id` is denormalized: it can be derived via
+-- entries.case_id → cases.organization_id, but storing it directly lets
+-- every query AND in an org filter without a join. utils.py's generic
+-- CRUD helpers don't support joins; the redundancy is worth it.
+-- Enforce consistency in application code (and eventually a CHECK trigger
+-- if we ever see drift).
 CREATE TABLE entries (
-    id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id   UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    ombuds_id UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
-    date      DATE NOT NULL,
-    medium    TEXT NOT NULL DEFAULT 'inPerson',
-    duration  INT  NOT NULL DEFAULT 0,         -- minutes
-    notes     TEXT NOT NULL DEFAULT ''
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id         UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+    ombuds_id       UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    date            DATE NOT NULL,
+    medium          TEXT NOT NULL DEFAULT 'inPerson',
+    duration        INT  NOT NULL DEFAULT 0,         -- minutes
+    notes           TEXT NOT NULL DEFAULT ''
 );
 
-CREATE INDEX entries_case_id_idx   ON entries (case_id);
-CREATE INDEX entries_ombuds_id_idx ON entries (ombuds_id);
+CREATE INDEX entries_case_id_idx         ON entries (case_id);
+CREATE INDEX entries_ombuds_id_idx       ON entries (ombuds_id);
+CREATE INDEX entries_organization_id_idx ON entries (organization_id);
 
 
 -- =====================================================================

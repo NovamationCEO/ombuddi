@@ -14,17 +14,29 @@ logger = logging.getLogger(__name__)
 # CREATE
 ###
 
-def add_one(table, model, request, db_name="default", key='id'):
+def add_one(table, model, request, db_name="default", key='id', owner_constraint=None):
+    """Insert a row.
+
+    `owner_constraint` is a dict of DB column name -> value (e.g. {'organization_id': '...'})
+    that gets merged into the row being inserted, overriding any value the
+    client sent for those columns. Used to force-stamp principal-derived
+    fields once auth lands. Default `None` means "no override" — behavior
+    matches the pre-multi-tenancy version of this helper.
+    """
     conn = None
+    owner_constraint = owner_constraint or {}
     user_data = request.get_json()
     if key not in model:
         return jsonify({'success': False, 'status': 'input error', 'error': f'Missing {key}'}), 400
     valid_data = {k: v for k, v in user_data.items() if k in model}
-    set_clause = ', '.join([f"{model[k]}" for k in valid_data])
-    values_clause = ', '.join(['%s' for k in valid_data])
+    # column-name -> value so owner_constraint can override what the client sent
+    column_values = {model[k]: v for k, v in valid_data.items()}
+    column_values.update(owner_constraint)
+    set_clause = ', '.join(column_values.keys())
+    values_clause = ', '.join(['%s' for _ in column_values])
     sql_command = "INSERT INTO " + table + f" ({set_clause}) VALUES ({values_clause}) RETURNING {model[key]};"
 
-    values = [v for k, v in valid_data.items()]
+    values = list(column_values.values())
     try:
         conn = get_db_connection(db_name)
         with conn.cursor() as cur:
@@ -48,13 +60,20 @@ def add_one(table, model, request, db_name="default", key='id'):
 # READ
 ###
 
-def get_one(table, model, constraints, db_name="default"):
+def get_one(table, model, constraints, db_name="default", owner_constraint=None):
+    """Read a single row.
+
+    `owner_constraint` (dict of DB column name -> value) is ANDed into the
+    WHERE clause so the caller cannot see rows they don't own. Default `None`
+    means "no extra filter" — pre-multi-tenancy behavior.
+    """
     conn = None
-    where_clause = ' AND '.join(f"{k} = %s" for k in constraints)
-    values = [v for k,v in constraints.items()]
+    full_constraints = {**constraints, **(owner_constraint or {})}
+    where_clause = ' AND '.join(f"{k} = %s" for k in full_constraints)
+    values = list(full_constraints.values())
 
     keys_string = ', '.join(model.values())
-    sql_command = ('SELECT ' + keys_string  
+    sql_command = ('SELECT ' + keys_string
                 + '''   FROM ''' + table + ''' WHERE ''' + where_clause)
 
     try:
@@ -72,7 +91,14 @@ def get_one(table, model, constraints, db_name="default"):
         if conn:
             conn.close()
 
-def get_many(table, model, constraints, db_name="default"):
+def get_many(table, model, constraints, db_name="default", owner_constraint=None):
+    """Read many rows.
+
+    `owner_constraint` (dict of DB column name -> value) is ANDed into the
+    WHERE clause. Default `None` means "no extra filter" — pre-multi-tenancy
+    behavior. Owner constraints only support simple equality; sentinel values
+    like None / 'IS NOT NULL' are not honored on this side.
+    """
     conn = None
     where_parts = []
     values = []
@@ -85,6 +111,10 @@ def get_many(table, model, constraints, db_name="default"):
         else:
             where_parts.append(f"{k} = %s")
             values.append(v)
+
+    for k, v in (owner_constraint or {}).items():
+        where_parts.append(f"{k} = %s")
+        values.append(v)
 
     where_clause = ' AND '.join(where_parts)
     keys_string = ', '.join(model.values())
@@ -191,24 +221,45 @@ def get_many_in_by(table, model, list_constraint, by_constraints, db_name="defau
 # UPDATE
 ###
 
-def update_one(table, model, request, db_name="default"):
+def update_one(table, model, request, db_name="default", owner_constraint=None):
+    """Update a single row by id.
+
+    `owner_constraint` (dict of DB column name -> value) is ANDed into the
+    WHERE clause so the caller cannot update rows they don't own. If a
+    non-empty constraint is provided and zero rows match, returns 404
+    (instead of silent success). Default `None` preserves the pre-multi-tenancy
+    behavior of always returning success.
+    """
     conn = None
+    owner_constraint = owner_constraint or {}
     user_data = request.json
     if 'id' not in user_data:
         return jsonify({'success': False, 'status': 'input error', 'error': 'Missing id'}), 400
-    
+
     valid_data = {k: v for k, v in user_data.items() if k in model}
     set_clause = ', '.join([f"{model[k]} = COALESCE(%s, {model[k]})" for k in valid_data if k != 'id'])
-    sql_command = "UPDATE " + table + f" SET {set_clause} WHERE id = %s"
+    where_parts = ['id = %s'] + [f'{k} = %s' for k in owner_constraint.keys()]
+    sql_command = f"UPDATE {table} SET {set_clause} WHERE {' AND '.join(where_parts)}"
 
-    values = [v for k, v in valid_data.items() if k != 'id'] + [user_data['id']]
+    values = (
+        [v for k, v in valid_data.items() if k != 'id']
+        + [user_data['id']]
+        + list(owner_constraint.values())
+    )
 
     try:
         conn = get_db_connection(db_name)
         with conn.cursor() as cur:
             cur.execute(sql_command, values)
+            # When the caller scopes by ownership, a zero-row update means
+            # either the row doesn't exist OR it belongs to someone else.
+            # Surface that as 404; ambiguity is on purpose (don't leak that
+            # a UUID exists in another tenant).
+            if owner_constraint and cur.rowcount == 0:
+                conn.rollback()
+                return jsonify({'success': False, 'status': '404 error', 'error': 'Not found'}), 404
             conn.commit()
-                    
+
             return jsonify({'success': True, 'status': 'success'}), 200
     except Exception as e:
         conn.rollback()

@@ -46,9 +46,15 @@ export function AddEntry() {
     const [entryPriority, setEntryPriority] = useState('primary')
 
     async function save() {
+        const organizationId = caseRes.data?.organizationId
+        if (!organizationId) return
         const payload = {
             caseId,
             ombudsId,
+            // Entry's org is denormalized from the parent case so every entry
+            // query can scope on it without joining; sourcing from caseRes
+            // here makes the invariant case.org_id === entry.org_id explicit.
+            organizationId,
             date: eventDate,
             medium,
             duration,
