@@ -27,6 +27,7 @@ import { RoundButton } from '../trusted-components/RoundButton'
 import { Add } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
+import { usePicklists } from '../tools/usePicklists'
 
 /** Compact label for a Person chip — demographics only, no identity. */
 function personLabel(p: PersonType): string {
@@ -47,15 +48,27 @@ export function AddEntry() {
     const ombudsId = useUserId()
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
 
-    const [medium, setMedium] = useState('inPerson')
-    const entryMediums = [
-        { value: 'inPerson', label: 'In Person' },
-        { value: 'phone', label: 'Phone' },
-        { value: 'video', label: 'Videoconference' },
-        { value: 'email', label: 'Email' },
-        { value: 'other', label: 'Other' },
-    ]
-    const [entryPriority, setEntryPriority] = useState('primary')
+    // Entry medium and priority are org-customizable picklists. The stored
+    // value on entries.medium is the picklist row's display name directly
+    // (e.g. "In Person") — see schema.sql notes on picklists.
+    const mediums = usePicklists('medium')
+    const priorities = usePicklists('priority')
+    const [medium, setMedium] = useState('')
+    const [entryPriority, setEntryPriority] = useState('')
+
+    // Auto-select the first option (lowest index) once the picklists arrive,
+    // so the ombuds doesn't have to start by clicking radios.
+    React.useEffect(() => {
+        if (!medium && mediums.items.length > 0) {
+            setMedium(mediums.items[0].name)
+        }
+    }, [mediums.items, medium])
+
+    React.useEffect(() => {
+        if (!entryPriority && priorities.items.length > 0) {
+            setEntryPriority(priorities.items[0].name)
+        }
+    }, [priorities.items, entryPriority])
 
     // People staged for this entry. Kept in component state until the entry is
     // saved; then we POST add_entry_person for each.
@@ -308,16 +321,14 @@ export function AddEntry() {
                             value={entryPriority}
                             onChange={(evt) => setEntryPriority(evt.target.value)}
                         >
-                            <FormControlLabel
-                                value={'primary'}
-                                control={<Radio />}
-                                label={'Primary'}
-                            />
-                            <FormControlLabel
-                                value={'secondary'}
-                                control={<Radio />}
-                                label={'Secondary'}
-                            />
+                            {priorities.items.map((item) => (
+                                <FormControlLabel
+                                    key={item.id}
+                                    value={item.name}
+                                    control={<Radio />}
+                                    label={item.name}
+                                />
+                            ))}
                         </RadioGroup>
                     </RoundedContainer>
                     <RoundedContainer title={'Entry Method'}>
@@ -325,12 +336,12 @@ export function AddEntry() {
                             value={medium}
                             onChange={(evt) => setMedium(evt.target.value)}
                         >
-                            {entryMediums.map((type) => (
+                            {mediums.items.map((item) => (
                                 <FormControlLabel
-                                    key={type.value}
-                                    value={type.value}
+                                    key={item.id}
+                                    value={item.name}
                                     control={<Radio />}
-                                    label={type.label}
+                                    label={item.name}
                                 />
                             ))}
                         </RadioGroup>

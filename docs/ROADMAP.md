@@ -42,7 +42,7 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/MULTI_TENANCY.md`.
 
-## Phase 1 — Entry flow complete  [mostly done]
+## Phase 1 — Entry flow complete  [done]
 
 Goal: an ombuds can fully log a meeting and associate people with it.
 
@@ -53,7 +53,7 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 - [x] CaseSummary: highlighted entry now shows associated people as chips below notes.
 - [x] Inline-dialog "Create new user": PersonFinder's `onCreateRequest` fires with the typed name; AddEntry mounts `PersonForm` in a stacked Dialog pre-filled with that name. On save, the new person is staged immediately. The `/add_person` route still works as a fallback when PersonFinder is used outside AddEntry.
 - [x] Tags on entries (decision: allowed). `entries.codes UUID[]` mirrors `cases.codes`. Same CodeSetterBox picker pattern as AddNewCase (IOA + org). CaseSummary shows the highlighted entry's tags as CodeChips above the People list. Issue-level tagging stays on the case; action-level tagging (e.g. "intake", "mediation") happens on the entry.
-- [ ] Org-customizable entry `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
+- [x] Org-customizable entry `medium` and `priority`. Went with the **generic `picklists` table** keyed by `kind` so future list types (ombuds_action, referral_source, case_contact, risk_level, …) ship as configuration rather than schema changes. `usePicklists(kind)` hook + `PicklistManager` component on the Organization page handle CRUD + reorder. `primary_roles` stays separate for now; it could be folded into picklists later.
 
 ## Phase 2 — Persons & visitors hardening  [not started]
 

@@ -5,6 +5,7 @@ import React from 'react'
 import { CodeSummary } from '../components/organization/CodeSummary'
 import { useOrganization } from '../tools/useOrganization'
 import { PrimaryRoles } from '../components/organization/PrimaryRoles'
+import { PicklistManager } from '../components/organization/PicklistManager'
 
 export function Organization() {
     const [orgName, setOrgName] = React.useState<string>('')
@@ -35,6 +36,16 @@ export function Organization() {
                 </RoundedContainer>
                 <CodeSummary />
                 <PrimaryRoles />
+                <PicklistManager
+                    kind={'medium'}
+                    title={'Entry Mediums'}
+                    singularNoun={'medium'}
+                />
+                <PicklistManager
+                    kind={'priority'}
+                    title={'Entry Priorities'}
+                    singularNoun={'priority'}
+                />
             </Stack>
         </Box>
     )

@@ -106,6 +106,41 @@ CREATE INDEX primary_roles_organization_id_idx ON primary_roles (organization_id
 
 
 -- =====================================================================
+-- picklists
+-- =====================================================================
+-- Generic key-by-kind store for every org-customizable single-select list:
+-- entry mediums, entry priorities, ombuds-action tags, referral sources,
+-- case-related contacts, risk levels, etc.
+--
+-- A single TEXT column on each entry / case / person stores the chosen
+-- picklist row's `name` directly (e.g. entries.medium = 'In Person'). This
+-- means renaming a row affects future selections only; historic data keeps
+-- the prior label. That's a deliberate trade-off — see docs/LESSONS.md.
+--
+-- `primary_roles` is structurally identical and could be folded into this
+-- table eventually; for now it stays separate to avoid churn during the
+-- pre-auth lift.
+CREATE TABLE picklists (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    kind            TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    index           INT NOT NULL DEFAULT 0,
+    soft_delete     BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX picklists_org_kind_idx ON picklists (organization_id, kind);
+
+-- Partial unique: prevents two *active* picklist rows with the same name
+-- inside the same org+kind. Soft-deleted rows still hold their slot in
+-- history but don't block re-creating a name later (after the soft-delete
+-- is reversed or after enough drift). Also lets the dev seed use ON CONFLICT.
+CREATE UNIQUE INDEX picklists_active_unique_idx
+    ON picklists (organization_id, kind, name)
+    WHERE soft_delete = FALSE;
+
+
+-- =====================================================================
 -- cases
 -- =====================================================================
 -- A case bundles related entries about the same issue or people. Tagged

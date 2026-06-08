@@ -41,7 +41,18 @@ Note the typo / bug below — see LESSONS.md, `get_codes_by_category_id` queries
 - `index` INT
 - `soft_delete` BOOL
 
-Org-customizable replacement / extension of the hard-coded role list in `AddPerson.tsx`. The hard-coded list there should eventually be replaced by these rows once seeded.
+Org-customizable replacement / extension of the hard-coded role list in `AddPerson.tsx`. The hard-coded list there should eventually be replaced by these rows once seeded. Structurally identical to `picklists` — could be folded in.
+
+### `picklists`
+- `id` UUID, PK
+- `organization_id` UUID, FK
+- `kind` TEXT (e.g. `'medium'`, `'priority'`, `'ombuds_action'`, `'referral_source'`)
+- `name` TEXT (the display label, also the value stored on parent rows)
+- `index` INT (sort order within an org+kind)
+- `soft_delete` BOOL
+- Partial unique index on `(organization_id, kind, name) WHERE soft_delete = FALSE`
+
+Generic single-select customizable list. The chosen value gets stored as a TEXT field on the parent row (e.g. `entries.medium = 'In Person'`); renaming a picklist row therefore affects only future selections.
 
 ### `cases`
 - `id` UUID, PK

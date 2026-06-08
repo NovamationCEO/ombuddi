@@ -22,3 +22,17 @@ VALUES (
     'Dev Ombuds'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Default picklists so AddEntry has medium and priority options available
+-- out of the box. These are org-customizable in the UI under Organization →
+-- Entry Mediums / Entry Priorities; this seed just makes the dev experience
+-- usable without manually clicking through admin first.
+INSERT INTO picklists (organization_id, kind, name, index, soft_delete) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'medium',   'In Person',       0, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'medium',   'Phone',           1, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'medium',   'Videoconference', 2, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'medium',   'Email',           3, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'medium',   'Other',           4, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'priority', 'Primary',         0, FALSE),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'priority', 'Secondary',       1, FALSE)
+ON CONFLICT (organization_id, kind, name) WHERE soft_delete = FALSE DO NOTHING;

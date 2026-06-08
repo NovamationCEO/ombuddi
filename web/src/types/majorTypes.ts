@@ -59,6 +59,21 @@ export type PrimaryRoleType = {
     softDelete: boolean
 }
 
+export type PicklistType = {
+    id: string
+    organizationId: string
+    /**
+     * Discriminator: which list this row belongs to. Examples today:
+     * 'medium', 'priority'. Future: 'ombuds_action', 'referral_source',
+     * 'case_contact', 'risk_level'. Keep this in lockstep with the kind
+     * strings the UI hard-codes in `usePicklists(kind)` calls.
+     */
+    kind: string
+    name: string
+    index: number
+    softDelete: boolean
+}
+
 export type EntryType = {
     id: string
     caseId: string

@@ -35,17 +35,10 @@ export function CaseSummary() {
         return entriesRes.data?.find((e) => e.id === highlightedId) ?? null
     }, [highlightedId, entriesRes.data])
 
+    // Entry medium is stored as the org-customized display name directly
+    // (picklist row's `name` field), so we just render it as-is.
     function mediumText(medium?: string) {
-        if (!medium) return ''
-        const mapping = {
-            inPerson: 'In Person',
-            phone: 'Phone',
-            video: 'Videoconference',
-            email: 'Email',
-            other: 'Other',
-        }
-
-        return mapping[medium] || medium
+        return medium ?? ''
     }
 
     function formatMinutes(minutes?: number) {
