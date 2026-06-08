@@ -8,12 +8,12 @@
 
 - **Wire format is camelCase, DB is snake_case.** The `*_model` dicts in `service/src/*_views.py` map between them (e.g. `{'caseId': 'case_id'}`). When you add a new column, you must add it to the model dict AND the TS type in `web/src/types/majorTypes.ts` or the round-trip silently drops it.
 - **Standardized vocabulary:** a Case contains many **Entries**. The word "Contact" used to appear in some product descriptions and UI labels but has been retired — use "Entry" everywhere (DB, API, UI, docs, conversation).
-- **`person` is singular**, while `entries`, `cases`, `organizations`, `codes`, `code_categories`, `primary_roles` are plural. **[FIX QUEUED]** Rename to `persons` in Phase 0; no production data to migrate.
+- All table names are plural (`persons`, `entries`, `cases`, etc.). If you find yourself writing a singular table name, you're looking at stale docs or an old comment.
+- **IOA codes are application constants, not DB rows.** `web/src/constants/ioaConstants.ts` is the single source of truth; uuid5 ids are derived at module load. Code that needs to detect IOA codes uses `ioaCodeIdSet` / `ioaCodesById`. There is no "IOA organization" row to look up.
 
 ## Backend (Flask)
 
 - `service/src/utils.py` does dynamic SQL string interpolation off the `model` dict's values for column names. Those values come from the source code, not from user input, so this is not SQL-injection-prone *as long as* nobody starts feeding user-controlled keys into the model dicts. Don't.
-- `add_many` in `utils.py` references `sql.Identifier(...)` but never imports `sql` from `psycopg2`. **It is broken** — first call will `NameError`. Not used by any endpoint currently. Either fix or delete.
 - `add_one` uses raw `f"{model[k]}"` for column names; lowercase fine, but if a new column is added with mixed case or a reserved word, this will need `psycopg2.sql.Identifier`.
 - `update_one` uses `COALESCE(%s, existing)` so passing `null` for a field is treated as "leave alone". That means you can never blank a field via update — be aware.
 - `person_views.py._salt_name` mutates `request._cached_json` (a Flask private). It works today but is one Flask upgrade away from breaking; prefer building a proper request-body decorator.
@@ -27,18 +27,14 @@
 - `creator`, `updater`, `deleter` are imperative — they do NOT invalidate React Query caches on success. Callers refetch by hand (e.g. `caseRes.refetch()`). When adding new mutations, remember to refetch or wire up `useMutation` + `queryClient.invalidateQueries`.
 - The hard-coded `useUserId` returns the same UUID always. Many other components compute the org by chaining `useUserId -> get_ombuds_by_id -> get_organization_by_id`. The two requests run on every page that wants the org. There's an opportunity to centralize this in a `useCurrentUser` once auth lands.
 - Keycloak scaffolding is everywhere (commented out) — `App.tsx`, `Page.tsx`, `constants/keycloak.ts`, deps in `package.json`. We can either revive it or rip it out, but the half-state is confusing.
-- `useHashName` includes `organization.name` (not id) in the hash. **[FIX QUEUED]** Switching to `organization.id` in Phase 0. Org name becomes decorative.
-- MUI's `Grid2` is imported from `@mui/material/Unstable_Grid2`. That'll move when MUI v6 lands; track for upgrade.
-- `randomUUID` is imported from `crypto` (Node) in `AddNewCase.tsx`. In the browser this should be `crypto.randomUUID()` off `window.crypto`, or `uuid` from npm. Likely throws at runtime. **[FIX QUEUED]**
+- `useHashName` hashes off `organization.id` (UUID), not name. Don't reintroduce the name into the hash — renames would orphan persons.
+- Dependencies were bumped to current major versions in early 2026 (MUI v9, React 19, react-router 7, Vite 8, TypeScript 6). Mapping/stats deps (leaflet, georaster, chroma-js, simple-statistics) were pruned at the same time. Treat any older code patterns (Unstable_Grid2, MUI v5 sx-prop quirks, etc.) as bugs.
 
 ## Known bugs / smells
 
-- `get_codes_by_category_id` queries `code_category_id` but the column is `category_id`. **[FIX QUEUED]**
-- `caseRes.data?.codes` is treated as a string array in TS, but the SQL `codes` column type is undocumented. Confirm it's `text[]` (or `uuid[]`) in DDL; if it's TEXT (comma-separated), the array operations will silently break.
-- `PersonFinder` calls the `Select` button but doesn't wire it up. The "Add Person to Entry" save likewise does nothing. The path "person picked in dialog → attached to the entry on save" is unimplemented.
-- `Cases.tsx` links to `/add_case` and `/log_without_case`, neither of which is in `router.tsx`. Click leads to 404.
-- `AddEntry.tsx` exists as both `AddEntry.tsx` (current) and `AddEntryBackup copy.tsx` (stale). **[FIX QUEUED]** Delete.
-- `WelcomePage.tsx` says "International Ombuds **Coven**" — typo for "Association". **[FIX QUEUED]**
+- `cases.codes` is `UUID[]` per `schema.sql`. Both IOA reference codes (uuid5-derived, in code) and org codes (uuid, in DB) are stored as ids in this array; renderers check `ioaCodesById` first, then fall back to `/get_code_by_id`.
+- `PersonFinder` calls the `Select` button but doesn't wire it up. The "Add Person to Entry" save likewise does nothing. The path "person picked in dialog → attached to the entry on save" is unimplemented (Phase 1 work).
+- `/log_without_case` is referenced by `Cases.tsx` but has no route in `router.tsx`. Semantics still TBD — probably "open AddEntry against a hidden per-ombuds catch-all case."
 
 ## Security pitfalls to keep top of mind
 
@@ -49,8 +45,8 @@
 
 ## Dev workflow
 
-- Backend: `cd service && docker compose up` brings up Postgres on 5432 and Flask on 5002. `.env` provides `DB_USER`, `DB_PASS`, `DB_NAME`, `SALT`. There is no `.env.example` checked in — add one for new contributors.
+- Backend: `cd service && docker compose up` brings up Postgres on 5432 and Flask on 5002. Copy `.env.example` to `.env` for required vars.
 - Frontend: `cd web && yarn dev` runs Vite at 5173. The `getter`/`creator`/`updater`/`deleter` all key off `window.location.host.includes('localhost')` to swap base URLs.
+- DDL source of truth: `service/schema.sql`. Rebuild commands in the header.
 - No tests checked in. Vitest is in devDependencies but unused.
 - No CI configured.
-- No DDL / migrations committed. Whoever runs the DB locally needs to know the schema — currently only by reading the views. Adding an Alembic migration or a `schema.sql` is a near-term must.

@@ -8,11 +8,7 @@
 - `id` UUID, PK
 - `name` TEXT
 
-Two "well-known" organizations live in the DB today:
-- `628b5737-43e6-49c7-a632-2f723a455e59` — IOA (holds the shared IOA reporting categories/codes)
-- `ac314522-27f8-42e1-8bd5-6ff68d6b3e9d` — appears in seed comments ("Supernatural", "Sandwiches" categories), looks like a dev/test org.
-
-The IOA org id is hard-coded in `web/src/tools/useIoaOrgId.ts`. Real customers will need to be onboarded as additional rows.
+No "well-known" organization rows. The IOA reporting categories and codes are application-level reference data — they live in `web/src/constants/ioaConstants.ts`, never as DB rows. See CONTEXT.md "Settled decisions" for the rationale.
 
 ### `ombuds`
 - `id` UUID, PK

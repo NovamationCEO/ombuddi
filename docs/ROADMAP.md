@@ -8,34 +8,36 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 **Tier 1 — trivial cleanups (no design decisions):**
 
-- [ ] Fix the `crypto.randomUUID` import in `web/src/components/AddEntry/AddNewCase.tsx` (use `uuid` from npm or `window.crypto.randomUUID()`).
-- [ ] Fix `service/src/ombuddi_views.py::get_codes_by_category_id` — column is `category_id`, not `code_category_id`.
-- [ ] Either delete or fix `service/src/utils.py::add_many` (currently `NameError` on `sql.Identifier`).
-- [ ] Remove `web/src/pages/AddEntryBackup copy.tsx`.
-- [ ] WelcomePage: "International Ombuds Coven" → "International Ombuds Association".
+- [x] Fix the `crypto.randomUUID` import in `web/src/components/AddEntry/AddNewCase.tsx`.
+- [x] Fix `service/src/ombuddi_views.py::get_codes_by_category_id` — column is `category_id`.
+- [x] Delete broken `add_many` in `service/src/utils.py`.
+- [x] Remove `web/src/pages/AddEntryBackup copy.tsx`.
+- [x] WelcomePage: "Coven" → "Association".
 
 **Tier 2 — small additions:**
 
-- [ ] `service/.env.example` mirroring `.env` with placeholder values.
-- [ ] `service/schema.sql` (or first Alembic migration) as the source of truth for DDL. Write *after* Tier 3 lands so we capture the renamed/redesigned shape.
-- [ ] Define the two missing routes from `Cases.tsx`: `/add_case` (point at `AddNewCase`). `/log_without_case` semantics TBD — likely "open AddEntry against a hidden per-ombuds catch-all case."
+- [x] `service/.env.example` with placeholder values.
+- [x] `service/schema.sql` as the DDL source of truth.
+- [x] `/add_case` route. `/log_without_case` still TBD — see note in LESSONS.md.
 
 **Tier 3 — schema and identity redesign (the "pre-production freedom" cluster):**
 
-- [ ] Rename DB table `person` → `persons` (and table-name string in `person_views.py`). Wipe + recreate dev DB.
-- [ ] Switch hashing input from `organization.name` to `organization.id` in `web/src/tools/useHashName.ts`. Org names become decorative (Principle: Settled Decisions in CONTEXT.md).
-- [ ] Remove the keycloak imports that are currently commented out, OR fully revive them — pick one. (Decision: revive in Phase 4; for now, delete the commented blocks to reduce noise.)
-- [ ] Strip dead utilities from `web/src/tools/` (Jenks, mapping leftovers) and the unused `trusted-components/` modules. Defer until we read them on demand.
+- [x] Rename DB table `person` → `persons` (and the table-name string in `person_views.py`). Wipe + recreate dev DB.
+- [x] Switch hashing input from `organization.name` to `organization.id`.
+- [x] Retire the "IOA organization" sentinel; IOA codes are application constants now. See `web/src/constants/ioaConstants.ts` and `web/src/tools/useCodeSource.ts`.
+- [ ] Decide whether to fully revive the commented-out Keycloak scaffolding now (deferred to Phase 4).
+- [ ] Strip dead utilities from `web/src/tools/` and `trusted-components/` on a read-on-demand basis.
 
 **Tier 4 — dependency upgrades:**
 
-- [ ] MUI v5 → latest (v6 or v7, whichever is current). Includes `Grid2` move out of `Unstable_`. Breaking changes around theming/styling — read MUI's migration guide before starting.
-- [ ] React Query, react-router-dom, Vite, TypeScript, Zustand to current.
-- [ ] Drop unused deps: html-to-image, jsdom — both look like leftovers from another project. Confirm by grepping for usage.
+- [x] MUI → v9, React → 19, react-router → 7, Vite → 8, TypeScript → 6, Zustand → 5, etc. Done out-of-band.
+- [x] Pruned mapping/stats deps (leaflet, georaster, chroma-js, simple-statistics, etc.) at the same time.
+- [ ] Added `uuid` runtime dep for `ioaConstants.ts` uuid5 derivation. **Run `cd web && yarn install` to pick this up.**
+- [ ] Still-questionable deps to audit on demand: `html-to-image`, `jsdom`, `patch-package`, `@dnd-kit/*` (only used in `trusted-components/Sortable*`, which is untouched).
 
 **Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
 
-The full plan lives in `docs/MULTI_TENANCY.md` — endpoint-by-endpoint gaps, the `Principal` model, the `utils.py` wrapper, the IOA-cross-org-read exception, and a test scenario list. Pre-auth lift we can land safely under Principle 1 is called out at the bottom of that doc.
+The full plan lives in `docs/MULTI_TENANCY.md` — endpoint-by-endpoint gaps, the `Principal` model, the `utils.py` wrapper, and a test scenario list. Pre-auth lift we can land safely under Principle 1 is called out at the bottom of that doc.
 
 ## Phase 1 — Entry flow complete  [not started]
 

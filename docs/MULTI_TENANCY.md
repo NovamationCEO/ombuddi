@@ -6,7 +6,7 @@
 
 Every row in the database is owned by exactly one organization. Every read, write, update, or delete must demonstrably match the calling principal's `organization_id`. URL parameters and request bodies are **inputs, never authority** — the only authority is the verified auth token.
 
-Stated as a rule the codebase enforces: *no query is allowed without an `organization_id` predicate derived from the token.* Endpoints that legitimately cross orgs (e.g. reading the IOA reference codes) are explicit opt-outs, not implicit ones.
+Stated as a rule the codebase enforces: *no query is allowed without an `organization_id` predicate derived from the token.* There are no legitimate cross-org reads in the data model — IOA reference codes live in code, not in the DB (see CONTEXT.md "Settled decisions").
 
 ## The principal
 
@@ -37,15 +37,15 @@ Sourced from `service/src/ombuddi_views.py` and `service/src/person_views.py`. "
 | `PUT /update_case` | None | Same. |
 | `GET /get_organization_by_id/<id>` | None | Currently used to fetch the *caller's* org name only; once auth lands, drop the parameter and just return the principal's org. |
 | `GET /get_ombuds_by_id/<id>` | None | Same — drop the parameter, return the principal's ombuds row. |
-| `GET /get_code_categories_by_organization_id/<id>` | URL only | Must match principal.org_id (or the IOA org — see exceptions). |
+| `GET /get_code_categories_by_organization_id/<id>` | URL only | Must match principal.org_id. |
 | `POST /add_code_category` | None | Body says org_id; verify it matches principal. |
 | `PUT /update_code_category` | None | Verify the target row's org_id matches principal. |
-| `GET /get_codes_by_category_id/<id>` | None | Join through `code_categories.organization_id`; match principal or IOA. |
-| `GET /get_codes_by_organization_id/<id>` | URL only | Match principal or IOA. |
+| `GET /get_codes_by_category_id/<id>` | None | Join through `code_categories.organization_id`; match principal. |
+| `GET /get_codes_by_organization_id/<id>` | URL only | Match principal. |
 | `POST /add_code`, `PUT /update_code` | None | Verify org_id matches principal. |
-| `GET /get_code_by_id/<id>` | None | Verify org of the row matches principal or IOA. |
+| `GET /get_code_by_id/<id>` | None | Verify org of the row matches principal. |
 | `GET /get_all_codes_by_organization_id/<id>` | URL only | (Note: this duplicates `get_codes_by_organization_id` minus the soft_delete filter; consider collapsing.) |
-| `GET /get_primary_roles_by_organization_id/<id>` | URL only | Match principal. (Primary roles are not shared across orgs — no IOA exception.) |
+| `GET /get_primary_roles_by_organization_id/<id>` | URL only | Match principal. |
 | `POST /add_primary_role`, `PUT /update_primary_role`, `GET /get_primary_role_by_id/<id>`, `GET /get_all_primary_roles_by_organization_id/<id>` | None / URL only | All match principal. |
 | `GET /get_entry_by_id/<id>` | None | Join through `entries.case_id → cases.organization_id` (or add `entries.organization_id` directly — see Schema Changes). |
 | `POST /add_entry` | None | Verify the target `case_id` belongs to principal.org. |
@@ -95,22 +95,14 @@ def get_case_by_id(id, principal: Principal):
 
 For endpoints where the owner check has to traverse a relationship (e.g. `update_entry` needs to verify the entry's case's org matches), we add one helper: `verify_owner_via_parent(table, id, parent_table, parent_fk, owner_constraint)`. Used sparingly; the `organization_id`-on-entries addition above is specifically to reduce how often we need this.
 
-## Cross-org reads (the IOA exception)
+## Cross-org reads
 
-Every real organization needs to *read* the IOA org's codes and code_categories, but never modify them. Two options:
-
-A. **Allow-list in the wrapper.** `owner_constraint = {'organization_id': IN [principal.org_id, IOA_ORG_ID]}`, applied only to `codes` and `code_categories` read endpoints.
-
-B. **`readable_by_all BOOLEAN` flag on rows.** Generalizes beyond IOA. Reads OR in `organization_id = principal.org_id OR readable_by_all = TRUE`. Writes still require strict ownership.
-
-Recommendation: **(A) for now** because it's smaller and the IOA org is the only such case we have. Revisit when a second cross-org dataset shows up.
-
-Either way, *writes* to the IOA org are forbidden from every principal that isn't an Ombuddi-staff admin (which doesn't exist as a role yet — see Open Questions).
+There are none. IOA reference codes are loaded from `web/src/constants/ioaConstants.ts` at runtime, not from the DB. If a future Ombuddi-provided reference pack (e.g. "Hospital ombuds defaults") needs to ship, it ships as another constants file with its own uuid5 namespace — same pattern.
 
 ## Open questions
 
 - **Org-admin role.** Most real orgs will want a non-ombuds admin (HR contact, IT contact, IOA license holder) who can manage seats and billing but never see ombuds data. Define this when we get to subscriptions (Phase 6). Until then, principals are always ombuds.
-- **Ombuddi-staff role.** Per Principle 5, Ombuddi staff must NOT be able to read tenant data. They DO need to manage the IOA org's reference codes if IOA publishes a v3. Resolution: a separate Keycloak realm for Ombuddi staff, scoped to the IOA org only, and audited.
+- **Ombuddi-staff role.** Per Principle 5, Ombuddi staff must NOT be able to read tenant data. With IOA codes now living in code rather than the DB, there is no DB-side reason staff would need privileged access. Updating IOA codes is a code edit + deploy.
 - **Org switching.** Can a single Keycloak user belong to multiple orgs? Common in higher ed (a person who's an ombuds at two universities). Punt for v1: one Keycloak account = one ombuds seat at one org.
 - **Soft delete of an org.** A licensing lapse shouldn't immediately destroy data, but reads should be denied. Add an `organizations.status` column when we get to Phase 6.
 
@@ -120,10 +112,9 @@ Either way, *writes* to the IOA org are forbidden from every principal that isn'
 2. **Direct UUID guess.** Ombuds A asks `/get_case_by_id/<a_case_belonging_to_org_B>` → 404. (Prefer 404 over 403 to avoid leaking row existence.)
 3. **Update across orgs.** Ombuds A PUTs `/update_case` with an org B id → 404; row unchanged.
 4. **Person enumeration.** Ombuds A's `/get_persons_by_hashed_name/<hash>` never returns org B persons even when the hash happens to collide (it won't, mathematically, but we still test).
-5. **IOA read.** Both ombuds A and ombuds B successfully GET `/get_codes_by_organization_id/<IOA_ORG_ID>` and see identical results.
-6. **IOA write.** Both ombuds A and ombuds B POST `/add_code` with `organization_id = IOA_ORG_ID` → 403.
-7. **Cross-org reference in body.** Ombuds A POSTs `/add_entry` with a `case_id` whose case belongs to org B → 404 (case not visible to A) or 403; never accidentally writes.
-8. **No-auth.** All endpoints, no token → 401.
+5. **IOA codes resolve client-side.** Rendering a case that uses IOA codes never triggers `/get_code_by_id` for those ids. Confirmed via network panel.
+6. **Cross-org reference in body.** Ombuds A POSTs `/add_entry` with a `case_id` whose case belongs to org B → 404 (case not visible to A) or 403; never accidentally writes.
+7. **No-auth.** All endpoints, no token → 401.
 
 ## Implementation sequence (when Phase 4 starts)
 
@@ -131,9 +122,8 @@ Either way, *writes* to the IOA org are forbidden from every principal that isn'
 2. `auth.py`: token decode, JWKS verification, principal construction, the `@requires_principal` decorator.
 3. `utils.py` rewrite: every generic helper takes `owner_constraint`.
 4. View rewrite: every route adopts `@requires_principal`, drops the `<organization_id>` URL parameter where present (it's now redundant), and passes the principal's org as owner.
-5. Add the IOA-read allow-list to the two code-read helpers.
-6. Frontend: replace `useUserId.ts` and `useOrganization.ts` with hooks that read claims off the Keycloak token instead of fetching `/get_ombuds_by_id`.
-7. Manual run-through of the eight test scenarios above. Convert to automated tests when we add a test harness (Phase 0 follow-up).
+5. Frontend: replace `useUserId.ts` and `useOrganization.ts` with hooks that read claims off the Keycloak token instead of fetching `/get_ombuds_by_id`.
+6. Manual run-through of the test scenarios above. Convert to automated tests when we add a test harness (Phase 0 follow-up).
 
 ## Pre-auth lift we can do now (safe under Principle 1)
 

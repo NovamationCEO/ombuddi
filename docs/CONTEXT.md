@@ -27,7 +27,7 @@ A logged-in ombuds, working under their organization's seat, can:
 1. Create **cases** (one issue / one cluster of related concerns).
 2. Add **entries** to a case — meeting date, duration, medium, notes, optional tags, optional people.
 3. Search for / create **persons** (visitors and public persons), where visitor identity is gated behind a salt phrase the ombuds chose.
-4. Tag cases/entries with **codes**, organized into customizable **categories**. IOA's nine Uniform Reporting Categories are seeded as a shared "IOA org".
+4. Tag cases/entries with **codes**, organized into customizable **categories**. IOA's nine Uniform Reporting Categories ship as application-level reference data (see "Settled decisions" below) and appear in the picker alongside the org's own codes.
 5. Generate **aggregate reports** (trends, demographics, role mix, code mix) without revealing identities.
 6. Trust that records auto-purge on a configurable schedule, with hooks to pause on legal hold.
 
@@ -68,7 +68,7 @@ API base: `http://localhost:5002/api/v1/...` in dev; same-host `https://` in pro
 
 Working / wired:
 - Sign-in stub: `useUserId()` returns a hard-coded UUID. Profile shows that ombuds row, links to their org.
-- Organization page: edit org name (UI only), manage **Codes** and **Code Categories** (create, rename, soft-delete, reorder). Manage **Primary Roles** (org-customizable). IOA's 9 categories + ~70 subcodes seeded as a separate "IOA" org so they appear in the Code picker alongside the user's own codes.
+- Organization page: edit org name (UI only), manage **Codes** and **Code Categories** (create, rename, soft-delete, reorder). Manage **Primary Roles** (org-customizable). IOA's 9 categories + 87 codes are loaded from `web/src/constants/ioaConstants.ts` so they appear in the Code picker alongside the user's own codes.
 - Cases list, case create (`AddNewCase` — has IOA + org code selection, referral source UI scaffolded, randomized name button, picsum-seeded security image).
 - Case summary page: shows case, codes (with `EditCodeDialog`), list of entries by date, hover-to-preview entry details. "Add Entry" button.
 - Add entry form: date, duration, medium, entry priority radios, notes, and a People dialog that includes the `PersonFinder` (name + salt → hashed search) — but the Save button on the people dialog currently only closes; selected people aren't yet stored on the entry.
@@ -94,7 +94,8 @@ Not yet working / stubbed:
 | Person endpoints | `service/src/person_views.py` |
 | Case/code/role endpoints | `service/src/ombuddi_views.py` |
 | TS data shapes | `web/src/types/majorTypes.ts` |
-| IOA codes (seed) | `web/src/constants/ioaConstants.ts` |
+| IOA codes (reference data) | `web/src/constants/ioaConstants.ts` |
+| Code picker data source | `web/src/tools/useCodeSource.ts` |
 | Code editor (org) | `web/src/components/organization/CodeSummary.tsx` |
 | Code picker (cases) | `web/src/components/CodeSetterBox.tsx`, `OrgCodeSetter.tsx`, `EditCodeDialog.tsx` |
 | Add case | `web/src/components/AddEntry/AddNewCase.tsx` |
@@ -114,6 +115,7 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
   - *Shareable mode* (for leadership): minimum cell size enforced (default 5, org-configurable); below-threshold buckets are merged into "Other" or suppressed entirely. This is the only version that can be exported / shared.
 - **Authentication: Keycloak.** The scaffolding is partly in place, the user knows the system, the audience is bounded (rare profession), so the per-seat economics of managed providers don't pay back. Self-hosted Keycloak in the same compose stack.
 - **No backwards compatibility constraints** while pre-production. See Guiding Principle 1.
+- **IOA reporting categories and codes are application-level reference data, not DB rows.** They live in `web/src/constants/ioaConstants.ts`, with deterministic uuid5-derived ids resolved at runtime. A future "Hospital ombuds defaults" or "Government ombuds defaults" pack ships the same way: another constants file with another uuid5 namespace. No "fake organization" rows; no cross-org read exception in the multi-tenancy model.
 
 ## Open product questions (resolve before/with the user)
 
