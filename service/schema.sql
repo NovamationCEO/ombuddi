@@ -3,10 +3,14 @@
 -- This file captures the current intended shape of every table. It is
 -- canonical: when a column changes, change it here first, then in code.
 --
--- For now there is no migration tooling. To rebuild a dev DB:
---   docker compose down -v
---   docker compose up -d db
---   docker exec -i $(docker compose ps -q db) psql -U "$DB_USER" -d "$DB_NAME" < service/schema.sql
+-- For now there is no migration tooling. To rebuild a dev DB from service/:
+--   docker compose stop app
+--   set -a; source .env; set +a
+--   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" \
+--       -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+--   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < schema.sql
+--   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < seed_dev.sql
+--   docker compose start app
 --
 -- IOA reference codes and categories are NOT seeded to the database; they
 -- live in web/src/constants/ioaConstants.ts and are loaded at runtime.
