@@ -52,7 +52,7 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 - [x] AddEntry dialog left panel lists people already on the case (via `get_persons_by_case_id`), filtered to those not yet staged; click to add.
 - [x] CaseSummary: highlighted entry now shows associated people as chips below notes.
 - [x] Inline-dialog "Create new user": PersonFinder's `onCreateRequest` fires with the typed name; AddEntry mounts `PersonForm` in a stacked Dialog pre-filled with that name. On save, the new person is staged immediately. The `/add_person` route still works as a fallback when PersonFinder is used outside AddEntry.
-- [ ] Decide: tags on entries (separate `entry_codes`?) or rely on case-level codes only. Implement chosen path.
+- [x] Tags on entries (decision: allowed). `entries.codes UUID[]` mirrors `cases.codes`. Same CodeSetterBox picker pattern as AddNewCase (IOA + org). CaseSummary shows the highlighted entry's tags as CodeChips above the People list. Issue-level tagging stays on the case; action-level tagging (e.g. "intake", "mediation") happens on the entry.
 - [ ] Org-customizable entry `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
 
 ## Phase 2 — Persons & visitors hardening  [not started]

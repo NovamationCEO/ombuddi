@@ -64,6 +64,7 @@ The `organization_id` column exists; the API does not yet *enforce* that the cal
 - `medium` TEXT ('inPerson', 'phone', 'video', 'email', 'other')
 - `duration` INT (minutes)
 - `notes` TEXT
+- `codes` UUID[] (action-level tags on this specific entry; issue-level tags live on the parent case's `codes`)
 
 "Entry" is the standardized term across DB, API, UI, and docs. Earlier drafts used "Contact" — retired.
 

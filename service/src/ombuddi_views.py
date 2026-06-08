@@ -154,6 +154,7 @@ entry_model = {
     'medium': 'medium',
     'duration': 'duration',
     'notes': 'notes',
+    'codes': 'codes',
 }
 
 @ombuddi_views.route('/api/v1/get_entry_by_id/<id>')

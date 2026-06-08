@@ -68,4 +68,5 @@ export type EntryType = {
     medium: string
     duration: number
     notes: string
+    codes: string[]
 }

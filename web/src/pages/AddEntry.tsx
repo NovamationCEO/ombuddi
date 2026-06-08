@@ -22,6 +22,7 @@ import { creator } from '../tools/db_tools/creator'
 import { useUserId } from '../tools/useUserId'
 import { PersonFinder } from '../components/PersonFinder'
 import { PersonForm } from '../components/AddPerson/PersonForm'
+import { CodeSetterBox } from '../components/CodeSetterBox'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Add } from '@mui/icons-material'
 import React from 'react'
@@ -60,6 +61,12 @@ export function AddEntry() {
     // saved; then we POST add_entry_person for each.
     const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
 
+    // Per-entry code tags. Issue-level codes still live on the case; these are
+    // action-level (e.g. "intake", "mediation", "policy clarification"). IOA
+    // and org codes are tracked separately because the picker is two boxes.
+    const [activeIoaCodes, setActiveIoaCodes] = useState<string[]>([])
+    const [activeOrgCodes, setActiveOrgCodes] = useState<string[]>([])
+
     // Inline "Create new user" dialog: triggered from PersonFinder when no
     // search matches. The typed name pre-fills PersonForm so the ombuds
     // doesn't retype it.
@@ -90,6 +97,7 @@ export function AddEntry() {
             medium,
             duration,
             notes,
+            codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
         }
         const created = await creator<{ id: string; success: boolean }>('add_entry', payload)
         const newEntryId = created?.id
@@ -359,6 +367,26 @@ export function AddEntry() {
                             </RoundButton>
                         </Box>
                     </RoundedContainer>
+                </Stack>
+                {/*
+                 * Per-entry tags. Same picker shape as AddNewCase: IOA codes
+                 * (action-level for this entry) plus the org's own codes.
+                 * Case-level codes still live on the parent case.
+                 */}
+                <Stack
+                    spacing={2}
+                    direction={'row'}
+                >
+                    <CodeSetterBox
+                        activeCodeIds={activeIoaCodes}
+                        setActiveCodeIds={setActiveIoaCodes}
+                        source={{ kind: 'ioa' }}
+                    />
+                    <CodeSetterBox
+                        activeCodeIds={activeOrgCodes}
+                        setActiveCodeIds={setActiveOrgCodes}
+                        source={{ kind: 'org', organizationId: caseRes.data?.organizationId }}
+                    />
                 </Stack>
                 <Box>
                     <TextField
