@@ -9,8 +9,14 @@ import { useNavigate } from 'react-router-dom'
 export function PersonFinder(props: {
     /** Called when the ombuds clicks Select on a matching person. */
     onSelect?: (person: PersonType) => void
+    /**
+     * Called when the ombuds clicks "Create new user" with no matches. The
+     * typed name is passed through so callers can pre-fill it. If omitted,
+     * the finder navigates to `/add_person` instead.
+     */
+    onCreateRequest?: (name: string) => void
 }) {
-    const { onSelect } = props
+    const { onSelect, onCreateRequest } = props
     const [name, setName] = React.useState<string>('')
     const [salt, setSalt] = React.useState<string>('')
     const [results, setResults] = React.useState<PersonType[]>([])
@@ -104,7 +110,7 @@ export function PersonFinder(props: {
                 ) : (
                     <div
                         className="result-item create"
-                        onClick={() => navigate('/add_person')}
+                        onClick={() => (onCreateRequest ? onCreateRequest(name) : navigate('/add_person'))}
                     >
                         ✚ Create new user “{name}”
                     </div>

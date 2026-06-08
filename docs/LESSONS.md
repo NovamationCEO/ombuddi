@@ -34,7 +34,8 @@
 
 - `cases.codes` is `UUID[]` per `schema.sql`. Both IOA reference codes (uuid5-derived, in code) and org codes (uuid, in DB) are stored as ids in this array; renderers check `ioaCodesById` first, then fall back to `/get_code_by_id`.
 - `entry_person` is a composite-PK join with no `id` column, so `utils.py::add_one` doesn't fit. Inline SQL via `_exec_entry_person` in `person_views.py` handles add/remove. POST `/add_entry_person`, DELETE `/remove_entry_person`, both take `{entryId, personId}`.
-- "Create new user" in PersonFinder still navigates to `/add_person` (full page). Inline-dialog version is a follow-up — see ROADMAP Phase 1.
+- `PersonForm` is the reusable form body extracted from `AddPerson` — same fields, hash pipeline, salt-phrase tooltip, and save flow, but parameterized with `initialName`, `onSaved(person)`, `onCancel`. Two consumers: the `/add_person` page route (thin wrapper) and the inline dialog inside `AddEntry`. The page wrapper passes `onSaved={() => null}` and skips `onCancel` — the inline dialog passes both to close itself and stage the new person.
+- Stacked MUI dialogs work: AddEntry's PersonForm dialog sits on top of the People dialog with no special z-index handling. Snacks from `useSnack` render globally so they appear above both.
 - `/log_without_case` is referenced by `Cases.tsx` but has no route in `router.tsx`. Semantics still TBD — probably "open AddEntry against a hidden per-ombuds catch-all case."
 
 ## Security pitfalls to keep top of mind

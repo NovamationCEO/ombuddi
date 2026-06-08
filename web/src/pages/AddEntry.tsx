@@ -21,6 +21,7 @@ import { CaseType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { useUserId } from '../tools/useUserId'
 import { PersonFinder } from '../components/PersonFinder'
+import { PersonForm } from '../components/AddPerson/PersonForm'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Add } from '@mui/icons-material'
 import React from 'react'
@@ -58,6 +59,12 @@ export function AddEntry() {
     // People staged for this entry. Kept in component state until the entry is
     // saved; then we POST add_entry_person for each.
     const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
+
+    // Inline "Create new user" dialog: triggered from PersonFinder when no
+    // search matches. The typed name pre-fills PersonForm so the ombuds
+    // doesn't retype it.
+    const [createPersonName, setCreatePersonName] = useState<string | null>(null)
+    const showCreatePersonDialog = createPersonName !== null
 
     function addPerson(person: PersonType) {
         setEntryPeople((prev) =>
@@ -108,6 +115,32 @@ export function AddEntry() {
 
     return (
         <Box>
+            {/*
+             * Inline "Create new user" dialog. Stacks on top of the People
+             * dialog (MUI handles z-ordering automatically) so the ombuds
+             * stays inside the AddEntry flow instead of being routed to
+             * /add_person and losing context.
+             */}
+            <Dialog
+                open={showCreatePersonDialog}
+                onClose={() => setCreatePersonName(null)}
+                maxWidth={'lg'}
+                fullWidth
+            >
+                <DialogTitle>Create New Person</DialogTitle>
+                <DialogContent>
+                    {showCreatePersonDialog && (
+                        <PersonForm
+                            initialName={createPersonName ?? ''}
+                            onSaved={(person) => {
+                                addPerson(person)
+                                setCreatePersonName(null)
+                            }}
+                            onCancel={() => setCreatePersonName(null)}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
             <Dialog
                 open={showPeopleDialog}
                 onClose={() => setShowPeopleDialog(false)}
@@ -192,7 +225,10 @@ export function AddEntry() {
                             size={{ xs: 12, sm: 8, md: 9 }}
                         >
                             <Box sx={{ flex: 1, width: '100%' }}>
-                                <PersonFinder onSelect={addPerson} />
+                                <PersonFinder
+                                    onSelect={addPerson}
+                                    onCreateRequest={(name) => setCreatePersonName(name)}
+                                />
                             </Box>
                         </Grid2>
                     </Grid2>

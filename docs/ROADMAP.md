@@ -51,7 +51,7 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 - [x] PersonFinder: `onSelect` callback wired up. Search clears after a successful pick so the dialog stays usable.
 - [x] AddEntry dialog left panel lists people already on the case (via `get_persons_by_case_id`), filtered to those not yet staged; click to add.
 - [x] CaseSummary: highlighted entry now shows associated people as chips below notes.
-- [ ] Inline-dialog version of "Create new user" so the ombuds doesn't have to navigate away from AddEntry. Currently still routes to `/add_person`.
+- [x] Inline-dialog "Create new user": PersonFinder's `onCreateRequest` fires with the typed name; AddEntry mounts `PersonForm` in a stacked Dialog pre-filled with that name. On save, the new person is staged immediately. The `/add_person` route still works as a fallback when PersonFinder is used outside AddEntry.
 - [ ] Decide: tags on entries (separate `entry_codes`?) or rely on case-level codes only. Implement chosen path.
 - [ ] Org-customizable entry `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
 
