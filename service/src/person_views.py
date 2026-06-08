@@ -109,3 +109,65 @@ def get_persons_by_case_id(case_id):
 @person_views.route("/api/v1/get_persons_by_entry_id/<entry_id>")
 def get_persons_by_entry_id(entry_id):
     return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (entry_id,))
+
+
+# ---------------------------------------------------------------------------
+# entry_person join: attach / detach a person to / from a specific entry.
+# Inline SQL because the join table has a composite PK (no `id` column) so
+# the generic add_one helper in utils.py doesn't fit.
+# ---------------------------------------------------------------------------
+
+SQL_ADD_ENTRY_PERSON = """
+    INSERT INTO entry_person (entry_id, person_id)
+    VALUES (%s, %s)
+    ON CONFLICT (entry_id, person_id) DO NOTHING;
+"""
+
+SQL_REMOVE_ENTRY_PERSON = """
+    DELETE FROM entry_person
+    WHERE entry_id = %s AND person_id = %s;
+"""
+
+
+def _exec_entry_person(sql: str, entry_id, person_id):
+    if not entry_id or not person_id:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "status": "input error",
+                    "error": "Missing entryId or personId",
+                }
+            ),
+            400,
+        )
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (entry_id, person_id))
+        return jsonify({"success": True, "status": "success"}), 200
+    except Exception as e:
+        logger.exception("entry_person mutation failed")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "status": "db error",
+                    "error": "Database error",
+                    "message": str(e),
+                }
+            ),
+            500,
+        )
+
+
+@person_views.route("/api/v1/add_entry_person", methods=["POST"])
+def add_entry_person():
+    data = request.get_json(silent=True) or {}
+    return _exec_entry_person(SQL_ADD_ENTRY_PERSON, data.get("entryId"), data.get("personId"))
+
+
+@person_views.route("/api/v1/remove_entry_person", methods=["DELETE"])
+def remove_entry_person():
+    data = request.get_json(silent=True) or {}
+    return _exec_entry_person(SQL_REMOVE_ENTRY_PERSON, data.get("entryId"), data.get("personId"))

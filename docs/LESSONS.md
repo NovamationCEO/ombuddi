@@ -33,7 +33,8 @@
 ## Known bugs / smells
 
 - `cases.codes` is `UUID[]` per `schema.sql`. Both IOA reference codes (uuid5-derived, in code) and org codes (uuid, in DB) are stored as ids in this array; renderers check `ioaCodesById` first, then fall back to `/get_code_by_id`.
-- `PersonFinder` calls the `Select` button but doesn't wire it up. The "Add Person to Entry" save likewise does nothing. The path "person picked in dialog → attached to the entry on save" is unimplemented (Phase 1 work).
+- `entry_person` is a composite-PK join with no `id` column, so `utils.py::add_one` doesn't fit. Inline SQL via `_exec_entry_person` in `person_views.py` handles add/remove. POST `/add_entry_person`, DELETE `/remove_entry_person`, both take `{entryId, personId}`.
+- "Create new user" in PersonFinder still navigates to `/add_person` (full page). Inline-dialog version is a follow-up — see ROADMAP Phase 1.
 - `/log_without_case` is referenced by `Cases.tsx` but has no route in `router.tsx`. Semantics still TBD — probably "open AddEntry against a hidden per-ombuds catch-all case."
 
 ## Security pitfalls to keep top of mind

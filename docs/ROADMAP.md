@@ -42,18 +42,16 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 
 The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/MULTI_TENANCY.md`.
 
-## Phase 1 — Entry flow complete  [not started]
+## Phase 1 — Entry flow complete  [mostly done]
 
 Goal: an ombuds can fully log a meeting and associate people with it.
 
-- [ ] `entry_person` API:
-  - [ ] `POST /api/v1/add_entry_person` ({entryId, personId})
-  - [ ] `DELETE /api/v1/remove_entry_person`
-  - [ ] use existing `get_persons_by_entry_id`
-- [ ] AddEntry "People" dialog: persist selected people on save (currently no-op).
-- [ ] PersonFinder: wire the "Select" button to add a found person to the staged list; wire the "Create new user" branch to a smaller AddPerson flow that returns the new id.
-- [ ] Show people currently on a case in the left panel of the AddEntry people dialog (the box that already says "Associated with Case" — pull from `get_persons_by_case_id`).
-- [ ] CaseSummary: surface people on the highlighted entry alongside notes/duration.
+- [x] `entry_person` API: `POST /add_entry_person`, `DELETE /remove_entry_person`, both `{entryId, personId}`. `get_persons_by_entry_id` and `get_persons_by_case_id` already existed.
+- [x] AddEntry "People" dialog: staged people persist on entry save (fans out one `add_entry_person` per staged person after the entry is created).
+- [x] PersonFinder: `onSelect` callback wired up. Search clears after a successful pick so the dialog stays usable.
+- [x] AddEntry dialog left panel lists people already on the case (via `get_persons_by_case_id`), filtered to those not yet staged; click to add.
+- [x] CaseSummary: highlighted entry now shows associated people as chips below notes.
+- [ ] Inline-dialog version of "Create new user" so the ombuds doesn't have to navigate away from AddEntry. Currently still routes to `/add_person`.
 - [ ] Decide: tags on entries (separate `entry_codes`?) or rely on case-level codes only. Implement chosen path.
 - [ ] Org-customizable entry `medium` list and `priority` list. New tables `mediums` and `priorities` with the same `id/organization_id/name/index/soft_delete` shape as `primary_roles`, or a single `picklists` table keyed by `kind`.
 

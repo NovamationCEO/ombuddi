@@ -3,7 +3,7 @@ import { GenericResponse } from '../../types/miscTypes'
 let host = window.location.host
 host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
 
-export async function deleter(address: string, payload: { id?: string; ids?: string[] }) {
+export async function deleter<T>(address: string, payload: Partial<T>) {
     const requestOptions = {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },

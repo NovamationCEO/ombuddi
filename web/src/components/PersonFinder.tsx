@@ -6,7 +6,11 @@ import { useHashName } from '../tools/useHashName'
 import './PersonFinder.css'
 import { useNavigate } from 'react-router-dom'
 
-export function PersonFinder() {
+export function PersonFinder(props: {
+    /** Called when the ombuds clicks Select on a matching person. */
+    onSelect?: (person: PersonType) => void
+}) {
+    const { onSelect } = props
     const [name, setName] = React.useState<string>('')
     const [salt, setSalt] = React.useState<string>('')
     const [results, setResults] = React.useState<PersonType[]>([])
@@ -19,6 +23,16 @@ export function PersonFinder() {
     function revealSearch() {
         setResults(personRes.data || [])
         setShowBottom(true)
+    }
+
+    function handleSelect(person: PersonType) {
+        onSelect?.(person)
+        // Clear the search after a successful pick so the dialog stays usable
+        // for adding additional people without re-entering anything from before.
+        setName('')
+        setSalt('')
+        setResults([])
+        setShowBottom(false)
     }
 
     React.useEffect(() => {
@@ -78,7 +92,12 @@ export function PersonFinder() {
                                 <Box sx={{
                                     flex: 1
                                 }}>{person.primaryRole}</Box>
-                                <Button size="small">Select</Button>
+                                <Button
+                                    size="small"
+                                    onClick={() => handleSelect(person)}
+                                >
+                                    Select
+                                </Button>
                             </Box>
                         </div>
                     ))

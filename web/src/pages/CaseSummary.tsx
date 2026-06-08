@@ -1,13 +1,21 @@
-import { Box, Button, Paper, Stack } from '@mui/material'
+import { Box, Button, Chip, Paper, Stack } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType, EntryType } from '../types/majorTypes'
+import { CaseType, EntryType, PersonType } from '../types/majorTypes'
 import { CodeChip } from '../components/CodeChip'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Edit } from '@mui/icons-material'
 import { EditCodeDialog } from '../components/EditCodeDialog'
+
+/** Compact demographic-only label for a Person chip (no identity). */
+function personLabel(p: PersonType): string {
+    const parts = [p.primaryRole, p.generation, p.gender].filter(
+        (s) => s && s !== 'unknown' && s !== 'N/A',
+    )
+    return parts.length > 0 ? parts.join(' · ') : 'Unspecified'
+}
 
 export function CaseSummary() {
     const { caseId } = useParams()
@@ -17,6 +25,10 @@ export function CaseSummary() {
     const [showEditCodes, setShowEditCodes] = React.useState(false)
 
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
+    const highlightedPeopleRes = useGetter<PersonType[]>([
+        'get_persons_by_entry_id',
+        highlightedId ?? undefined,
+    ])
 
     const highlightedEntry = React.useMemo(() => {
         if (!highlightedId) return null
@@ -200,15 +212,6 @@ export function CaseSummary() {
                                     p: 2,
                                     position: 'relative'
                                 }}>
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        right: 0,
-                                        border: '1px solid black'
-                                    }}>
-                                    Hi
-                                </Box>
                                 <Box>
                                     <b>Date:</b>{' '}
                                     {highlightedEntry ? new Date(highlightedEntry.date).toISOString().slice(0, 10) : ''}
@@ -222,6 +225,27 @@ export function CaseSummary() {
                                 <Box>
                                     <b>Notes:</b> {highlightedEntry ? highlightedEntry.notes ?? '' : ''}
                                 </Box>
+                                {highlightedEntry && (
+                                    <Box sx={{ mt: 1 }}>
+                                        <b>People:</b>{' '}
+                                        {(highlightedPeopleRes.data ?? []).length === 0 ? (
+                                            <span>—</span>
+                                        ) : (
+                                            <Stack
+                                                direction={'row'}
+                                                sx={{ flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}
+                                            >
+                                                {(highlightedPeopleRes.data ?? []).map((p) => (
+                                                    <Chip
+                                                        key={p.id}
+                                                        size={'small'}
+                                                        label={personLabel(p)}
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        )}
+                                    </Box>
+                                )}
                             </Box>
                         </Grid2>
                     </Grid2>

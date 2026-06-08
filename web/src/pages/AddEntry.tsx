@@ -1,6 +1,7 @@
 import {
     Box,
     Button,
+    Chip,
     Dialog,
     DialogActions,
     DialogContent,
@@ -16,7 +17,7 @@ import { useState } from 'react'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType } from '../types/majorTypes'
+import { CaseType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { useUserId } from '../tools/useUserId'
 import { PersonFinder } from '../components/PersonFinder'
@@ -25,9 +26,18 @@ import { Add } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 
+/** Compact label for a Person chip — demographics only, no identity. */
+function personLabel(p: PersonType): string {
+    const parts = [p.primaryRole, p.generation, p.gender].filter(
+        (s) => s && s !== 'unknown' && s !== 'N/A',
+    )
+    return parts.length > 0 ? parts.join(' · ') : 'Unspecified'
+}
+
 export function AddEntry() {
     const { caseId } = useParams()
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
+    const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
     const [notes, setNotes] = useState('')
     const navigate = useNavigate()
     const [duration, setDuration] = useState(30)
@@ -45,6 +55,20 @@ export function AddEntry() {
     ]
     const [entryPriority, setEntryPriority] = useState('primary')
 
+    // People staged for this entry. Kept in component state until the entry is
+    // saved; then we POST add_entry_person for each.
+    const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
+
+    function addPerson(person: PersonType) {
+        setEntryPeople((prev) =>
+            prev.some((p) => p.id === person.id) ? prev : [...prev, person],
+        )
+    }
+
+    function removePerson(personId: string) {
+        setEntryPeople((prev) => prev.filter((p) => p.id !== personId))
+    }
+
     async function save() {
         const organizationId = caseRes.data?.organizationId
         if (!organizationId) return
@@ -60,9 +84,27 @@ export function AddEntry() {
             duration,
             notes,
         }
-        await creator('add_entry', payload)
+        const created = await creator<{ id: string; success: boolean }>('add_entry', payload)
+        const newEntryId = created?.id
+        if (newEntryId && entryPeople.length > 0) {
+            // Fan out the join inserts. If one fails the rest still run; the
+            // entry itself is created either way. (Future: batch endpoint.)
+            await Promise.all(
+                entryPeople.map((person) =>
+                    creator<{ entryId: string; personId: string }>('add_entry_person', {
+                        entryId: newEntryId,
+                        personId: person.id,
+                    }),
+                ),
+            )
+        }
         navigate(`/case/${caseId}`)
     }
+
+    // People on the case but not yet staged for this entry.
+    const casePeopleNotStaged = (casePeopleRes.data ?? []).filter(
+        (cp) => !entryPeople.some((ep) => ep.id === cp.id),
+    )
 
     return (
         <Box>
@@ -71,73 +113,102 @@ export function AddEntry() {
                 onClose={() => setShowPeopleDialog(false)}
                 fullScreen
             >
-                <DialogTitle>Add Person to Entry</DialogTitle>
+                <DialogTitle>Add People to Entry</DialogTitle>
                 <DialogContent sx={{ height: '70vh' }}>
+                    {entryPeople.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                            <Typography
+                                variant={'subtitle2'}
+                                sx={{ mb: 1 }}
+                            >
+                                On this entry
+                            </Typography>
+                            <Stack
+                                direction={'row'}
+                                spacing={1}
+                                sx={{ flexWrap: 'wrap', gap: 1 }}
+                            >
+                                {entryPeople.map((p) => (
+                                    <Chip
+                                        key={p.id}
+                                        label={personLabel(p)}
+                                        onDelete={() => removePerson(p.id)}
+                                    />
+                                ))}
+                            </Stack>
+                        </Box>
+                    )}
                     <Grid2
                         container
                         spacing={2}
-                        sx={{ height: '100%', alignItems: 'stretch' }}
+                        sx={{ alignItems: 'stretch' }}
                     >
                         <Grid2
                             sx={{ display: 'flex' }}
-                            size={{
-                                xs: 12,
-                                sm: 4,
-                                md: 3
-                            }}>
+                            size={{ xs: 12, sm: 4, md: 3 }}
+                        >
                             <Box
                                 sx={{
                                     p: 1,
-                                    border: '1px solid green',
+                                    border: '1px solid lightgray',
+                                    borderRadius: 1,
                                     flex: 1,
-                                    width: '100%'
-                                }}>
-                                <Box>
-                                    <Typography variant={'h6'}>Associated with Case</Typography>
-                                </Box>
+                                    width: '100%',
+                                }}
+                            >
+                                <Typography
+                                    variant={'h6'}
+                                    sx={{ mb: 1 }}
+                                >
+                                    Already on this case
+                                </Typography>
+                                {casePeopleNotStaged.length === 0 && (
+                                    <Typography
+                                        variant={'body2'}
+                                        color={'text.secondary'}
+                                    >
+                                        None to add.
+                                    </Typography>
+                                )}
+                                <Stack
+                                    spacing={1}
+                                    sx={{ alignItems: 'flex-start' }}
+                                >
+                                    {casePeopleNotStaged.map((p) => (
+                                        <Chip
+                                            key={p.id}
+                                            label={personLabel(p)}
+                                            variant={'outlined'}
+                                            onClick={() => addPerson(p)}
+                                            icon={<Add fontSize={'small'} />}
+                                        />
+                                    ))}
+                                </Stack>
                             </Box>
                         </Grid2>
 
                         <Grid2
                             sx={{ display: 'flex' }}
-                            size={{
-                                xs: 12,
-                                sm: 8,
-                                md: 9
-                            }}>
-                            <Box sx={{ border: '1px solid blue', flex: 1, width: '100%' }}>
-                                <PersonFinder />
+                            size={{ xs: 12, sm: 8, md: 9 }}
+                        >
+                            <Box sx={{ flex: 1, width: '100%' }}>
+                                <PersonFinder onSelect={addPerson} />
                             </Box>
                         </Grid2>
                     </Grid2>
                 </DialogContent>
 
                 <DialogActions>
-                    <Stack
-                        spacing={2}
-                        direction={'row'}
+                    <Button
+                        variant={'contained'}
+                        onClick={() => setShowPeopleDialog(false)}
                     >
-                        <Button
-                            variant={'outlined'}
-                            onClick={() => setShowPeopleDialog(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant={'contained'}
-                            onClick={() => {
-                                setShowPeopleDialog(false)
-                            }}
-                        >
-                            Save
-                        </Button>
-                    </Stack>
+                        Done
+                    </Button>
                 </DialogActions>
             </Dialog>
             <Stack spacing={2}>
-                <Box sx={{
-                    display: 'flex'
-                }}>
+                <Box sx={{ display: 'flex' }}>
                     <Box>
                         <Typography variant={'h5'}>
                             Add Entry to Case: <em>{caseRes.data?.name}</em>
@@ -146,11 +217,8 @@ export function AddEntry() {
                     <Stack
                         spacing={2}
                         direction={'row'}
-                        sx={{
-                            display: 'flex',
-                            flex: 1,
-                            justifyContent: 'flex-end'
-                        }}>
+                        sx={{ display: 'flex', flex: 1, justifyContent: 'flex-end' }}
+                    >
                         <Button
                             variant={'outlined'}
                             onClick={() => navigate(`/case/${caseId}`)}
@@ -187,9 +255,7 @@ export function AddEntry() {
                                 value={duration}
                                 onChange={(evt) => setDuration(Number(evt.target.value))}
                                 fullWidth
-                                slotProps={{
-                                    htmlInput: { min: 0, step: 15 }
-                                }}
+                                slotProps={{ htmlInput: { min: 0, step: 15 } }}
                             />
                         </Stack>
                     </RoundedContainer>
@@ -199,13 +265,11 @@ export function AddEntry() {
                             onChange={(evt) => setEntryPriority(evt.target.value)}
                         >
                             <FormControlLabel
-                                key={'priamry'}
                                 value={'primary'}
                                 control={<Radio />}
                                 label={'Primary'}
                             />
                             <FormControlLabel
-                                key={'secondary'}
                                 value={'secondary'}
                                 control={<Radio />}
                                 label={'Secondary'}
@@ -229,12 +293,27 @@ export function AddEntry() {
                     </RoundedContainer>
 
                     <RoundedContainer title={'People'}>
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                bottom: 8,
-                                right: 8
-                            }}>
+                        <Stack
+                            direction={'row'}
+                            sx={{ flexWrap: 'wrap', gap: 1, mb: 4 }}
+                        >
+                            {entryPeople.length === 0 && (
+                                <Typography
+                                    variant={'body2'}
+                                    color={'text.secondary'}
+                                >
+                                    None added yet.
+                                </Typography>
+                            )}
+                            {entryPeople.map((p) => (
+                                <Chip
+                                    key={p.id}
+                                    label={personLabel(p)}
+                                    onDelete={() => removePerson(p.id)}
+                                />
+                            ))}
+                        </Stack>
+                        <Box sx={{ position: 'absolute', bottom: 8, right: 8 }}>
                             <RoundButton
                                 bgcolor={'white'}
                                 size={27}
@@ -257,5 +336,5 @@ export function AddEntry() {
                 </Box>
             </Stack>
         </Box>
-    );
+    )
 }
