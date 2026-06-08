@@ -1,12 +1,12 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from '@mui/material'
 import { CodeSetterBox } from './CodeSetterBox'
 import React from 'react'
-import { useIoaOrgId } from '../tools/useIoaOrgId'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType, CodeType, OmbudsType } from '../types/majorTypes'
+import { CaseType, OmbudsType } from '../types/majorTypes'
 import { useUserId } from '../tools/useUserId'
 import { useParams } from 'react-router-dom'
 import { updater } from '../tools/db_tools/updater'
+import { ioaCodeIdSet } from '../constants/ioaConstants'
 
 export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
     const { open, onClose } = props
@@ -17,16 +17,12 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
     const userId = useUserId()
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
-    const ioaId = useIoaOrgId()
-    const masterIoaCodesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', ioaId])
-    const masterIoaCodes = masterIoaCodesRes.data?.map((code) => code.id) || []
 
     React.useEffect(() => {
         if (!caseRes.data) return
-        const newIoaCodes = caseRes.data?.codes.filter((code) => masterIoaCodes.includes(code))
-        const newOrgCodes = caseRes.data?.codes.filter((code) => !masterIoaCodes.includes(code))
-        setActiveIoaCodes(newIoaCodes || [])
-        setActiveOrgCodes(newOrgCodes || [])
+        const existing = caseRes.data.codes ?? []
+        setActiveIoaCodes(existing.filter((code) => ioaCodeIdSet.has(code)))
+        setActiveOrgCodes(existing.filter((code) => !ioaCodeIdSet.has(code)))
     }, [caseRes.data])
 
     async function save() {
@@ -53,18 +49,18 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
                     spacing={2}
                     direction={'row'}
                     sx={{
-                        display: 'flex'
+                        display: 'flex',
                     }}
                 >
                     <CodeSetterBox
                         activeCodeIds={activeIoaCodes}
                         setActiveCodeIds={setActiveIoaCodes}
-                        organizationId={ioaId}
+                        source={{ kind: 'ioa' }}
                     />
                     <CodeSetterBox
                         activeCodeIds={activeOrgCodes}
                         setActiveCodeIds={setActiveOrgCodes}
-                        organizationId={organizationId ?? ''}
+                        source={{ kind: 'org', organizationId }}
                     />
                 </Stack>
             </DialogContent>
@@ -83,5 +79,5 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
                 </Button>
             </DialogActions>
         </Dialog>
-    );
+    )
 }

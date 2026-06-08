@@ -20,7 +20,6 @@ import { creator } from '../../tools/db_tools/creator'
 import { useUserId } from '../../tools/useUserId'
 import { useGetter } from '../../tools/db_tools/useGetter'
 import { CodeSetterBox } from '../CodeSetterBox'
-import { useIoaOrgId } from '../../tools/useIoaOrgId'
 import { OmbudsType } from '../../types/majorTypes'
 import { RoundedContainer } from '../RoundedContainer'
 
@@ -52,7 +51,6 @@ export function AddNewCase() {
     const userId = useUserId()
     const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
     const organizationId = ombudsRes.data?.organizationId
-    const ioaId = useIoaOrgId()
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
     const newId = React.useMemo(() => crypto.randomUUID(), [])
@@ -93,7 +91,7 @@ export function AddNewCase() {
             id: newId,
             name: caseName,
             description: description,
-            codes: activeIoaCodes,
+            codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
             status: 'active',
         }
         await creator<{ id: string; status: string; success: boolean }>('create_case', payload).then((response) => {
@@ -199,12 +197,12 @@ export function AddNewCase() {
                 <CodeSetterBox
                     activeCodeIds={activeIoaCodes}
                     setActiveCodeIds={setActiveIoaCodes}
-                    organizationId={ioaId}
+                    source={{ kind: 'ioa' }}
                 />
                 <CodeSetterBox
                     activeCodeIds={activeOrgCodes}
                     setActiveCodeIds={setActiveOrgCodes}
-                    organizationId={organizationId ?? ''}
+                    source={{ kind: 'org', organizationId }}
                 />
             </Stack>
             <Stack

@@ -12,23 +12,20 @@ import {
     DialogTitle,
 } from '@mui/material'
 import React from 'react'
-import { useGetter } from '../tools/db_tools/useGetter'
-import { CodeCategoryType, CodeType, OrganizationType } from '../types/majorTypes'
+import { CodeSource, useCodeSource } from '../tools/useCodeSource'
 
 export const OrgCodeSetter = React.memo(function CodeSetter(props: {
     activeCodes: string[]
     setActiveCodes: (codes: string[]) => void
     showCodeSetter: boolean
     setShowCodeSetter: (b: boolean) => void
-    organizationId: string
+    source: CodeSource
 }) {
-    const { activeCodes, setActiveCodes, showCodeSetter, setShowCodeSetter, organizationId } = props
+    const { activeCodes, setActiveCodes, showCodeSetter, setShowCodeSetter, source } = props
     const [openIndex, setOpenIndex] = React.useState<number>(0)
     const [localCodes, setLocalCodes] = React.useState<string[]>([])
 
-    const orgRes = useGetter<OrganizationType>(['get_organization_by_id', organizationId])
-    const codesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', organizationId])
-    const categoriesRes = useGetter<CodeCategoryType[]>(['get_code_categories_by_organization_id', organizationId])
+    const { title, codes, codeCategories } = useCodeSource(source)
 
     React.useEffect(() => {
         setLocalCodes(activeCodes)
@@ -52,8 +49,9 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
             <Box
                 sx={{
                     color: isMatch ? 'forestgreen' : 'black',
-                    userSelect: 'none'
-                }}>
+                    userSelect: 'none',
+                }}
+            >
                 {codeId + ': ' + codeLabel}
             </Box>
         ),
@@ -62,11 +60,11 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
 
     return (
         <Dialog open={showCodeSetter}>
-            <DialogTitle>{orgRes.data?.name} Codes</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             <DialogContent>
                 <Grid2 container>
-                    {categoriesRes.data
-                        ?.sort((a, b) => a.index - b.index)
+                    {[...codeCategories]
+                        .sort((a, b) => a.index - b.index)
                         .map((category, index) => {
                             const isExpanded = openIndex === index
 
@@ -78,16 +76,14 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                                     disableGutters
                                 >
                                     <AccordionSummary>
-                                        <Box sx={{
-                                            fontWeight: "bold"
-                                        }}>{category.name}</Box>
+                                        <Box sx={{ fontWeight: 'bold' }}>{category.name}</Box>
                                     </AccordionSummary>
                                     <AccordionDetails>
                                         <Grid2
                                             container
                                             spacing={2}
                                         >
-                                            {(codesRes.data || [])
+                                            {codes
                                                 .filter((code) => code.categoryId === category.id)
                                                 .map((code) => {
                                                     const isMatch = localCodes.includes(code.id)
@@ -108,12 +104,12 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                                                                 />
                                                             </Box>
                                                         </Grid2>
-                                                    );
+                                                    )
                                                 })}
                                         </Grid2>
                                     </AccordionDetails>
                                 </Accordion>
-                            );
+                            )
                         })}
                 </Grid2>
             </DialogContent>
@@ -127,5 +123,5 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
                 </Button>
             </DialogActions>
         </Dialog>
-    );
+    )
 })
