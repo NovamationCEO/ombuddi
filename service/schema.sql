@@ -213,7 +213,9 @@ CREATE INDEX entries_organization_id_idx ON entries (organization_id);
 -- and salt phrase under the right org.
 CREATE TABLE persons (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hashed_name      TEXT NOT NULL,
+    hashed_name      TEXT,           -- NULL for public persons; NOT NULL for private visitors
+    public_name      TEXT,           -- plaintext name, populated only when is_public = TRUE
+    is_public        BOOLEAN NOT NULL DEFAULT FALSE,
     gender           TEXT,
     generation       TEXT,
     race             TEXT,

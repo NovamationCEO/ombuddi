@@ -60,7 +60,7 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 Goal: respect IOA confidentiality on identity.
 
 - [x] Org name is decorative — hashing keys off `organization.id` (UUID), so renames never orphan persons. No lock needed. `PUT /api/v1/update_organization` added; Organization page Save button wired up.
-- [ ] Public Persons: add `is_public` BOOL to `person`; UI tab in Organization page for managing them; expose unhashed name field on those rows only.
+- [x] Public Persons: `is_public` BOOL + `public_name` TEXT on `persons` (hashed_name now nullable). `GET /api/v1/get_public_persons_by_organization_id` + `DELETE /api/v1/delete_person` added. PublicPersons component on Organization page with add/edit/delete.
 - [ ] AddPerson security UX: explain the salt-phrase choices the user already wants surfaced (per-org, per-ombuds, per-month, per-case, blank, scrambled-spelling). The big tooltip already drafted is a good starting point; make it a side-panel modal instead.
 - [ ] PersonFinder result rendering: show enough demographic differentiation when multiple matches share a salt+name (rare but possible across orgs).
 - [ ] Decide: encrypt `entries.notes` at rest with a key derived from the ombuds' salt phrase. If yes, this changes everything downstream — design before implementing.

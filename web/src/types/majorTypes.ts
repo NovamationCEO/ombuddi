@@ -40,6 +40,8 @@ export type CodeType = {
 export type PersonType = {
     id: string
     hashedName: string
+    publicName?: string
+    isPublic?: boolean
     gender: string
     generation: string
     race: string

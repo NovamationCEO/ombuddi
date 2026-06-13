@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from src.connection import get_db_connection
-from utils import add_one, get_many, get_one, return_many, update_one
+from utils import add_one, get_many, get_one, return_many, update_one, remove_one
 from hash_name import hash_name
 import logging
 
@@ -11,6 +11,8 @@ person_views = Blueprint('person_views', __name__)
 person_model = {
     'id': 'id',
     'hashedName': 'hashed_name',
+    'publicName': 'public_name',
+    'isPublic': 'is_public',
     'gender': 'gender',
     'generation': 'generation',
     'race': 'race',
@@ -53,8 +55,17 @@ def update_person():
 
 @person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
 def get_persons_by_organization_id(organization_id):
-    constraints = {'organization_id': organization_id} 
+    constraints = {'organization_id': organization_id}
     return get_many('persons', person_model, constraints)
+
+@person_views.route('/api/v1/get_public_persons_by_organization_id/<organization_id>')
+def get_public_persons_by_organization_id(organization_id):
+    constraints = {'organization_id': organization_id, 'is_public': True}
+    return get_many('persons', person_model, constraints)
+
+@person_views.route('/api/v1/delete_person', methods=['DELETE'])
+def delete_person():
+    return remove_one('persons', request)
 
 def _get_persons_by_sql(sql: str, params: tuple):
     try:

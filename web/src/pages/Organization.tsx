@@ -6,6 +6,7 @@ import { CodeSummary } from '../components/organization/CodeSummary'
 import { useOrganization } from '../tools/useOrganization'
 import { PrimaryRoles } from '../components/organization/PrimaryRoles'
 import { PicklistManager } from '../components/organization/PicklistManager'
+import { PublicPersons } from '../components/organization/PublicPersons'
 import { updater } from '../tools/db_tools/updater'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSnack } from '../libraries/useSnack'
@@ -62,6 +63,7 @@ export function Organization() {
                 </RoundedContainer>
                 <CodeSummary />
                 <PrimaryRoles />
+                <PublicPersons />
                 <PicklistManager
                     kind={'medium'}
                     title={'Entry Mediums'}

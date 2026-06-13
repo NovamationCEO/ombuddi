@@ -1,7 +1,7 @@
 let host = window.location.host
 host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
 
-export async function creator<T>(address: string, payload: Partial<T>) {
+export async function creator<TReturn = unknown, TPayload = unknown>(address: string, payload: TPayload) {
     const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -18,7 +18,7 @@ export async function creator<T>(address: string, payload: Partial<T>) {
             throw new Error(error)
         }
 
-        return data as T
+        return data as TReturn
     } catch (error) {
         console.error('There was an error!', error)
         throw error // Ensure errors are thrown to be catchable by caller
