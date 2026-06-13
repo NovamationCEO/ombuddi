@@ -44,6 +44,10 @@ def get_organization_by_id(id):
     constraints = {'id': id}
     return get_one('organizations', organization_model, constraints)
 
+@ombuddi_views.route('/api/v1/update_organization', methods=['PUT'])
+def update_organization():
+    return update_one('organizations', organization_model, request)
+
 ombuds_model = {
     'id': 'id',
     'name': 'name',

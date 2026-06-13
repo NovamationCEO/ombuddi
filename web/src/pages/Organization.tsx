@@ -1,20 +1,41 @@
 import { Box, Stack } from '@mui/system'
 import { RoundedContainer } from '../components/RoundedContainer'
-import { TextField } from '@mui/material'
+import { Button, TextField } from '@mui/material'
 import React from 'react'
 import { CodeSummary } from '../components/organization/CodeSummary'
 import { useOrganization } from '../tools/useOrganization'
 import { PrimaryRoles } from '../components/organization/PrimaryRoles'
 import { PicklistManager } from '../components/organization/PicklistManager'
+import { updater } from '../tools/db_tools/updater'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSnack } from '../libraries/useSnack'
+import { OrganizationType } from '../types/majorTypes'
 
 export function Organization() {
     const [orgName, setOrgName] = React.useState<string>('')
+    const [saving, setSaving] = React.useState(false)
     const organization = useOrganization()
+    const queryClient = useQueryClient()
+    const setSnack = useSnack((state) => state.setSnack)
 
     React.useEffect(() => {
         if (!organization) return
         setOrgName(organization.name)
     }, [organization])
+
+    async function saveOrg() {
+        if (!organization.id) return
+        setSaving(true)
+        try {
+            await updater<OrganizationType>('update_organization', { id: organization.id, name: orgName })
+            queryClient.invalidateQueries({ queryKey: ['get_organization_by_id', organization.id] })
+            setSnack({ message: 'Organization saved.', severity: 'success' })
+        } catch {
+            setSnack({ message: 'Failed to save organization.', severity: 'error' })
+        } finally {
+            setSaving(false)
+        }
+    }
 
     return (
         <Box>
@@ -32,6 +53,11 @@ export function Organization() {
                             label={'License Status'}
                             disabled
                         />
+                        <Box>
+                            <Button variant='contained' onClick={saveOrg} disabled={saving || !orgName.trim()}>
+                                Save
+                            </Button>
+                        </Box>
                     </Stack>
                 </RoundedContainer>
                 <CodeSummary />
