@@ -72,6 +72,7 @@ export type PicklistType = {
      */
     kind: string
     name: string
+    description: string
     index: number
     softDelete: boolean
 }

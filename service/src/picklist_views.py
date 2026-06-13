@@ -11,6 +11,7 @@ picklist_model = {
     'organizationId': 'organization_id',
     'kind': 'kind',
     'name': 'name',
+    'description': 'description',
     'index': 'index',
     'softDelete': 'soft_delete',
 }

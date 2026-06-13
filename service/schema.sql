@@ -125,6 +125,7 @@ CREATE TABLE picklists (
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     kind            TEXT NOT NULL,
     name            TEXT NOT NULL,
+    description     TEXT NOT NULL DEFAULT '',
     index           INT NOT NULL DEFAULT 0,
     soft_delete     BOOLEAN NOT NULL DEFAULT FALSE
 );

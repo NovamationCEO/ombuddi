@@ -13,6 +13,7 @@ import {
     useTheme,
 } from '@mui/material'
 import React from 'react'
+import { usePicklists } from '../../tools/usePicklists'
 import { MySwitch } from '../MySwitch'
 import { RoundedContainer } from '../RoundedContainer'
 import { Close, Lock, LockOpen, QuestionMark } from '@mui/icons-material'
@@ -35,6 +36,74 @@ import { useSessionSalt } from '../../libraries/useSessionSalt'
  * state (plus the server-returned id) and hands it to `onSaved`. That lets
  * callers stage the new person immediately without an extra fetch.
  */
+
+function DemographicPicker(props: {
+    kind: string
+    value: string
+    onChange: (v: string) => void
+}) {
+    const { kind, value, onChange } = props
+    const { items, isLoading } = usePicklists(kind)
+    const knownValues = items.map((p) => p.name)
+
+    const [otherMode, setOtherMode] = React.useState(false)
+    const [otherText, setOtherText] = React.useState('')
+
+    // When picklist finishes loading, detect if the current value is a custom one.
+    React.useEffect(() => {
+        if (!isLoading && items.length > 0 && value && !knownValues.includes(value)) {
+            setOtherMode(true)
+            setOtherText(value)
+        }
+    }, [isLoading, items.length])
+
+    const radioValue = otherMode ? '__other__' : value
+
+    function handleRadioChange(newVal: string) {
+        if (newVal === '__other__') {
+            setOtherMode(true)
+        } else {
+            setOtherMode(false)
+            setOtherText('')
+            onChange(newVal)
+        }
+    }
+
+    return (
+        <RadioGroup
+            value={radioValue}
+            onChange={(e) => handleRadioChange(e.target.value)}
+        >
+            {items.map((item) => (
+                <Tooltip key={item.id} title={item.description || ''} placement="right">
+                    <FormControlLabel
+                        value={item.name}
+                        control={<Radio />}
+                        label={item.name}
+                    />
+                </Tooltip>
+            ))}
+            <FormControlLabel
+                value="__other__"
+                control={<Radio />}
+                label="Other..."
+            />
+            {otherMode && (
+                <TextField
+                    size="small"
+                    value={otherText}
+                    onChange={(e) => {
+                        setOtherText(e.target.value)
+                        onChange(e.target.value)
+                    }}
+                    placeholder="Specify..."
+                    autoFocus={!otherText}
+                    sx={{ ml: 4, mt: 0.5, width: '80%' }}
+                />
+            )}
+        </RadioGroup>
+    )
+}
 
 function SaltStrategy(props: { name: string; summary: string; detail: string }) {
     const { name, summary, detail } = props
@@ -246,138 +315,16 @@ export function PersonForm(props: {
                     >
                         <Box sx={{ flex: 1 }}>
                             <Title>Gender</Title>
-                            <RadioGroup
-                                value={gender}
-                                onChange={(evt) => setGender(evt.target.value)}
-                            >
-                                <FormControlLabel
-                                    value={'N/A'}
-                                    control={<Radio />}
-                                    label={'N/A'}
-                                />
-                                <FormControlLabel
-                                    value={'male'}
-                                    control={<Radio />}
-                                    label={'Male'}
-                                />
-                                <FormControlLabel
-                                    value={'female'}
-                                    control={<Radio />}
-                                    label={'Female'}
-                                />
-                                <FormControlLabel
-                                    value={'nonbinary'}
-                                    control={<Radio />}
-                                    label={'Non-Binary'}
-                                />
-                                <FormControlLabel
-                                    value={'other'}
-                                    control={<Radio />}
-                                    label={'Other'}
-                                />
-                                <FormControlLabel
-                                    value={'unknown'}
-                                    control={<Radio />}
-                                    label={'Unknown'}
-                                />
-                            </RadioGroup>
+                            <DemographicPicker kind="gender" value={gender} onChange={setGender} />
                         </Box>
                     </Stack>
                     <Box sx={{ flex: 1 }}>
                         <Title>Generation</Title>
-                        <RadioGroup
-                            value={generation}
-                            onChange={(evt) => setGeneration(evt.target.value)}
-                        >
-                            <FormControlLabel
-                                value={'unknown'}
-                                control={<Radio />}
-                                label={'Unknown'}
-                            />
-                            <Tooltip title={'Born 1946-1964'}>
-                                <FormControlLabel
-                                    value={'boomer'}
-                                    control={<Radio />}
-                                    label={'Boomer'}
-                                />
-                            </Tooltip>
-                            <Tooltip title={'Born 1965-1980'}>
-                                <FormControlLabel
-                                    value={'genx'}
-                                    control={<Radio />}
-                                    label={'Gen X'}
-                                />
-                            </Tooltip>
-                            <Tooltip title={'Born 1981-1996'}>
-                                <FormControlLabel
-                                    value={'Millenial'}
-                                    control={<Radio />}
-                                    label={'Millenial'}
-                                />
-                            </Tooltip>
-                            <Tooltip title={'Born 1997-2012'}>
-                                <FormControlLabel
-                                    value={'genZ'}
-                                    control={<Radio />}
-                                    label={'Gen Z'}
-                                />
-                            </Tooltip>
-                            <Tooltip title={'Born 2013-2025'}>
-                                <FormControlLabel
-                                    value={'genAlpha'}
-                                    control={<Radio />}
-                                    label={'Gen Alpha'}
-                                />
-                            </Tooltip>
-                        </RadioGroup>
+                        <DemographicPicker kind="generation" value={generation} onChange={setGeneration} />
                     </Box>
                     <Box sx={{ flex: 1 }}>
                         <Title>Race</Title>
-                        <RadioGroup
-                            value={race}
-                            onChange={(evt) => setRace(evt.target.value)}
-                        >
-                            <FormControlLabel
-                                value={'unknown'}
-                                control={<Radio />}
-                                label={'Unknown'}
-                            />
-                            <FormControlLabel
-                                value={'asian'}
-                                control={<Radio />}
-                                label={'Asian'}
-                            />
-                            <FormControlLabel
-                                value={'black'}
-                                control={<Radio />}
-                                label={'Black / African American / Afro-Caribbean'}
-                            />
-                            <FormControlLabel
-                                value={'pacific'}
-                                control={<Radio />}
-                                label={'Native Hawaiian / Pacific Islander'}
-                            />
-                            <FormControlLabel
-                                value={'hispanic'}
-                                control={<Radio />}
-                                label={'Hispanic of any Race'}
-                            />
-                            <FormControlLabel
-                                value={'native'}
-                                control={<Radio />}
-                                label={'Native American / Alaskan Native'}
-                            />
-                            <FormControlLabel
-                                value={'white'}
-                                control={<Radio />}
-                                label={'White'}
-                            />
-                            <FormControlLabel
-                                value={'multi'}
-                                control={<Radio />}
-                                label={'Multi-racial'}
-                            />
-                        </RadioGroup>
+                        <DemographicPicker kind="race" value={race} onChange={setRace} />
                     </Box>
                 </Box>
             </RoundedContainer>
