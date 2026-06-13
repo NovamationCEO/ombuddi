@@ -55,15 +55,18 @@ Goal: an ombuds can fully log a meeting and associate people with it.
 - [x] Tags on entries (decision: allowed). `entries.codes UUID[]` mirrors `cases.codes`. Same CodeSetterBox picker pattern as AddNewCase (IOA + org). CaseSummary shows the highlighted entry's tags as CodeChips above the People list. Issue-level tagging stays on the case; action-level tagging (e.g. "intake", "mediation") happens on the entry.
 - [x] Org-customizable entry `medium` and `priority`. Went with the **generic `picklists` table** keyed by `kind` so future list types (ombuds_action, referral_source, case_contact, risk_level, …) ship as configuration rather than schema changes. `usePicklists(kind)` hook + `PicklistManager` component on the Organization page handle CRUD + reorder. `primary_roles` stays separate for now; it could be folded into picklists later.
 
-## Phase 2 — Persons & visitors hardening  [not started]
+## Phase 2 — Persons & visitors hardening  [done]
 
 Goal: respect IOA confidentiality on identity.
 
 - [x] Org name is decorative — hashing keys off `organization.id` (UUID), so renames never orphan persons. No lock needed. `PUT /api/v1/update_organization` added; Organization page Save button wired up.
 - [x] Public Persons: `is_public` BOOL + `public_name` TEXT on `persons` (hashed_name now nullable). `GET /api/v1/get_public_persons_by_organization_id` + `DELETE /api/v1/delete_person` added. PublicPersons component on Organization page with add/edit/delete.
 - [x] AddPerson security UX: tooltip replaced with a right-side Drawer ("Salt Phrase Guide") covering all six strategies — organizational, personal, time-based, per-case, scrambled spelling, blank.
-- [ ] PersonFinder result rendering: show enough demographic differentiation when multiple matches share a salt+name (rare but possible across orgs).
+- [ ] PersonFinder result rendering: show enough demographic differentiation when multiple matches share a salt+name (rare but possible across orgs). *(deferred — low priority until multiple-match scenarios arise in practice)*
 - [x] Encrypt `entries.notes` at rest. Client-side AES-256-GCM via WebCrypto; key derived from PBKDF2(saltPhrase, orgId). Session salt entered once at app load (pre-fills PersonForm + PersonFinder salt fields). Per-entry override supported. CaseSummary decrypts on display; shows inline salt-override prompt on key mismatch. Format: `ombuddi_enc_v1:<base64(iv+ciphertext)>`; legacy plaintext detected and passed through.
+- [x] Org-customizable demographic picklists (gender, generation, race). `DemographicPicker` component in `PersonForm` renders each as a dynamic radio list with a free-text "Other…" option at the end. Custom values stored as plain text on the person row; remain readable if the org later adds that value to the list.
+- [x] Picklist descriptions / tooltips. `description TEXT NOT NULL DEFAULT ''` added to `picklists` table. Edit dialog in `PicklistManager` now has a second "Tooltip / description" field; description shown inline in italic beneath the option name in the manager, and as a MUI Tooltip when hovering in `DemographicPicker`. Generation options ship with birth-year descriptions.
+- [x] `PicklistManager` preset loader. `defaultSets` prop accepts named preset packs (`DefaultSet[]`). "Load defaults" button appears when the list is empty, opens a picker dialog showing available sets with item preview, and loads the chosen set sequentially. All five Organization-page picklist kinds (medium, priority, gender, generation, race) ship with a Standard preset. Dev seed pre-populates all five for the dev org.
 
 ## Phase 3 — Reports  [not started]
 

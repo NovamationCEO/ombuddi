@@ -46,6 +46,42 @@
 - The "scramble" only protects the name → person lookup. Demographics, codes, notes, dates, durations, and case names are stored unencrypted under the person's `id`. A breach gives an attacker rich profiles even if they can't link them to a real-world name without the salt phrase.
 - A truncation attack on `picsum.photos/seed/{case.id}` leaks case-id existence to a CDN. Not a real privacy hit, but worth noting if anyone asks "do you call out to third parties?" — the answer is currently yes, for the security thumbnails.
 
+## MUI v9 breaking changes to remember
+
+- `PaperProps` on Drawer/Dialog → `slotProps={{ paper: { sx: ... } }}`
+- `disableEscapeKeyDown` removed from Dialog — just use `onClose`
+- `Stack alignItems` is not a direct prop — move to `sx={{ alignItems: '...' }}`
+- `primaryTypographyProps` / `secondaryTypographyProps` on ListItemText → `slotProps={{ primary: ..., secondary: ... }}`
+- Stack's `alignItems` and similar layout props moved to `sx` in v9; don't use them as direct props.
+
+## TypeScript 6 pitfall
+
+`new TextEncoder().encode(str)` returns `Uint8Array<ArrayBufferLike>`, which is not assignable to `BufferSource`. Cast explicitly: `new TextEncoder().encode(str) as Uint8Array<ArrayBuffer>`.
+
+## `useOrganization()` returns `{} as OrganizationType` while loading
+
+Empty object is truthy, so `if (!organization) return` does not guard against `organization.name` being `undefined`. Always guard with `if (!organization?.name) return` (or whichever field you need) rather than checking the object itself.
+
+## DB rebuild when schema changes
+
+Run from `service/` directory:
+```
+set -a; source .env; set +a
+docker compose down -v
+docker compose up -d
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < schema.sql
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < seed_dev.sql
+```
+`docker compose down -v` is required (not just `down`) to drop the volume and pick up schema changes. Quote `"$DB_NAME"` when it contains a hyphen.
+
+## PicklistManager / defaultSets pattern
+
+"Load defaults" is a first-run helper, not an ongoing tool — show it only when the list is empty. Once the ombuds has configured their list, the button disappears. Future preset packs are just additional entries in the `defaultSets` array passed from the caller; the picker dialog scales automatically.
+
+## `creator` generic signature
+
+`creator<TReturn=unknown, TPayload=unknown>(addr, payload: TPayload)` — TReturn and TPayload are split generics. Before this fix the signature was `creator<T>(addr, payload: Partial<T>)`, which forced the payload type to be a partial of the return type — wrong for endpoints whose response shape differs from their request shape (e.g. `add_person` returns `{ id, success }` but accepts person fields).
+
 ## Dev workflow
 
 - Backend: `cd service && docker compose up` brings up Postgres on 5432 and Flask on 5002. Copy `.env.example` to `.env` for required vars.
