@@ -2,28 +2,35 @@ import { useStyles } from '../tools/useStyles'
 import { Header } from './Header'
 import type { ReactNode } from 'react'
 
-import { Box } from '@mui/material'
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    TextField,
+} from '@mui/material'
 import { headerHeight } from '../constants/uiSizes'
-// import { useKeycloak } from '@react-keycloak/web'
-// import { useNavigate } from 'react-router'
-// import React from 'react'
+import React from 'react'
+import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function Page(props: { element: ReactNode }) {
     const style = useStyles()
+    const { sessionSalt, setSessionSalt } = useSessionSalt()
+    const [draft, setDraft] = React.useState('')
 
-    // const { keycloak } = useKeycloak()
-    // const navigate = useNavigate()
+    // sessionSalt === null means the user hasn't been prompted yet this session.
+    const promptOpen = sessionSalt === null
 
-    // const userId = keycloak?.idTokenParsed?.sub
+    function confirm() {
+        setSessionSalt(draft.trim())
+    }
 
-    // React.useEffect(() => {
-    //     if (!keycloak) {
-    //         return
-    //     }
-    //     if (!keycloak.authenticated) {
-    //         navigate('/welcome')
-    //     }
-    // }, [keycloak])
+    function skip() {
+        setSessionSalt('')
+    }
 
     return (
         <Box
@@ -43,17 +50,12 @@ export function Page(props: { element: ReactNode }) {
                     position: 'relative',
                     display: 'flex'
                 }}>
-                {/* <SidebarLeft>
-                    <NavigationMenu />
-                </SidebarLeft> */}
                 <Box
                     sx={{
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                    {/* <SidebarTop /> */}
-
                     <Box
                         {...style.mainContainer}
                         sx={{
@@ -63,10 +65,35 @@ export function Page(props: { element: ReactNode }) {
                         }}>
                         {props.element}
                     </Box>
-                    {/* <SidebarBottom></SidebarBottom> */}
                 </Box>
-                {/* <SidebarRight></SidebarRight> */}
             </Box>
+
+            <Dialog open={promptOpen} onClose={skip}>
+                <DialogTitle>Session Salt Phrase</DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Enter your salt phrase for this session. It will pre-fill the salt field
+                        when adding visitors and will be used to encrypt and decrypt entry notes.
+                        Leave blank to use no additional salt.
+                    </DialogContentText>
+                    <TextField
+                        autoFocus
+                        fullWidth
+                        label="Salt Phrase"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') confirm()
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={skip}>Skip (no salt)</Button>
+                    <Button variant="contained" onClick={confirm}>
+                        Set Salt
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
-    );
+    )
 }

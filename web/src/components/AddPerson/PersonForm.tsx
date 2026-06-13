@@ -1,18 +1,21 @@
 import {
     Autocomplete,
     Box,
+    Divider,
+    Drawer,
     FormControlLabel,
     Radio,
     RadioGroup,
     Stack,
     TextField,
     Tooltip,
+    Typography,
     useTheme,
 } from '@mui/material'
 import React from 'react'
 import { MySwitch } from '../MySwitch'
 import { RoundedContainer } from '../RoundedContainer'
-import { Lock, LockOpen, QuestionMark } from '@mui/icons-material'
+import { Close, Lock, LockOpen, QuestionMark } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { creator } from '../../tools/db_tools/creator'
 import { useSnack } from '../../libraries/useSnack'
@@ -20,6 +23,7 @@ import { PersonType } from '../../types/majorTypes'
 import { useHashName } from '../../tools/useHashName'
 import { RoundButton } from '../../trusted-components/RoundButton'
 import { useOrganization } from '../../tools/useOrganization'
+import { useSessionSalt } from '../../libraries/useSessionSalt'
 
 /**
  * Reusable person-entry form. Owns all field state, the salt-phrase tooltip,
@@ -31,6 +35,29 @@ import { useOrganization } from '../../tools/useOrganization'
  * state (plus the server-returned id) and hands it to `onSaved`. That lets
  * callers stage the new person immediately without an extra fetch.
  */
+
+function SaltStrategy(props: { name: string; summary: string; detail: string }) {
+    const { name, summary, detail } = props
+    return (
+        <Box>
+            <Typography variant="subtitle2">
+                <b>{name}</b>
+            </Typography>
+            <Typography
+                variant="body2"
+                sx={{ fontStyle: 'italic', mb: 0.5 }}
+            >
+                {summary}
+            </Typography>
+            <Typography
+                variant="body2"
+                color="text.secondary"
+            >
+                {detail}
+            </Typography>
+        </Box>
+    )
+}
 
 function Title(props: { children: React.ReactNode }) {
     const { children } = props
@@ -61,6 +88,7 @@ export function PersonForm(props: {
     const [name, setName] = React.useState(initialName)
     const [salt, setSalt] = React.useState('')
     const [isSecure, setIsSecure] = React.useState(true)
+    const [saltGuideOpen, setSaltGuideOpen] = React.useState(false)
     const [generation, setGeneration] = React.useState('unknown')
     const [gender, setGender] = React.useState('N/A')
     const [race, setRace] = React.useState('unknown')
@@ -72,6 +100,14 @@ export function PersonForm(props: {
     const setSnack = useSnack((state) => state.setSnack)
     const organization = useOrganization()
     const orgId = organization.id
+    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
+
+    // Pre-populate from the session salt the first time it becomes available.
+    React.useEffect(() => {
+        if (sessionSalt !== null && salt === '') {
+            setSalt(sessionSalt)
+        }
+    }, [sessionSalt])
 
     const hashedName = useHashName(name, salt)
 
@@ -152,65 +188,8 @@ export function PersonForm(props: {
                             }}
                         >
                             <RoundButton
-                                onClick={() => null}
-                                tooltipText={
-                                    <Box>
-                                        Security: Salt Phrase. <br />
-                                        For additional security, a salt phrase acts as an additional password
-                                        required to access this person.
-                                        <Box>You may consider using:</Box>
-                                        <Box>
-                                            <ul>
-                                                <li>An organizational Salt.</li>
-                                                <ul>
-                                                    <li>
-                                                        Ombuds in your organization share this password, as an
-                                                        extra layer of security and anonymity. Accessing this
-                                                        record would take an active organizational license, a
-                                                        valid Ombuddi username and password associated with
-                                                        that organization, the exact spelling of the person's
-                                                        name, AND the correct Salt.
-                                                    </li>
-                                                </ul>
-                                                <li>A Salt unique to you.</li>
-                                                <ul>
-                                                    <li>
-                                                        This will hide this person even from other
-                                                        Ombuddi-licensed ombuds in your organization.
-                                                    </li>
-                                                </ul>
-                                                <li>A Salt that changes yearly.</li>
-                                                <ul>
-                                                    <li>
-                                                        A person with two (or more) different Salts is the same
-                                                        as two (or more) entirely different people for all
-                                                        purposes.
-                                                    </li>
-                                                </ul>
-                                                <li>A Salt per case.</li>
-                                                <ul>
-                                                    <li>
-                                                        No cross-referencing is possible; a person attached to
-                                                        multiple cases is a 'new' person each time with no
-                                                        connection to any previous records.
-                                                    </li>
-                                                </ul>
-                                                <li>
-                                                    A 'blank' Salt.
-                                                    <ul>
-                                                        <li>
-                                                            This is still locked behind your personal username
-                                                            and password, and still requires searching for the
-                                                            exact spelling of the person's full name by someone
-                                                            with a valid Ombuddi account within your
-                                                            organization.
-                                                        </li>
-                                                    </ul>
-                                                </li>
-                                            </ul>
-                                        </Box>
-                                    </Box>
-                                }
+                                onClick={() => setSaltGuideOpen(true)}
+                                tooltipText="About salt phrases"
                             >
                                 <QuestionMark />
                             </RoundButton>
@@ -402,6 +381,66 @@ export function PersonForm(props: {
                     </Box>
                 </Box>
             </RoundedContainer>
+            <Drawer
+                anchor="right"
+                open={saltGuideOpen}
+                onClose={() => setSaltGuideOpen(false)}
+                slotProps={{ paper: { sx: { width: 380, p: 3 } } }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Typography
+                        variant="h6"
+                        sx={{ flex: 1 }}
+                    >
+                        Salt Phrase Guide
+                    </Typography>
+                    <RoundButton onClick={() => setSaltGuideOpen(false)}>
+                        <Close />
+                    </RoundButton>
+                </Box>
+                <Typography
+                    variant="body2"
+                    sx={{ mb: 2 }}
+                >
+                    A salt phrase is mixed into a visitor's name before hashing. It acts as a second secret: someone
+                    with the hash database still can't look up a visitor without knowing the exact salt you used. Choose
+                    a strategy that matches how you want to balance cross-reference ability against isolation.
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Stack spacing={2.5}>
+                    <SaltStrategy
+                        name="Organizational salt"
+                        summary="A phrase shared by every ombuds in your organization."
+                        detail="Finding this visitor requires a valid Ombuddi login, the correct org license, the visitor's exact name spelling, and the shared salt. Enables cross-ombuds continuity if a case is handed off."
+                    />
+                    <SaltStrategy
+                        name="Personal salt"
+                        summary="A phrase only you know — not shared with colleagues."
+                        detail="Hides the visitor even from other licensed ombuds in your organization. Records become inaccessible if you leave without transferring them."
+                    />
+                    <SaltStrategy
+                        name="Time-based salt"
+                        summary="A phrase that rotates on a schedule (e.g. the year)."
+                        detail="The same visitor with a different salt is an entirely different record. Limits how far back cross-referencing reaches — records from prior periods are effectively isolated."
+                    />
+                    <SaltStrategy
+                        name="Per-case salt"
+                        summary="A unique phrase for each case."
+                        detail="Maximum isolation. A visitor attached to two cases under different salts has no connection between them for any purpose, including reporting."
+                    />
+                    <SaltStrategy
+                        name="Scrambled spelling"
+                        summary="An intentional misspelling of the visitor's name as the salt."
+                        detail="Records the 'wrong' name in the hash. Someone who obtains the hash database and knows the real name cannot find this visitor without also knowing which misspelling was used. Works best combined with another strategy."
+                    />
+                    <SaltStrategy
+                        name="Blank salt"
+                        summary="No additional phrase — the name alone is hashed."
+                        detail="Still protected by Ombuddi authentication and the server-side pepper. Lookups still require the exact name spelling. Weakest option, but sufficient for low-sensitivity situations or when cross-referencing convenience matters more than isolation."
+                    />
+                </Stack>
+            </Drawer>
+
             <RoundedContainer title={'Role'}>
                 <Box sx={{ display: 'flex' }}>
                     <Box sx={{ flex: 1 }}>

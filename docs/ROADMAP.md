@@ -61,9 +61,9 @@ Goal: respect IOA confidentiality on identity.
 
 - [x] Org name is decorative — hashing keys off `organization.id` (UUID), so renames never orphan persons. No lock needed. `PUT /api/v1/update_organization` added; Organization page Save button wired up.
 - [x] Public Persons: `is_public` BOOL + `public_name` TEXT on `persons` (hashed_name now nullable). `GET /api/v1/get_public_persons_by_organization_id` + `DELETE /api/v1/delete_person` added. PublicPersons component on Organization page with add/edit/delete.
-- [ ] AddPerson security UX: explain the salt-phrase choices the user already wants surfaced (per-org, per-ombuds, per-month, per-case, blank, scrambled-spelling). The big tooltip already drafted is a good starting point; make it a side-panel modal instead.
+- [x] AddPerson security UX: tooltip replaced with a right-side Drawer ("Salt Phrase Guide") covering all six strategies — organizational, personal, time-based, per-case, scrambled spelling, blank.
 - [ ] PersonFinder result rendering: show enough demographic differentiation when multiple matches share a salt+name (rare but possible across orgs).
-- [ ] Decide: encrypt `entries.notes` at rest with a key derived from the ombuds' salt phrase. If yes, this changes everything downstream — design before implementing.
+- [x] Encrypt `entries.notes` at rest. Client-side AES-256-GCM via WebCrypto; key derived from PBKDF2(saltPhrase, orgId). Session salt entered once at app load (pre-fills PersonForm + PersonFinder salt fields). Per-entry override supported. CaseSummary decrypts on display; shows inline salt-override prompt on key mismatch. Format: `ombuddi_enc_v1:<base64(iv+ciphertext)>`; legacy plaintext detected and passed through.
 
 ## Phase 3 — Reports  [not started]
 

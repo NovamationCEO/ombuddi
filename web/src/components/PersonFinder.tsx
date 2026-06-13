@@ -5,6 +5,7 @@ import { PersonType } from '../types/majorTypes'
 import { useHashName } from '../tools/useHashName'
 import './PersonFinder.css'
 import { useNavigate } from 'react-router-dom'
+import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function PersonFinder(props: {
     /** Called when the ombuds clicks Select on a matching person. */
@@ -18,7 +19,14 @@ export function PersonFinder(props: {
 }) {
     const { onSelect, onCreateRequest } = props
     const [name, setName] = React.useState<string>('')
+    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [salt, setSalt] = React.useState<string>('')
+
+    React.useEffect(() => {
+        if (sessionSalt !== null && salt === '') {
+            setSalt(sessionSalt)
+        }
+    }, [sessionSalt])
     const [results, setResults] = React.useState<PersonType[]>([])
     const hashedName = useHashName(name, salt)
     const [showBottom, setShowBottom] = React.useState<boolean>(false)

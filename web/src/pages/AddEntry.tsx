@@ -28,6 +28,8 @@ import { Add } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
+import { useSessionSalt } from '../libraries/useSessionSalt'
+import { encryptNotes } from '../tools/notesCrypto'
 
 /** Compact label for a Person chip — demographics only, no identity. */
 function personLabel(p: PersonType): string {
@@ -46,6 +48,7 @@ export function AddEntry() {
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
     const ombudsId = useUserId()
+    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
 
     // Entry medium and priority are org-customizable picklists. The stored
@@ -99,6 +102,9 @@ export function AddEntry() {
     async function save() {
         const organizationId = caseRes.data?.organizationId
         if (!organizationId) return
+        const storedNotes = notes
+            ? await encryptNotes(notes, sessionSalt ?? '', organizationId)
+            : ''
         const payload = {
             caseId,
             ombudsId,
@@ -109,7 +115,7 @@ export function AddEntry() {
             date: eventDate,
             medium,
             duration,
-            notes,
+            notes: storedNotes,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
         }
         const created = await creator<{ id: string; success: boolean }>('add_entry', payload)

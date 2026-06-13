@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Paper, Stack } from '@mui/material'
+import { Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType, EntryType, PersonType } from '../types/majorTypes'
@@ -8,6 +8,8 @@ import React from 'react'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { Edit } from '@mui/icons-material'
 import { EditCodeDialog } from '../components/EditCodeDialog'
+import { useSessionSalt } from '../libraries/useSessionSalt'
+import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
 
 /** Compact demographic-only label for a Person chip (no identity). */
 function personLabel(p: PersonType): string {
@@ -23,6 +25,10 @@ export function CaseSummary() {
     const navigate = useNavigate()
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
     const [showEditCodes, setShowEditCodes] = React.useState(false)
+    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
+    const [decryptedNotes, setDecryptedNotes] = React.useState<string | null>(null)
+    const [decryptFailed, setDecryptFailed] = React.useState(false)
+    const [overrideSalt, setOverrideSalt] = React.useState('')
 
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
     const highlightedPeopleRes = useGetter<PersonType[]>([
@@ -34,6 +40,39 @@ export function CaseSummary() {
         if (!highlightedId) return null
         return entriesRes.data?.find((e) => e.id === highlightedId) ?? null
     }, [highlightedId, entriesRes.data])
+
+    const orgId = caseRes.data?.organizationId ?? ''
+
+    React.useEffect(() => {
+        setDecryptedNotes(null)
+        setDecryptFailed(false)
+        setOverrideSalt(sessionSalt ?? '')
+
+        const raw = highlightedEntry?.notes
+        if (!raw || !isEncrypted(raw)) {
+            setDecryptedNotes(raw ?? '')
+            return
+        }
+        decryptNotes(raw, sessionSalt ?? '', orgId).then((result) => {
+            if (result !== null) {
+                setDecryptedNotes(result)
+            } else {
+                setDecryptFailed(true)
+            }
+        })
+    }, [highlightedEntry, sessionSalt, orgId])
+
+    async function tryOverrideSalt() {
+        const raw = highlightedEntry?.notes
+        if (!raw) return
+        const result = await decryptNotes(raw, overrideSalt, orgId)
+        if (result !== null) {
+            setDecryptedNotes(result)
+            setDecryptFailed(false)
+        } else {
+            setDecryptFailed(true)
+        }
+    }
 
     // Entry medium is stored as the org-customized display name directly
     // (picklist row's `name` field), so we just render it as-is.
@@ -216,7 +255,27 @@ export function CaseSummary() {
                                     <b>Duration:</b> {highlightedEntry ? formatMinutes(highlightedEntry.duration) : ''}
                                 </Box>
                                 <Box>
-                                    <b>Notes:</b> {highlightedEntry ? highlightedEntry.notes ?? '' : ''}
+                                    <b>Notes:</b>{' '}
+                                    {!highlightedEntry ? '' : decryptFailed ? (
+                                        <Box sx={{ mt: 0.5 }}>
+                                            <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
+                                                Notes are encrypted with a different salt phrase.
+                                            </Typography>
+                                            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                                <TextField
+                                                    size="small"
+                                                    label="Salt phrase"
+                                                    value={overrideSalt}
+                                                    onChange={(e) => setOverrideSalt(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') tryOverrideSalt() }}
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <Button size="small" variant="contained" onClick={tryOverrideSalt}>
+                                                    Decrypt
+                                                </Button>
+                                            </Stack>
+                                        </Box>
+                                    ) : decryptedNotes ?? '…'}
                                 </Box>
                                 {highlightedEntry && (
                                     <Box sx={{ mt: 1 }}>
