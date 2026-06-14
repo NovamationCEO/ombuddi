@@ -33,7 +33,7 @@ def add_one(table, model, request, db_name="default", key='id', owner_constraint
     column_values = {model[k]: v for k, v in valid_data.items()}
     column_values.update(owner_constraint)
     set_clause = ', '.join(column_values.keys())
-    values_clause = ', '.join(['%s' for _ in column_values])
+    values_clause = ', '.join(['%s::uuid[]' if isinstance(v, list) else '%s' for v in column_values.values()])
     sql_command = "INSERT INTO " + table + f" ({set_clause}) VALUES ({values_clause}) RETURNING {model[key]};"
 
     values = list(column_values.values())
@@ -283,7 +283,11 @@ def update_many(table, model, request, db_name="default"):
         
         valid_data = {k: v for k, v in user_data.items() if k in model}
         
-        set_clause = ', '.join([f"{model[k]} = COALESCE(%s, {model[k]})" for k in valid_data if k != 'id'])
+        set_clause = ', '.join([
+            f"{model[k]} = COALESCE(%s::uuid[], {model[k]})" if isinstance(valid_data[k], list)
+            else f"{model[k]} = COALESCE(%s, {model[k]})"
+            for k in valid_data if k != 'id'
+        ])
         
         sql_command = f"UPDATE {table} SET {set_clause} WHERE id = %s"
         sql_commands.append(sql_command)
