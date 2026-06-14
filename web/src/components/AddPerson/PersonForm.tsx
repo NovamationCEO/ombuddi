@@ -182,18 +182,33 @@ export function PersonForm(props: {
 
     async function save() {
         if (!orgId) return
-        const payload = {
-            hashedName,
-            gender,
-            generation,
-            race,
-            primaryRole,
-            isInternational,
-            category1: category1?.length ? category1 : undefined,
-            category2: category2?.length ? category2 : undefined,
-            category3: category3?.length ? category3 : undefined,
-            organizationId: orgId,
-        }
+        const payload = isSecure
+            ? {
+                  hashedName,
+                  isPublic: false,
+                  gender,
+                  generation,
+                  race,
+                  primaryRole,
+                  isInternational,
+                  category1: category1?.length ? category1 : undefined,
+                  category2: category2?.length ? category2 : undefined,
+                  category3: category3?.length ? category3 : undefined,
+                  organizationId: orgId,
+              }
+            : {
+                  publicName: name,
+                  isPublic: true,
+                  gender,
+                  generation,
+                  race,
+                  primaryRole,
+                  isInternational,
+                  category1: category1?.length ? category1 : undefined,
+                  category2: category2?.length ? category2 : undefined,
+                  category3: category3?.length ? category3 : undefined,
+                  organizationId: orgId,
+              }
         try {
             const res = await creator<{ id: string; success: boolean }>('add_person', payload)
             if (!res?.id) {
@@ -201,7 +216,9 @@ export function PersonForm(props: {
             }
             const newPerson: PersonType = {
                 id: res.id,
-                hashedName: hashedName ?? '',
+                hashedName: isSecure ? (hashedName ?? '') : undefined,
+                publicName: isSecure ? undefined : name,
+                isPublic: !isSecure,
                 gender,
                 generation,
                 race,
@@ -240,30 +257,32 @@ export function PersonForm(props: {
                         onChange={(e) => setName(e.target.value)}
                         label="Full Name"
                     />
-                    <Box sx={{ display: 'flex' }}>
-                        <Box sx={{ flex: 1 }}>
-                            <TextField
-                                value={salt}
-                                onChange={(e) => setSalt(e.target.value)}
-                                label="Salt Phrase"
-                                fullWidth
-                            />
-                        </Box>
-                        <Box
-                            sx={{
-                                ml: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <RoundButton
-                                onClick={() => setSaltGuideOpen(true)}
-                                tooltipText="About salt phrases"
+                    {isSecure && (
+                        <Box sx={{ display: 'flex' }}>
+                            <Box sx={{ flex: 1 }}>
+                                <TextField
+                                    value={salt}
+                                    onChange={(e) => setSalt(e.target.value)}
+                                    label="Salt Phrase"
+                                    fullWidth
+                                />
+                            </Box>
+                            <Box
+                                sx={{
+                                    ml: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                }}
                             >
-                                <QuestionMark />
-                            </RoundButton>
+                                <RoundButton
+                                    onClick={() => setSaltGuideOpen(true)}
+                                    tooltipText="About salt phrases"
+                                >
+                                    <QuestionMark />
+                                </RoundButton>
+                            </Box>
                         </Box>
-                    </Box>
+                    )}
                 </Stack>
                 <Box sx={{ flex: 1, padding: 1 }}>
                     <Box
