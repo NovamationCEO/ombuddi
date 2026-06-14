@@ -63,6 +63,13 @@ def get_public_persons_by_organization_id(organization_id):
     constraints = {'organization_id': organization_id, 'is_public': True}
     return get_many('persons', person_model, constraints)
 
+@person_views.route('/api/v1/search_public_persons/<organization_id>/<query>')
+def search_public_persons(organization_id, query):
+    return _get_persons_by_sql(
+        "SELECT * FROM persons WHERE organization_id = %s AND is_public = TRUE AND public_name ILIKE %s ORDER BY public_name",
+        (organization_id, f'%{query}%'),
+    )
+
 @person_views.route('/api/v1/delete_person', methods=['DELETE'])
 def delete_person():
     return remove_one('persons', request)

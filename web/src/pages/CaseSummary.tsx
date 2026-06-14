@@ -13,6 +13,7 @@ import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
 
 /** Compact demographic-only label for a Person chip (no identity). */
 function personLabel(p: PersonType): string {
+    if (p.isPublic && p.publicName) return p.publicName
     const parts = [p.primaryRole, p.generation, p.gender].filter(
         (s) => s && s !== 'unknown' && s !== 'N/A',
     )

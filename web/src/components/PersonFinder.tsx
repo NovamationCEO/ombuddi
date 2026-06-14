@@ -1,9 +1,10 @@
-import { Box, Button, CircularProgress, Paper, TextField } from '@mui/material'
+import { Box, Button, CircularProgress, Paper, TextField, Typography } from '@mui/material'
 import React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { PersonType } from '../types/majorTypes'
 import { useHashName } from '../tools/useHashName'
+import { useOrganization } from '../tools/useOrganization'
 import './PersonFinder.css'
 import { useNavigate } from 'react-router-dom'
 import { useSessionSalt } from '../libraries/useSessionSalt'
@@ -23,13 +24,24 @@ export function PersonFinder(props: {
     const [searched, setSearched] = React.useState(false)
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const organization = useOrganization()
+    const orgId = organization?.id
 
     React.useEffect(() => {
         if (sessionSalt !== null && salt === '') setSalt(sessionSalt)
     }, [sessionSalt])
 
     const hashedName = useHashName(name, salt)
-    const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
+
+    // Private persons: exact hash match
+    const privateRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
+
+    // Public persons: partial name match via backend ILIKE — only fires when orgId + name ready
+    const trimmedName = name.trim()
+    const publicRes = useGetter<PersonType[]>(
+        ['search_public_persons', orgId, trimmedName],
+        false, // no retry on 404
+    )
 
     React.useEffect(() => {
         setSearched(false)
@@ -43,7 +55,10 @@ export function PersonFinder(props: {
     }, [clearTrigger])
 
     async function revealSearch() {
-        await queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] })
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] }),
+            queryClient.invalidateQueries({ queryKey: ['search_public_persons', orgId, trimmedName] }),
+        ])
         setSearched(true)
     }
 
@@ -54,8 +69,13 @@ export function PersonFinder(props: {
         setSearched(false)
     }
 
-    const results = personRes.data ?? []
-    const showResults = searched && name.length > 0
+    const privateMatches = privateRes.data ?? []
+    const publicMatches = (publicRes.data ?? []).filter(
+        (pub) => !privateMatches.some((priv) => priv.id === pub.id),
+    )
+    const allResults = [...privateMatches, ...publicMatches]
+    const isFetching = privateRes.isFetching || publicRes.isFetching
+    const showResults = searched && trimmedName.length > 0
 
     const inner = (
         <>
@@ -83,17 +103,17 @@ export function PersonFinder(props: {
             </div>
             <Box
                 sx={{
-                    height: showResults ? 80 : 0,
+                    maxHeight: showResults ? 300 : 0,
                     overflow: 'hidden',
-                    transition: 'height 0.3s ease-in-out',
+                    transition: 'max-height 0.3s ease-in-out',
                 }}
             >
-                {personRes.isFetching ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', pl: 1 }}>
+                {isFetching ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
                         <CircularProgress size={20} />
                     </Box>
-                ) : results.length > 0 ? (
-                    results.map((person) => (
+                ) : allResults.length > 0 ? (
+                    allResults.map((person) => (
                         <div
                             key={person.id}
                             className="result-item"
@@ -104,11 +124,23 @@ export function PersonFinder(props: {
                                     justifyContent: 'space-between',
                                     width: '100%',
                                     alignItems: 'center',
+                                    gap: 1,
                                 }}
                             >
-                                <Box sx={{ flex: 1 }}>{person.gender}</Box>
-                                <Box sx={{ flex: 1 }}>{person.generation}</Box>
-                                <Box sx={{ flex: 1 }}>{person.primaryRole}</Box>
+                                {person.isPublic ? (
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ flex: 1, fontWeight: 500 }}
+                                    >
+                                        {person.publicName}
+                                    </Typography>
+                                ) : (
+                                    <>
+                                        <Box sx={{ flex: 1 }}>{person.gender}</Box>
+                                        <Box sx={{ flex: 1 }}>{person.generation}</Box>
+                                        <Box sx={{ flex: 1 }}>{person.primaryRole}</Box>
+                                    </>
+                                )}
                                 <Button
                                     size="small"
                                     onClick={() => handleSelect(person)}

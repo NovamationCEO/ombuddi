@@ -34,6 +34,7 @@ import { encryptNotes } from '../tools/notesCrypto'
 
 /** Compact label for a Person chip — demographics only, no identity. */
 function personLabel(p: PersonType): string {
+    if (p.isPublic && p.publicName) return p.publicName
     const parts = [p.primaryRole, p.generation, p.gender].filter(
         (s) => s && s !== 'unknown' && s !== 'N/A',
     )
