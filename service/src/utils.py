@@ -368,10 +368,22 @@ def remove_many(table, request, db_name="default"):
 # RETURN
 ###
 
+def _coerce(value):
+    """
+    psycopg2 returns Postgres array columns (e.g. UUID[]) as raw literal
+    strings like '{}' or '{uuid1,uuid2}' rather than Python lists.
+    Convert those strings to proper lists so jsonify produces JSON arrays.
+    All other values pass through unchanged.
+    """
+    if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
+        inner = value[1:-1]
+        return [] if not inner else [item.strip() for item in inner.split(',')]
+    return value
+
 
 def return_many(model, res):
     if res:
-        response = [{model_key: value for model_key, value in zip(model.keys(), row)} for row in res]
+        response = [{model_key: _coerce(value) for model_key, value in zip(model.keys(), row)} for row in res]
         return jsonify(response)
     else:
         return jsonify([]), 200
@@ -379,7 +391,7 @@ def return_many(model, res):
 
 def return_one(model, res):
     if res:
-        response = {model_key: value for model_key, value in zip(model.keys(), res)}
+        response = {model_key: _coerce(value) for model_key, value in zip(model.keys(), res)}
         return jsonify(response)
     else:
         return jsonify({'error': "Not Found"}), 404

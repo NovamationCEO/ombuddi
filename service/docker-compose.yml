@@ -26,8 +26,8 @@ services:
       SALT: ${SALT}
     ports:
       - "5002:5000"
-    # volumes:
-    #   - .:/app       
+    volumes:
+      - .:/app
 
 volumes:
   db_data: {}

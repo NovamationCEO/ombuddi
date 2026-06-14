@@ -10,6 +10,8 @@
 --       -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 --   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < schema.sql
 --   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < seed_dev.sql
+--   docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < seed_demo.sql
+--   python seed_demo.py | docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME"
 --   docker compose start app
 --
 -- IOA reference codes and categories are NOT seeded to the database; they
