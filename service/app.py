@@ -5,12 +5,14 @@ from flask_cors import CORS
 from src.ombuddi_views import ombuddi_views
 from src.person_views import person_views
 from src.picklist_views import picklist_views
+from src.report_views import report_views
 
 app = Flask(__name__)
 app.debug = True
 app.register_blueprint(ombuddi_views)
 app.register_blueprint(person_views)
 app.register_blueprint(picklist_views)
+app.register_blueprint(report_views)
 
 CORS(app)
 

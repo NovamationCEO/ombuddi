@@ -61,6 +61,8 @@ export function AccountButton() {
                                     >
                                         <MenuItem onClick={() => navigate('/welcome')}>Welcome</MenuItem>
                                         <MenuItem onClick={() => navigate('/')}>Home</MenuItem>
+                                        <MenuItem onClick={() => navigate('/cases')}>Cases</MenuItem>
+                                        <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
                                         <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
                                         <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
                                         {/* {!isLoggedIn && <MenuItem onClick={() => keycloak.login()}>Log In</MenuItem>}
