@@ -4,15 +4,18 @@ import { CaseType } from '../../types/majorTypes'
 import { useNavigate } from 'react-router-dom'
 import { CodeChip } from '../CodeChip'
 
-export function CaseCard(props: { caseItem: CaseType }) {
-    const { caseItem } = props
+export function CaseCard(props: { caseItem: CaseType; muted?: boolean }) {
+    const { caseItem, muted = false } = props
     const navigate = useNavigate()
 
     if (!caseItem) {
         return null
     }
     return (
-        <CaseCardWrapper onClick={() => navigate(`/case/${caseItem.id}`)}>
+        <CaseCardWrapper
+            onClick={() => navigate(`/case/${caseItem.id}`)}
+            sx={muted ? { filter: 'grayscale(1)', opacity: 0.7 } : undefined}
+        >
             <CardContent
                 sx={{
                     display: 'flex',
@@ -38,16 +41,14 @@ export function CaseCard(props: { caseItem: CaseType }) {
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                 </Box>
-                <Box sx={{
-                    flex: 1
-                }}>
+                <Box sx={{ flex: 1 }}>
                     <Typography
                         variant={'h6'}
                         component={'h3'}
                     >
                         {caseItem.name}
                     </Typography>
-                    {caseItem.description && (
+                    {!muted && caseItem.description && (
                         <Typography
                             variant={'body2'}
                             sx={{

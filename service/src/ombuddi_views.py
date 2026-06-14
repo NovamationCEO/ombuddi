@@ -29,6 +29,10 @@ def get_all_cases():
     constraints = {'status': 'active'}
     return get_many('cases', case_model, constraints)
 
+@ombuddi_views.route('/api/v1/get_cases_by_status/<status>')
+def get_cases_by_status(status):
+    return get_many('cases', case_model, {'status': status})
+
 @ombuddi_views.route('/api/v1/update_case', methods=['PUT'])
 def update_case():
     return update_one('cases', case_model, request)
