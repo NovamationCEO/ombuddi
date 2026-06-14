@@ -15,11 +15,11 @@ export function RoundButton(props: {
     return (
         <Tooltip title={props.tooltipText ? props.tooltipText : ''}>
             <Box
-                {...style.roundButton}
                 sx={{
+                    ...style.roundButton,
                     width: size + 'px',
                     height: size + 'px',
-                    bgcolor: bgcolor
+                    bgcolor: bgcolor,
                 }}>
                 <IconButton
                     onClick={onClick}

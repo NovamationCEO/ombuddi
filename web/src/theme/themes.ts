@@ -88,6 +88,7 @@ const header = {
 const roundButtonBase = {
     border: `1px solid ${primary.light}`,
     borderRadius: '50%',
+    overflow: 'hidden',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
