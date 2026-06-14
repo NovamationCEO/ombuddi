@@ -9,16 +9,14 @@ import { useNavigate } from 'react-router-dom'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function PersonFinder(props: {
-    /** Called when the ombuds clicks Select on a matching person. */
     onSelect?: (person: PersonType) => void
-    /**
-     * Called when the ombuds clicks "Create new user" with no matches. The
-     * typed name is passed through so callers can pre-fill it. If omitted,
-     * the finder navigates to `/add_person` instead.
-     */
     onCreateRequest?: (name: string) => void
+    /** When true, renders without the standalone Paper shell — use inside a dialog or card. */
+    embedded?: boolean
+    /** Increment this to programmatically clear the search fields. */
+    clearTrigger?: number
 }) {
-    const { onSelect, onCreateRequest } = props
+    const { onSelect, onCreateRequest, embedded, clearTrigger } = props
     const [name, setName] = React.useState<string>('')
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [salt, setSalt] = React.useState<string>('')
@@ -33,14 +31,18 @@ export function PersonFinder(props: {
     const hashedName = useHashName(name, salt)
     const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
-    // Reset the revealed state whenever the search fields change.
     React.useEffect(() => {
         setSearched(false)
     }, [name, salt])
 
+    React.useEffect(() => {
+        if (clearTrigger === undefined) return
+        setName('')
+        setSalt(sessionSalt ?? '')
+        setSearched(false)
+    }, [clearTrigger])
+
     async function revealSearch() {
-        // Force a fresh fetch so a newly-created person is found even if the
-        // cache still holds the empty result from before they were created.
         await queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] })
         setSearched(true)
     }
@@ -55,25 +57,21 @@ export function PersonFinder(props: {
     const results = personRes.data ?? []
     const showResults = searched && name.length > 0
 
-    return (
-        <Paper
-            elevation={3}
-            className="person-finder"
-        >
-            <Box>Person Finder</Box>
+    const inner = (
+        <>
             <div className="search-panel">
                 <TextField
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     label="Full Name"
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     placeholder="Enter full name"
                 />
                 <TextField
                     value={salt}
                     onChange={(e) => setSalt(e.target.value)}
                     label="Salt Phrase"
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     placeholder="Enter salt phrase"
                 />
                 <Button
@@ -127,10 +125,24 @@ export function PersonFinder(props: {
                             onCreateRequest ? onCreateRequest(name) : navigate('/add_person')
                         }
                     >
-                        ✚ Create new user "{name}"
+                        ✚ Create new person "{name}"
                     </div>
                 )}
             </Box>
+        </>
+    )
+
+    if (embedded) {
+        return <Box className="person-finder-embedded">{inner}</Box>
+    }
+
+    return (
+        <Paper
+            elevation={3}
+            className="person-finder"
+        >
+            <Box>Person Finder</Box>
+            {inner}
         </Paper>
     )
 }

@@ -6,6 +6,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
     FormControlLabel,
     Radio,
     RadioGroup,
@@ -82,6 +83,7 @@ export function AddEntry() {
     // search matches. The typed name pre-fills PersonForm so the ombuds
     // doesn't retype it.
     const [createPersonName, setCreatePersonName] = useState<string | null>(null)
+    const [finderClearTrigger, setFinderClearTrigger] = useState(0)
     const showCreatePersonDialog = createPersonName !== null
 
     function addPerson(person: PersonType) {
@@ -157,6 +159,7 @@ export function AddEntry() {
                             onSaved={(person) => {
                                 addPerson(person)
                                 setCreatePersonName(null)
+                                setFinderClearTrigger((n) => n + 1)
                             }}
                             onCancel={() => setCreatePersonName(null)}
                         />
@@ -169,89 +172,137 @@ export function AddEntry() {
                 fullScreen
             >
                 <DialogTitle>Add People to Entry</DialogTitle>
-                <DialogContent sx={{ height: '70vh' }}>
-                    {entryPeople.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
+                <DialogContent>
+                    {/* Staged people — always visible so the layout doesn't jump */}
+                    <Box
+                        sx={{
+                            mb: 2,
+                            p: 1.5,
+                            borderRadius: 1,
+                            bgcolor: 'primary.50',
+                            border: '1px solid',
+                            borderColor: 'primary.100',
+                            minHeight: 56,
+                        }}
+                    >
+                        <Typography
+                            variant={'caption'}
+                            color={'text.secondary'}
+                            sx={{ display: 'block', mb: 1, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase' }}
+                        >
+                            On this entry {entryPeople.length > 0 && `· ${entryPeople.length}`}
+                        </Typography>
+                        {entryPeople.length === 0 ? (
                             <Typography
-                                variant={'subtitle2'}
-                                sx={{ mb: 1 }}
+                                variant={'body2'}
+                                color={'text.disabled'}
+                                sx={{ fontStyle: 'italic' }}
                             >
-                                On this entry
+                                No one added yet
                             </Typography>
+                        ) : (
                             <Stack
                                 direction={'row'}
-                                spacing={1}
                                 sx={{ flexWrap: 'wrap', gap: 1 }}
                             >
                                 {entryPeople.map((p) => (
                                     <Chip
                                         key={p.id}
                                         label={personLabel(p)}
+                                        sx={{
+                                            bgcolor: '#d4edda',
+                                            color: '#155724',
+                                            '& .MuiChip-deleteIcon': { color: '#155724' },
+                                        }}
                                         onDelete={() => removePerson(p.id)}
                                     />
                                 ))}
                             </Stack>
-                        </Box>
-                    )}
+                        )}
+                    </Box>
+
+                    <Divider sx={{ mb: 2 }} />
+
                     <Grid2
                         container
-                        spacing={2}
-                        sx={{ alignItems: 'stretch' }}
+                        spacing={3}
+                        sx={{ alignItems: 'flex-start' }}
                     >
-                        <Grid2
-                            sx={{ display: 'flex' }}
-                            size={{ xs: 12, sm: 4, md: 3 }}
-                        >
+                        {/* Left panel: people already on this case */}
+                        <Grid2 size={{ xs: 12, sm: 4, md: 3 }}>
                             <Box
                                 sx={{
-                                    p: 1,
-                                    border: '1px solid lightgray',
+                                    p: 1.5,
                                     borderRadius: 1,
-                                    flex: 1,
-                                    width: '100%',
+                                    bgcolor: 'grey.100',
+                                    border: '1px solid',
+                                    borderColor: 'grey.200',
+                                    height: '100%',
                                 }}
                             >
                                 <Typography
-                                    variant={'h6'}
-                                    sx={{ mb: 1 }}
+                                    variant={'subtitle2'}
+                                    sx={{ mb: 0.25 }}
                                 >
-                                    Already on this case
+                                    People On This Case
                                 </Typography>
-                                {casePeopleNotStaged.length === 0 && (
+                                <Typography
+                                    variant={'caption'}
+                                    color={'text.secondary'}
+                                    sx={{ display: 'block', mb: 1.5 }}
+                                >
+                                    Click to add person to this entry
+                                </Typography>
+                                {casePeopleNotStaged.length === 0 ? (
                                     <Typography
                                         variant={'body2'}
                                         color={'text.secondary'}
+                                        sx={{ fontStyle: 'italic' }}
                                     >
-                                        None to add.
+                                        {entryPeople.length > 0 && casePeopleRes.data?.length === entryPeople.length
+                                            ? 'Everyone is already added.'
+                                            : 'No one on this case yet.'}
                                     </Typography>
+                                ) : (
+                                    <Stack
+                                        spacing={1}
+                                        sx={{ alignItems: 'flex-start' }}
+                                    >
+                                        {casePeopleNotStaged.map((p) => (
+                                            <Chip
+                                                key={p.id}
+                                                label={personLabel(p)}
+                                                variant={'outlined'}
+                                                onClick={() => addPerson(p)}
+                                                icon={<Add fontSize={'small'} />}
+                                            />
+                                        ))}
+                                    </Stack>
                                 )}
-                                <Stack
-                                    spacing={1}
-                                    sx={{ alignItems: 'flex-start' }}
-                                >
-                                    {casePeopleNotStaged.map((p) => (
-                                        <Chip
-                                            key={p.id}
-                                            label={personLabel(p)}
-                                            variant={'outlined'}
-                                            onClick={() => addPerson(p)}
-                                            icon={<Add fontSize={'small'} />}
-                                        />
-                                    ))}
-                                </Stack>
                             </Box>
                         </Grid2>
 
-                        <Grid2
-                            sx={{ display: 'flex' }}
-                            size={{ xs: 12, sm: 8, md: 9 }}
-                        >
-                            <Box sx={{ flex: 1, width: '100%' }}>
-                                <PersonFinder
-                                    onSelect={addPerson}
-                                    onCreateRequest={(name) => setCreatePersonName(name)}
-                                />
-                            </Box>
+                        {/* Right panel: search or create */}
+                        <Grid2 size={{ xs: 12, sm: 8, md: 9 }}>
+                            <Typography
+                                variant={'subtitle2'}
+                                sx={{ mb: 0.25 }}
+                            >
+                                Find or create a person
+                            </Typography>
+                            <Typography
+                                variant={'caption'}
+                                color={'text.secondary'}
+                                sx={{ display: 'block', mb: 1.5 }}
+                            >
+                                Enter the exact name and salt phrase used when the person was created
+                            </Typography>
+                            <PersonFinder
+                                embedded
+                                onSelect={addPerson}
+                                onCreateRequest={(name) => setCreatePersonName(name)}
+                                clearTrigger={finderClearTrigger}
+                            />
                         </Grid2>
                     </Grid2>
                 </DialogContent>

@@ -16,13 +16,36 @@
     border: 1px solid #dfdfdf;
 }
 
-.person-finder .search-panel {
+.person-finder .search-panel,
+.person-finder-embedded .search-panel {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
     grid-gap: 1rem;
     align-items: end;
     margin-top: 1rem;
     margin-bottom: 2rem;
+}
+
+.person-finder-embedded .MuiTextField-root {
+    background: white;
+    border-radius: 6px;
+}
+
+.person-finder-embedded .result-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid #37993a;
+}
+
+.person-finder-embedded .result-item.create {
+    border: 2px dashed #A4B7BE;
+    color: #A4B7BE;
+    justify-content: center;
+    cursor: pointer;
 }
 
 .person-finder .search-panel .MuiTextField-root {
