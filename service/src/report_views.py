@@ -113,6 +113,62 @@ def get_reports(organization_id):
     """, (organization_id,))
     cases_by_status = [{'status': r[0], 'count': r[1]} for r in cur.fetchall()]
 
+    # Most common codes across cases (by number of cases carrying each code)
+    cur.execute("""
+        SELECT code_id::text,
+               org_code.code AS code_label,
+               COUNT(DISTINCT c.id) AS case_count
+        FROM cases c
+        CROSS JOIN unnest(c.codes) AS code_id
+        LEFT JOIN codes org_code ON org_code.id = code_id
+        WHERE c.organization_id = %s AND c.created_at >= %s AND c.created_at <= %s
+        GROUP BY code_id, org_code.code
+        ORDER BY case_count DESC
+        LIMIT 20
+    """, (organization_id, start, end))
+    codes_by_case_count = [
+        {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
+        for r in cur.fetchall()
+    ]
+
+    # Total contact time attributed to each code (sum of entry durations for cases carrying that code)
+    cur.execute("""
+        SELECT code_id::text,
+               org_code.code AS code_label,
+               COALESCE(SUM(e.duration), 0) AS total_minutes
+        FROM cases c
+        CROSS JOIN unnest(c.codes) AS code_id
+        JOIN entries e ON e.case_id = c.id
+        LEFT JOIN codes org_code ON org_code.id = code_id
+        WHERE c.organization_id = %s AND e.date >= %s AND e.date <= %s
+        GROUP BY code_id, org_code.code
+        ORDER BY total_minutes DESC
+        LIMIT 20
+    """, (organization_id, start, end))
+    codes_by_duration = [
+        {'codeId': r[0], 'codeLabel': r[1], 'totalMinutes': int(r[2])}
+        for r in cur.fetchall()
+    ]
+
+    # Codes with the most individual entries
+    cur.execute("""
+        SELECT code_id::text,
+               org_code.code AS code_label,
+               COUNT(e.id) AS entry_count
+        FROM cases c
+        CROSS JOIN unnest(c.codes) AS code_id
+        JOIN entries e ON e.case_id = c.id
+        LEFT JOIN codes org_code ON org_code.id = code_id
+        WHERE c.organization_id = %s AND e.date >= %s AND e.date <= %s
+        GROUP BY code_id, org_code.code
+        ORDER BY entry_count DESC
+        LIMIT 20
+    """, (organization_id, start, end))
+    codes_by_entry_count = [
+        {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
+        for r in cur.fetchall()
+    ]
+
     cur.close()
     conn.close()
 
@@ -127,4 +183,7 @@ def get_reports(organization_id):
         'personsByRole': persons_by_role,
         'personsByGeneration': persons_by_generation,
         'casesByStatus': cases_by_status,
+        'codesByCaseCount': codes_by_case_count,
+        'codesByDuration': codes_by_duration,
+        'codesByEntryCount': codes_by_entry_count,
     })

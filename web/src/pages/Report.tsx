@@ -8,6 +8,7 @@ const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsRe
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
 import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
+import { ioaCodesById } from '../constants/ioaConstants'
 // Side-effect imports: highcharts.js sets window._Highcharts in CJS mode, so
 // these modules self-register against it on evaluation. No function call needed.
 // Offline exporting keeps all chart data in-browser — nothing reaches export.highcharts.com.
@@ -25,6 +26,8 @@ const host = window.location.host.includes('localhost')
     ? 'http://localhost:5002'
     : `https://${window.location.host}`
 
+type CodeRow = { codeId: string; codeLabel: string | null; count?: number; totalMinutes?: number }
+
 type ReportData = {
     entriesByMonth: { month: string; count: number }[]
     durationByMonth: { month: string; totalMinutes: number }[]
@@ -36,6 +39,14 @@ type ReportData = {
     personsByRole: { role: string; count: number }[]
     personsByGeneration: { generation: string; count: number }[]
     casesByStatus: { status: string; count: number }[]
+    codesByCaseCount: CodeRow[]
+    codesByDuration: CodeRow[]
+    codesByEntryCount: CodeRow[]
+}
+
+function resolveCodeLabel(row: CodeRow): string {
+    if (row.codeLabel) return row.codeLabel
+    return ioaCodesById.get(row.codeId)?.code ?? row.codeId.slice(0, 8)
 }
 
 function defaultRange() {
@@ -420,6 +431,42 @@ export function ReportPage() {
                         categories={data?.casesByStatus.map(r => r.status) ?? []}
                         data={data?.casesByStatus.map(r => r.count) ?? []}
                         yTitle="Cases"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <ToggleChart
+                        title="Most Common Codes (by Cases)"
+                        categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
+                        data={data?.codesByCaseCount.map(r => r.count ?? 0) ?? []}
+                        yTitle="Cases"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <ToggleChart
+                        title="Contact Time by Code (hours)"
+                        categories={data?.codesByDuration.map(resolveCodeLabel) ?? []}
+                        data={data?.codesByDuration.map(r => +((r.totalMinutes ?? 0) / 60).toFixed(1)) ?? []}
+                        yTitle="Hours"
+                        decimalPlaces={1}
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <ToggleChart
+                        title="Most Active Codes (by Entries)"
+                        categories={data?.codesByEntryCount.map(resolveCodeLabel) ?? []}
+                        data={data?.codesByEntryCount.map(r => r.count ?? 0) ?? []}
+                        yTitle="Entries"
                         suppressable
                         shareMode={shareMode}
                         minCellSize={minCellSize}
