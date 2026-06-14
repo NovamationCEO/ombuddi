@@ -12,8 +12,8 @@ import { usePalette } from '../tools/usePalette'
  * tell at a glance which codes are the IOA-standard categories vs. their
  * organization's custom ones.
  */
-export function CodeChip(props: { code: string }) {
-    const { code } = props
+export function CodeChip(props: { code: string; compact?: boolean }) {
+    const { code, compact = false } = props
     const palette = usePalette()
 
     const ioaCode = ioaCodesById.get(code)
@@ -29,7 +29,7 @@ export function CodeChip(props: { code: string }) {
     if (ioaCode) {
         return (
             <Chip
-                label={`${ioaCode.code}: ${ioaCode.description}`}
+                label={compact ? ioaCode.code : `${ioaCode.code}: ${ioaCode.description}`}
                 sx={{
                     bgcolor: lighten(palette.primary.bgcolor, 0.8),
                     transition: 'all 0.3s ease',
@@ -40,7 +40,7 @@ export function CodeChip(props: { code: string }) {
     }
 
     if (customCodeRes.data) {
-        return <Chip label={`${customCodeRes.data.code}: ${customCodeRes.data.description}`} />
+        return <Chip label={compact ? customCodeRes.data.code : `${customCodeRes.data.code}: ${customCodeRes.data.description}`} />
     }
 
     return null

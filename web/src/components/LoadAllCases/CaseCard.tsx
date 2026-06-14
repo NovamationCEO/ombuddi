@@ -86,6 +86,7 @@ export function CaseCard(props: { caseItem: CaseType; muted?: boolean }) {
                         <CodeChip
                             key={code}
                             code={code}
+                            compact={muted}
                         />
                     ))}
                 </Box>
