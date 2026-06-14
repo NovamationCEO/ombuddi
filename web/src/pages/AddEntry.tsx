@@ -14,6 +14,7 @@ import {
     Typography,
 } from '@mui/material'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
@@ -45,6 +46,7 @@ export function AddEntry() {
     const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
     const [notes, setNotes] = useState('')
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
     const ombudsId = useUserId()
@@ -132,6 +134,7 @@ export function AddEntry() {
                 ),
             )
         }
+        await queryClient.invalidateQueries({ queryKey: ['get_entries_by_case_id', caseId] })
         navigate(`/case/${caseId}`)
     }
 
