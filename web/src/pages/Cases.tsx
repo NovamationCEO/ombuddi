@@ -29,7 +29,7 @@ export function Cases() {
     }
 
     return (
-        <Box>
+        <Box sx={{ p: 1 }}>
             <Box sx={grid}>
                 <CaseCardThin Icon={<Add />} text={'Add Case'} link={'/add_case'} />
                 <CaseCardThin Icon={<Commit />} text={'Log Without Case'} link={'/log_without_case'} />

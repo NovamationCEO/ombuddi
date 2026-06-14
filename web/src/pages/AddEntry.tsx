@@ -317,7 +317,7 @@ export function AddEntry() {
                     </Button>
                 </DialogActions>
             </Dialog>
-            <Stack spacing={2} sx={{ p: 3 }}>
+            <Stack spacing={2} sx={{ p: 1 }}>
                 <Box sx={{ display: 'flex' }}>
                     <Box>
                         <Typography variant={'h5'}>
