@@ -2,7 +2,9 @@ import { Box, Stack, TextField, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import Highcharts from 'highcharts'
-import HighchartsReact from 'highcharts-react-official'
+import HighchartsReactOfficial from 'highcharts-react-official'
+// highcharts-react-official ships CJS; Vite wraps it in an object at runtime
+const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsReactOfficial
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
 
