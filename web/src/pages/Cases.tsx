@@ -25,7 +25,8 @@ export function Cases() {
     const grid = {
         display: 'grid',
         gap: 2,
-        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+        gridTemplateColumns: '1fr',
+        '@media (min-width: 1100px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
     }
 
     return (
