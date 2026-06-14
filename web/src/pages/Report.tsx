@@ -1,4 +1,4 @@
-import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, IconButton, InputAdornment, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import Highcharts from 'highcharts'
@@ -7,7 +7,7 @@ import HighchartsReactOfficial from 'highcharts-react-official'
 const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsReactOfficial
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
-import { BarChart, PieChart } from '@mui/icons-material'
+import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
 
 const host = window.location.host.includes('localhost')
     ? 'http://localhost:5002'
@@ -33,6 +33,41 @@ function defaultRange() {
     return {
         start: start.toISOString().slice(0, 10),
         end: end.toISOString().slice(0, 10),
+    }
+}
+
+/**
+ * In shareable mode, merge any bucket below minSize into "Other" so that
+ * small groups can't be used to infer individual identity.
+ */
+function suppressSmallBuckets(
+    categories: string[],
+    data: number[],
+    minSize: number,
+): { categories: string[]; data: number[] } {
+    let otherTotal = 0
+    const kept: { label: string; value: number }[] = []
+
+    categories.forEach((label, i) => {
+        if (data[i] < minSize) {
+            otherTotal += data[i]
+        } else {
+            kept.push({ label, value: data[i] })
+        }
+    })
+
+    if (otherTotal > 0) {
+        const existingOther = kept.find(k => k.label === 'Other')
+        if (existingOther) {
+            existingOther.value += otherTotal
+        } else {
+            kept.push({ label: 'Other', value: otherTotal })
+        }
+    }
+
+    return {
+        categories: kept.map(k => k.label),
+        data: kept.map(k => k.value),
     }
 }
 
@@ -97,30 +132,38 @@ function makePieOptions(
     }
 }
 
-/** Bar chart with a small toggle to switch to pie view. */
+/** Bar chart with bar/pie toggle and optional small-bucket suppression. */
 function ToggleChart(props: {
     title: string
     categories: string[]
     data: number[]
     yTitle: string
     decimalPlaces?: number
+    /** When true, apply small-bucket suppression in shareable mode. */
+    suppressable?: boolean
+    shareMode: boolean
+    minCellSize: number
 }) {
-    const { title, categories, data, yTitle, decimalPlaces = 0 } = props
-    const [mode, setMode] = React.useState<'bar' | 'pie'>('bar')
+    const { title, yTitle, decimalPlaces = 0, suppressable = false, shareMode, minCellSize } = props
+    const [chartMode, setChartMode] = React.useState<'bar' | 'pie'>('bar')
 
-    const options = mode === 'bar'
+    const { categories, data } = (suppressable && shareMode)
+        ? suppressSmallBuckets(props.categories, props.data, minCellSize)
+        : { categories: props.categories, data: props.data }
+
+    const options = chartMode === 'bar'
         ? makeBarOptions(title, categories, data, yTitle, decimalPlaces)
         : makePieOptions(title, categories, data, decimalPlaces)
 
     return (
         <Box sx={{ position: 'relative', boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
-            <Tooltip title={mode === 'bar' ? 'Switch to pie chart' : 'Switch to bar chart'}>
+            <Tooltip title={chartMode === 'bar' ? 'Switch to pie chart' : 'Switch to bar chart'}>
                 <IconButton
                     size="small"
-                    onClick={() => setMode(m => m === 'bar' ? 'pie' : 'bar')}
+                    onClick={() => setChartMode(m => m === 'bar' ? 'pie' : 'bar')}
                     sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, opacity: 0.5, '&:hover': { opacity: 1 } }}
                 >
-                    {mode === 'bar' ? <PieChart fontSize="small" /> : <BarChart fontSize="small" />}
+                    {chartMode === 'bar' ? <PieChart fontSize="small" /> : <BarChart fontSize="small" />}
                 </IconButton>
             </Tooltip>
             <HighchartsReact highcharts={Highcharts} options={options} />
@@ -132,6 +175,8 @@ export function ReportPage() {
     const { start: defaultStart, end: defaultEnd } = defaultRange()
     const [start, setStart] = React.useState(defaultStart)
     const [end, setEnd] = React.useState(defaultEnd)
+    const [reportMode, setReportMode] = React.useState<'full' | 'shareable'>('full')
+    const [minCellSize, setMinCellSize] = React.useState(5)
     const org = useOrganization()
     const orgId = org.id
 
@@ -145,6 +190,7 @@ export function ReportPage() {
         enabled: !!orgId,
     })
 
+    const shareMode = reportMode === 'shareable'
     const entryMonths = data?.entriesByMonth.map(r => r.month) ?? []
     const caseMonths = data?.casesByMonth.map(r => r.month) ?? []
     const personMonths = data?.personsByMonth.map(r => r.month) ?? []
@@ -153,7 +199,7 @@ export function ReportPage() {
         <Box sx={{ p: 1 }}>
             <Typography variant="h5" sx={{ mb: 2 }}>Reports</Typography>
 
-            <Stack direction="row" spacing={2} sx={{ mb: 3 }} alignItems="center">
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center" flexWrap="wrap">
                 <TextField
                     type="date"
                     label="From"
@@ -170,10 +216,58 @@ export function ReportPage() {
                     size="small"
                     slotProps={{ inputLabel: { shrink: true } }}
                 />
+                <ToggleButtonGroup
+                    value={reportMode}
+                    exclusive
+                    onChange={(_, v) => { if (v) setReportMode(v) }}
+                    size="small"
+                >
+                    <ToggleButton value="full">
+                        <Lock fontSize="small" sx={{ mr: 0.5 }} /> Full
+                    </ToggleButton>
+                    <ToggleButton value="shareable">
+                        <Share fontSize="small" sx={{ mr: 0.5 }} /> Shareable
+                    </ToggleButton>
+                </ToggleButtonGroup>
+                {shareMode && (
+                    <TextField
+                        label="Min. cell size"
+                        type="number"
+                        value={minCellSize}
+                        onChange={e => setMinCellSize(Math.max(1, Number(e.target.value)))}
+                        size="small"
+                        sx={{ width: 140 }}
+                        slotProps={{
+                            htmlInput: { min: 1, step: 1 },
+                            inputLabel: { shrink: true },
+                            input: { startAdornment: <InputAdornment position="start">&ge;</InputAdornment> },
+                        }}
+                    />
+                )}
             </Stack>
 
+            {/* Mode banner */}
+            <Box
+                sx={{
+                    mb: 2,
+                    px: 2,
+                    py: 1,
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    bgcolor: shareMode ? 'success.light' : 'warning.light',
+                    color: shareMode ? 'success.contrastText' : 'warning.contrastText',
+                }}
+            >
+                {shareMode
+                    ? <><Share fontSize="small" /> Shareable view &mdash; buckets with fewer than {minCellSize} {minCellSize === 1 ? 'entry' : 'entries'} are merged into &ldquo;Other&rdquo;</>
+                    : <><Lock fontSize="small" /> Ombuds eyes only &mdash; all data shown without suppression</>
+                }
+            </Box>
+
             <Grid2 container spacing={2}>
-                {/* Time-series column charts — no toggle */}
+                {/* Time-series column charts */}
                 <Grid2 size={{ xs: 12, md: 6 }}>
                     <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
                         <HighchartsReact
@@ -246,13 +340,16 @@ export function ReportPage() {
                     </Box>
                 </Grid2>
 
-                {/* Categorical charts — bar/pie toggle */}
+                {/* Categorical charts — bar/pie toggle + shareable suppression */}
                 <Grid2 size={{ xs: 12, md: 6 }}>
                     <ToggleChart
                         title="Unique Persons by Race / Ethnicity"
                         categories={data?.personsByRace.map(r => r.race) ?? []}
                         data={data?.personsByRace.map(r => r.count) ?? []}
                         yTitle="Persons"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
 
@@ -262,16 +359,22 @@ export function ReportPage() {
                         categories={data?.entriesByMedium.map(r => r.medium) ?? []}
                         data={data?.entriesByMedium.map(r => r.count) ?? []}
                         yTitle="Entries"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
+                    {/* Avg duration is not a count — suppression doesn't apply */}
                     <ToggleChart
                         title="Avg. Contact Time by Method (min)"
                         categories={data?.avgDurationByMedium.map(r => r.medium) ?? []}
                         data={data?.avgDurationByMedium.map(r => r.avgMinutes) ?? []}
                         yTitle="Minutes"
                         decimalPlaces={1}
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
 
@@ -281,6 +384,9 @@ export function ReportPage() {
                         categories={data?.personsByRole.map(r => r.role) ?? []}
                         data={data?.personsByRole.map(r => r.count) ?? []}
                         yTitle="Persons"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
 
@@ -290,6 +396,9 @@ export function ReportPage() {
                         categories={data?.personsByGeneration.map(r => r.generation) ?? []}
                         data={data?.personsByGeneration.map(r => r.count) ?? []}
                         yTitle="Persons"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
 
@@ -299,6 +408,9 @@ export function ReportPage() {
                         categories={data?.casesByStatus.map(r => r.status) ?? []}
                         data={data?.casesByStatus.map(r => r.count) ?? []}
                         yTitle="Cases"
+                        suppressable
+                        shareMode={shareMode}
+                        minCellSize={minCellSize}
                     />
                 </Grid2>
             </Grid2>
