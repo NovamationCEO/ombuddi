@@ -1,10 +1,16 @@
+import keycloak from '../../constants/keycloak'
+
 let host = window.location.host
 host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
 
 export async function creator<TReturn = unknown, TPayload = unknown>(address: string, payload: TPayload) {
+    await keycloak.updateToken(30).catch(() => keycloak.login())
     const requestOptions = {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${keycloak.token}`,
+        },
         body: JSON.stringify(payload),
     }
 
@@ -21,6 +27,6 @@ export async function creator<TReturn = unknown, TPayload = unknown>(address: st
         return data as TReturn
     } catch (error) {
         console.error('There was an error!', error)
-        throw error // Ensure errors are thrown to be catchable by caller
+        throw error
     }
 }

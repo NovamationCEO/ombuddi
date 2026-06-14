@@ -1,12 +1,9 @@
-import { OmbudsType, OrganizationType } from '../types/majorTypes'
+import { OrganizationType } from '../types/majorTypes'
 import { useGetter } from './db_tools/useGetter'
-import { useUserId } from './useUserId'
+import keycloak from '../constants/keycloak'
 
 export function useOrganization(): OrganizationType {
-    const userId = useUserId()
-    const ombudRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
-    const organizationId = ombudRes.data?.organizationId
+    const organizationId = keycloak.tokenParsed?.organization_id as string | undefined
     const organizationRes = useGetter<OrganizationType>(['get_organization_by_id', organizationId])
-
     return organizationRes.data || ({} as OrganizationType)
 }

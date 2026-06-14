@@ -1,3 +1,5 @@
+import keycloak from '../../constants/keycloak'
+
 let host = window.location.host
 host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
 
@@ -7,9 +9,13 @@ export type UpdateResponse = {
 }
 
 export async function updater<T>(address: string, payload: Partial<T>) {
+    await keycloak.updateToken(30).catch(() => keycloak.login())
     const requestOptions = {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${keycloak.token}`,
+        },
         body: JSON.stringify(payload),
     }
 
@@ -27,6 +33,6 @@ export async function updater<T>(address: string, payload: Partial<T>) {
         return data as UpdateResponse
     } catch (error) {
         console.error('There was an error!', error)
-        throw error // Ensure errors are thrown to be catchable by caller
+        throw error
     }
 }

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from src.connection import get_db_connection
 from utils import add_one, get_many, get_one, return_many, update_one, remove_one
 from hash_name import hash_name
@@ -35,44 +35,58 @@ def _salt_name():
             True:  payload,
         }
 
+def _org():
+    return {'organization_id': g.organization_id}
+
 @person_views.route('/api/v1/get_person_by_id/<person_id>')
 def get_person_by_id(person_id):
-    constraints = {'id': person_id}
-    return get_one('persons', person_model, constraints)
+    return get_one('persons', person_model, {'id': person_id}, owner_constraint=_org())
 
 @person_views.route('/api/v1/get_persons_by_hashed_name/<raw_hash>')
 def get_persons_by_hashed_name(raw_hash):
     final_hash = hash_name(raw_hash)
-    return get_many('persons', person_model, {'hashed_name': final_hash})
+    return get_many('persons', person_model, {'hashed_name': final_hash}, owner_constraint=_org())
 
 @person_views.route('/api/v1/add_person', methods=['POST'])
 def add_person():
-    return add_one('persons', person_model, request)
+    return add_one('persons', person_model, request, owner_constraint=_org())
 
 @person_views.route('/api/v1/update_person', methods=['PUT'])
 def update_person():
-    return update_one('persons', person_model, request)
+    return update_one('persons', person_model, request, owner_constraint=_org())
 
 @person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
 def get_persons_by_organization_id(organization_id):
-    constraints = {'organization_id': organization_id}
-    return get_many('persons', person_model, constraints)
+    return get_many('persons', person_model, {}, owner_constraint=_org())
 
 @person_views.route('/api/v1/get_public_persons_by_organization_id/<organization_id>')
 def get_public_persons_by_organization_id(organization_id):
-    constraints = {'organization_id': organization_id, 'is_public': True}
-    return get_many('persons', person_model, constraints)
+    return get_many('persons', person_model, {'is_public': True}, owner_constraint=_org())
 
 @person_views.route('/api/v1/search_public_persons/<organization_id>/<query>')
 def search_public_persons(organization_id, query):
     return _get_persons_by_sql(
         "SELECT * FROM persons WHERE organization_id = %s AND is_public = TRUE AND public_name ILIKE %s ORDER BY public_name",
-        (organization_id, f'%{query}%'),
+        (g.organization_id, f'%{query}%'),
     )
 
 @person_views.route('/api/v1/delete_person', methods=['DELETE'])
 def delete_person():
-    return remove_one('persons', request)
+    data = request.get_json(silent=True) or {}
+    dead_id = data.get('id')
+    if not dead_id:
+        return jsonify({'success': False, 'error': 'Missing id'}), 400
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM persons WHERE id = %s AND organization_id = %s",
+                    (dead_id, g.organization_id),
+                )
+        return jsonify({'success': True, 'status': 'success'}), 200
+    except Exception as e:
+        logger.exception("delete_person failed")
+        return jsonify({'success': False, 'error': 'Database error', 'message': str(e)}), 500
 
 def _get_persons_by_sql(sql: str, params: tuple):
     try:
@@ -98,11 +112,13 @@ def _get_persons_by_sql(sql: str, params: tuple):
 SQL_PERSONS_BY_CASE_ID = """
     SELECT p.*
     FROM persons p
-    WHERE EXISTS (
+    WHERE p.organization_id = %s
+      AND EXISTS (
         SELECT 1
         FROM entry_person ep
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.case_id = %s
+          AND e.organization_id = %s
           AND ep.person_id = p.id
     )
     ORDER BY p.id;
@@ -111,10 +127,13 @@ SQL_PERSONS_BY_CASE_ID = """
 SQL_PERSONS_BY_ENTRY_ID = """
     SELECT p.*
     FROM persons p
-    WHERE EXISTS (
+    WHERE p.organization_id = %s
+      AND EXISTS (
         SELECT 1
         FROM entry_person ep
+        JOIN entries e ON e.id = ep.entry_id
         WHERE ep.entry_id = %s
+          AND e.organization_id = %s
           AND ep.person_id = p.id
     )
     ORDER BY p.id;
@@ -122,11 +141,13 @@ SQL_PERSONS_BY_ENTRY_ID = """
 
 @person_views.route("/api/v1/get_persons_by_case_id/<case_id>")
 def get_persons_by_case_id(case_id):
-    return _get_persons_by_sql(SQL_PERSONS_BY_CASE_ID, (case_id,))
+    org = g.organization_id
+    return _get_persons_by_sql(SQL_PERSONS_BY_CASE_ID, (org, case_id, org))
 
 @person_views.route("/api/v1/get_persons_by_entry_id/<entry_id>")
 def get_persons_by_entry_id(entry_id):
-    return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (entry_id,))
+    org = g.organization_id
+    return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (org, entry_id, org))
 
 
 # ---------------------------------------------------------------------------

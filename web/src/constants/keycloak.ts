@@ -1,7 +1,7 @@
 import Keycloak from 'keycloak-js'
 
 const keycloakConfig = {
-    url: 'https://localhost:5001/',
+    url: 'http://localhost:5001',
     realm: 'ombuddi',
     clientId: 'myclient',
 }

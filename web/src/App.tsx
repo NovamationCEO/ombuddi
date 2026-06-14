@@ -4,19 +4,25 @@ import { router } from './router'
 import { ThemingProvider, useThemingContext } from './libraries/ThemingContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-// import { ReactKeycloakProvider } from '@react-keycloak/web'
-// import keycloak from './constants/keycloak'
+import { ReactKeycloakProvider } from '@react-keycloak/web'
+import keycloak from './constants/keycloak'
 import { showDevtools } from './constants/showDevtools'
 import { Snack } from './trusted-components/Snack'
 import { Background } from './trusted-components/Background'
 import { Box, ThemeProvider, SxProps } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
+
 const App: React.FC = () => {
     return (
-        <ThemingProvider>
-            <QueryWrap />
-        </ThemingProvider>
+        <ReactKeycloakProvider
+            authClient={keycloak}
+            initOptions={{ onLoad: 'login-required', checkLoginIframe: false }}
+        >
+            <ThemingProvider>
+                <QueryWrap />
+            </ThemingProvider>
+        </ReactKeycloakProvider>
     )
 }
 
@@ -24,13 +30,6 @@ const QueryWrap: React.FC = () => {
     const queryClient = new QueryClient()
 
     return (
-        // <ReactKeycloakProvider
-        //     initOptions={{ checkLoginIframe: false }}
-        //     onEvent={eventLogger}
-        //     onTokens={tokenLogger}
-        //     authClient={keycloak}
-        // >
-        // </ReactKeycloakProvider>
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
                 {showDevtools && <ReactQueryDevtools initialIsOpen={false} />}

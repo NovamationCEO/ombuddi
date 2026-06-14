@@ -7,6 +7,7 @@ import HighchartsReactOfficial from 'highcharts-react-official'
 const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsReactOfficial
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
+import { getter } from '../tools/db_tools/getter'
 import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
 import { ioaCodesById } from '../constants/ioaConstants'
 // Side-effect imports: highcharts.js sets window._Highcharts in CJS mode, so
@@ -22,9 +23,6 @@ Highcharts.setOptions({
     },
 })
 
-const host = window.location.host.includes('localhost')
-    ? 'http://localhost:5002'
-    : `https://${window.location.host}`
 
 type CodeRow = { codeId: string; codeLabel: string | null; count?: number; totalMinutes?: number }
 
@@ -204,12 +202,8 @@ export function ReportPage() {
     const orgId = org.id
 
     const { data } = useQuery<ReportData>({
-        queryKey: ['reports', orgId, start, end],
-        queryFn: async () => {
-            const res = await fetch(`${host}/api/v1/reports/${orgId}?start=${start}&end=${end}`)
-            if (!res.ok) throw new Error('Report fetch failed')
-            return res.json()
-        },
+        queryKey: ['reports', start, end],
+        queryFn: () => getter(`reports?start=${start}&end=${end}`),
         enabled: !!orgId,
     })
 
@@ -222,7 +216,7 @@ export function ReportPage() {
         <Box sx={{ p: 1 }}>
             <Typography variant="h5" sx={{ mb: 2 }}>Reports</Typography>
 
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }} alignItems="center" flexWrap="wrap">
+            <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                 <TextField
                     type="date"
                     label="From"

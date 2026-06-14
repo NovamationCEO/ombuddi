@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import {
     Box,
     Button,
+    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
@@ -15,11 +16,21 @@ import {
 import { headerHeight } from '../constants/uiSizes'
 import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
+import { useKeycloak } from '@react-keycloak/web'
 
 export function Page(props: { element: ReactNode }) {
     const style = useStyles()
     const { sessionSalt, setSessionSalt } = useSessionSalt()
     const [draft, setDraft] = React.useState('')
+    const { initialized } = useKeycloak()
+
+    if (!initialized) {
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
+        )
+    }
 
     // sessionSalt === null means the user hasn't been prompted yet this session.
     const promptOpen = sessionSalt === null

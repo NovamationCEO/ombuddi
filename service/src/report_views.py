@@ -1,11 +1,12 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from src.connection import get_db_connection
 from datetime import date, timedelta
 
 report_views = Blueprint('report_views', __name__)
 
-@report_views.route('/api/v1/reports/<organization_id>')
-def get_reports(organization_id):
+@report_views.route('/api/v1/reports')
+def get_reports():
+    organization_id = g.organization_id
     today = date.today()
     end = request.args.get('end', today.isoformat())
     start = request.args.get('start', (today.replace(day=1) - timedelta(days=364)).isoformat())
