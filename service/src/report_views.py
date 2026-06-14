@@ -64,6 +64,55 @@ def get_reports(organization_id):
     """, (organization_id, start, end))
     persons_by_race = [{'race': r[0], 'count': r[1]} for r in cur.fetchall()]
 
+    cur.execute("""
+        SELECT COALESCE(NULLIF(TRIM(medium), ''), 'Not specified') AS medium,
+               COUNT(*) AS count
+        FROM entries
+        WHERE organization_id = %s AND date >= %s AND date <= %s
+        GROUP BY medium ORDER BY count DESC
+    """, (organization_id, start, end))
+    entries_by_medium = [{'medium': r[0], 'count': r[1]} for r in cur.fetchall()]
+
+    cur.execute("""
+        SELECT COALESCE(NULLIF(TRIM(medium), ''), 'Not specified') AS medium,
+               ROUND(AVG(duration)::numeric, 1) AS avg_minutes
+        FROM entries
+        WHERE organization_id = %s AND date >= %s AND date <= %s AND duration IS NOT NULL
+        GROUP BY medium ORDER BY avg_minutes DESC
+    """, (organization_id, start, end))
+    avg_duration_by_medium = [{'medium': r[0], 'avgMinutes': float(r[1])} for r in cur.fetchall()]
+
+    cur.execute("""
+        SELECT COALESCE(NULLIF(TRIM(p.primary_role), ''), 'Not specified') AS role,
+               COUNT(DISTINCT ep.person_id) AS count
+        FROM entry_person ep
+        JOIN persons p ON p.id = ep.person_id
+        JOIN entries e ON e.id = ep.entry_id
+        WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        GROUP BY role ORDER BY count DESC
+    """, (organization_id, start, end))
+    persons_by_role = [{'role': r[0], 'count': r[1]} for r in cur.fetchall()]
+
+    cur.execute("""
+        SELECT COALESCE(NULLIF(TRIM(p.generation), ''), 'Not specified') AS generation,
+               COUNT(DISTINCT ep.person_id) AS count
+        FROM entry_person ep
+        JOIN persons p ON p.id = ep.person_id
+        JOIN entries e ON e.id = ep.entry_id
+        WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        GROUP BY generation ORDER BY count DESC
+    """, (organization_id, start, end))
+    persons_by_generation = [{'generation': r[0], 'count': r[1]} for r in cur.fetchall()]
+
+    # Cases by current status — a snapshot, not date-filtered
+    cur.execute("""
+        SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
+        FROM cases
+        WHERE organization_id = %s
+        GROUP BY status ORDER BY count DESC
+    """, (organization_id,))
+    cases_by_status = [{'status': r[0], 'count': r[1]} for r in cur.fetchall()]
+
     cur.close()
     conn.close()
 
@@ -73,4 +122,9 @@ def get_reports(organization_id):
         'casesByMonth': cases_by_month,
         'personsByMonth': persons_by_month,
         'personsByRace': persons_by_race,
+        'entriesByMedium': entries_by_medium,
+        'avgDurationByMedium': avg_duration_by_medium,
+        'personsByRole': persons_by_role,
+        'personsByGeneration': persons_by_generation,
+        'casesByStatus': cases_by_status,
     })

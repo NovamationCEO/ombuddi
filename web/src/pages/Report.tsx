@@ -18,6 +18,11 @@ type ReportData = {
     casesByMonth: { month: string; count: number }[]
     personsByMonth: { month: string; uniquePersons: number; totalAppearances: number }[]
     personsByRace: { race: string; count: number }[]
+    entriesByMedium: { medium: string; count: number }[]
+    avgDurationByMedium: { medium: string; avgMinutes: number }[]
+    personsByRole: { role: string; count: number }[]
+    personsByGeneration: { generation: string; count: number }[]
+    casesByStatus: { status: string; count: number }[]
 }
 
 function defaultRange() {
@@ -46,6 +51,29 @@ function colOptions(
         series,
         credits: { enabled: false },
         tooltip: { shared: true },
+    }
+}
+
+function barOptions(
+    title: string,
+    categories: string[],
+    data: number[],
+    yTitle: string,
+    decimalPlaces = 0,
+): Highcharts.Options {
+    return {
+        chart: { type: 'bar', height: 240, animation: false },
+        title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
+        xAxis: { categories, labels: { style: { fontSize: '10px' } } },
+        yAxis: {
+            title: { text: yTitle, style: { fontSize: '11px' } },
+            allowDecimals: decimalPlaces > 0,
+            min: 0,
+        },
+        legend: { enabled: false },
+        series: [{ type: 'bar', data }],
+        credits: { enabled: false },
+        tooltip: { valueDecimals: decimalPlaces },
     }
 }
 
@@ -161,25 +189,73 @@ export function ReportPage() {
                 <Grid2 size={{ xs: 12, md: 6 }}>
                     <HighchartsReact
                         highcharts={Highcharts}
-                        options={{
-                            chart: { type: 'bar', height: 240, animation: false },
-                            title: {
-                                text: 'Unique Persons by Race / Ethnicity',
-                                style: { fontSize: '13px', fontWeight: '600' },
-                            },
-                            xAxis: {
-                                categories: data?.personsByRace.map(r => r.race) ?? [],
-                                labels: { style: { fontSize: '10px' } },
-                            },
-                            yAxis: {
-                                title: { text: 'Persons', style: { fontSize: '11px' } },
-                                allowDecimals: false,
-                                min: 0,
-                            },
-                            legend: { enabled: false },
-                            series: [{ type: 'bar', name: 'Persons', data: data?.personsByRace.map(r => r.count) ?? [] }],
-                            credits: { enabled: false },
-                        }}
+                        options={barOptions(
+                            'Unique Persons by Race / Ethnicity',
+                            data?.personsByRace.map(r => r.race) ?? [],
+                            data?.personsByRace.map(r => r.count) ?? [],
+                            'Persons',
+                        )}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <HighchartsReact
+                        highcharts={Highcharts}
+                        options={barOptions(
+                            'Entries by Contact Method',
+                            data?.entriesByMedium.map(r => r.medium) ?? [],
+                            data?.entriesByMedium.map(r => r.count) ?? [],
+                            'Entries',
+                        )}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <HighchartsReact
+                        highcharts={Highcharts}
+                        options={barOptions(
+                            'Avg. Contact Time by Method (min)',
+                            data?.avgDurationByMedium.map(r => r.medium) ?? [],
+                            data?.avgDurationByMedium.map(r => r.avgMinutes) ?? [],
+                            'Minutes',
+                            1,
+                        )}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <HighchartsReact
+                        highcharts={Highcharts}
+                        options={barOptions(
+                            'Unique Persons by Role',
+                            data?.personsByRole.map(r => r.role) ?? [],
+                            data?.personsByRole.map(r => r.count) ?? [],
+                            'Persons',
+                        )}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <HighchartsReact
+                        highcharts={Highcharts}
+                        options={barOptions(
+                            'Unique Persons by Generation',
+                            data?.personsByGeneration.map(r => r.generation) ?? [],
+                            data?.personsByGeneration.map(r => r.count) ?? [],
+                            'Persons',
+                        )}
+                    />
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <HighchartsReact
+                        highcharts={Highcharts}
+                        options={barOptions(
+                            'Cases by Current Status',
+                            data?.casesByStatus.map(r => r.status) ?? [],
+                            data?.casesByStatus.map(r => r.count) ?? [],
+                            'Cases',
+                        )}
                     />
                 </Grid2>
             </Grid2>
