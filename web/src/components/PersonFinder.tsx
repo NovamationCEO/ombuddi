@@ -1,5 +1,6 @@
-import { Box, Button, Paper, TextField } from '@mui/material'
+import { Box, Button, CircularProgress, Paper, TextField } from '@mui/material'
 import React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { PersonType } from '../types/majorTypes'
 import { useHashName } from '../tools/useHashName'
@@ -21,38 +22,38 @@ export function PersonFinder(props: {
     const [name, setName] = React.useState<string>('')
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [salt, setSalt] = React.useState<string>('')
+    const [searched, setSearched] = React.useState(false)
+    const navigate = useNavigate()
+    const queryClient = useQueryClient()
 
     React.useEffect(() => {
-        if (sessionSalt !== null && salt === '') {
-            setSalt(sessionSalt)
-        }
+        if (sessionSalt !== null && salt === '') setSalt(sessionSalt)
     }, [sessionSalt])
-    const [results, setResults] = React.useState<PersonType[]>([])
-    const hashedName = useHashName(name, salt)
-    const [showBottom, setShowBottom] = React.useState<boolean>(false)
-    const navigate = useNavigate()
 
+    const hashedName = useHashName(name, salt)
     const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
-    function revealSearch() {
-        setResults(personRes.data || [])
-        setShowBottom(true)
+    // Reset the revealed state whenever the search fields change.
+    React.useEffect(() => {
+        setSearched(false)
+    }, [name, salt])
+
+    async function revealSearch() {
+        // Force a fresh fetch so a newly-created person is found even if the
+        // cache still holds the empty result from before they were created.
+        await queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] })
+        setSearched(true)
     }
 
     function handleSelect(person: PersonType) {
         onSelect?.(person)
-        // Clear the search after a successful pick so the dialog stays usable
-        // for adding additional people without re-entering anything from before.
         setName('')
         setSalt('')
-        setResults([])
-        setShowBottom(false)
+        setSearched(false)
     }
 
-    React.useEffect(() => {
-        setResults([])
-        setShowBottom(false)
-    }, [name, salt])
+    const results = personRes.data ?? []
+    const showResults = searched && name.length > 0
 
     return (
         <Paper
@@ -80,11 +81,16 @@ export function PersonFinder(props: {
             </div>
             <Box
                 sx={{
-                    height: showBottom && name.length > 0 ? 80 : 0,
+                    height: showResults ? 80 : 0,
                     overflow: 'hidden',
-                    transition: 'height 0.3s ease-in-out'
-                }}>
-                {results.length > 0 ? (
+                    transition: 'height 0.3s ease-in-out',
+                }}
+            >
+                {personRes.isFetching ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', pl: 1 }}>
+                        <CircularProgress size={20} />
+                    </Box>
+                ) : results.length > 0 ? (
                     results.map((person) => (
                         <div
                             key={person.id}
@@ -95,17 +101,12 @@ export function PersonFinder(props: {
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     width: '100%',
-                                    alignItems: 'center'
-                                }}>
-                                <Box sx={{
-                                    flex: 1
-                                }}>{person.gender}</Box>
-                                <Box sx={{
-                                    flex: 1
-                                }}>{person.generation}</Box>
-                                <Box sx={{
-                                    flex: 1
-                                }}>{person.primaryRole}</Box>
+                                    alignItems: 'center',
+                                }}
+                            >
+                                <Box sx={{ flex: 1 }}>{person.gender}</Box>
+                                <Box sx={{ flex: 1 }}>{person.generation}</Box>
+                                <Box sx={{ flex: 1 }}>{person.primaryRole}</Box>
                                 <Button
                                     size="small"
                                     onClick={() => handleSelect(person)}
@@ -118,12 +119,14 @@ export function PersonFinder(props: {
                 ) : (
                     <div
                         className="result-item create"
-                        onClick={() => (onCreateRequest ? onCreateRequest(name) : navigate('/add_person'))}
+                        onClick={() =>
+                            onCreateRequest ? onCreateRequest(name) : navigate('/add_person')
+                        }
                     >
-                        ✚ Create new user “{name}”
+                        ✚ Create new user "{name}"
                     </div>
                 )}
             </Box>
         </Paper>
-    );
+    )
 }

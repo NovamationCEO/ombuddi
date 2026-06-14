@@ -8,9 +8,10 @@ import { CodeSource, useCodeSource } from '../tools/useCodeSource'
 export function CodeSetterBox(props: {
     activeCodeIds: string[]
     setActiveCodeIds: (codes: string[]) => void
+    onSave?: (codes: string[]) => Promise<void>
     source: CodeSource
 }) {
-    const { activeCodeIds, setActiveCodeIds, source } = props
+    const { activeCodeIds, setActiveCodeIds, onSave, source } = props
     const [showModal, setShowModal] = React.useState(false)
     const theme = useTheme()
 
@@ -46,6 +47,7 @@ export function CodeSetterBox(props: {
                 setShowCodeSetter={setShowModal}
                 activeCodes={activeCodeIds}
                 setActiveCodes={setActiveCodeIds}
+                onSave={onSave}
                 source={source}
             />
             <RoundedContainer title={title}>

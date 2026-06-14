@@ -279,26 +279,6 @@ export function CaseSummary() {
                                 </Box>
                                 {highlightedEntry && (
                                     <Box sx={{ mt: 1 }}>
-                                        <b>Tags:</b>{' '}
-                                        {(highlightedEntry.codes ?? []).length === 0 ? (
-                                            <span>—</span>
-                                        ) : (
-                                            <Stack
-                                                direction={'row'}
-                                                sx={{ flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}
-                                            >
-                                                {(highlightedEntry.codes ?? []).map((code) => (
-                                                    <CodeChip
-                                                        key={code}
-                                                        code={code}
-                                                    />
-                                                ))}
-                                            </Stack>
-                                        )}
-                                    </Box>
-                                )}
-                                {highlightedEntry && (
-                                    <Box sx={{ mt: 1 }}>
                                         <b>People:</b>{' '}
                                         {(highlightedPeopleRes.data ?? []).length === 0 ? (
                                             <span>—</span>

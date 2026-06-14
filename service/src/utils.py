@@ -237,7 +237,11 @@ def update_one(table, model, request, db_name="default", owner_constraint=None):
         return jsonify({'success': False, 'status': 'input error', 'error': 'Missing id'}), 400
 
     valid_data = {k: v for k, v in user_data.items() if k in model}
-    set_clause = ', '.join([f"{model[k]} = COALESCE(%s, {model[k]})" for k in valid_data if k != 'id'])
+    set_clause = ', '.join([
+        f"{model[k]} = %s::uuid[]" if isinstance(valid_data[k], list)
+        else f"{model[k]} = COALESCE(%s, {model[k]})"
+        for k in valid_data if k != 'id'
+    ])
     where_parts = ['id = %s'] + [f'{k} = %s' for k in owner_constraint.keys()]
     sql_command = f"UPDATE {table} SET {set_clause} WHERE {' AND '.join(where_parts)}"
 

@@ -193,12 +193,7 @@ CREATE TABLE entries (
     date            DATE NOT NULL,
     medium          TEXT NOT NULL DEFAULT 'inPerson',
     duration        INT  NOT NULL DEFAULT 0,         -- minutes
-    notes           TEXT NOT NULL DEFAULT '',
-    -- Per-entry tags. Issue-level tagging happens on cases.codes; this column
-    -- is for action-level tagging on the individual meeting (e.g. "intake",
-    -- "policy clarification", "mediation"). Same UUID array shape as cases.codes
-    -- and the same CodeChip / CodeSetterBox plumbing on the frontend.
-    codes           UUID[] NOT NULL DEFAULT '{}'
+    notes           TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX entries_case_id_idx         ON entries (case_id);

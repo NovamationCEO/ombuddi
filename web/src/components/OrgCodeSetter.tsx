@@ -17,11 +17,12 @@ import { CodeSource, useCodeSource } from '../tools/useCodeSource'
 export const OrgCodeSetter = React.memo(function CodeSetter(props: {
     activeCodes: string[]
     setActiveCodes: (codes: string[]) => void
+    onSave?: (codes: string[]) => Promise<void>
     showCodeSetter: boolean
     setShowCodeSetter: (b: boolean) => void
     source: CodeSource
 }) {
-    const { activeCodes, setActiveCodes, showCodeSetter, setShowCodeSetter, source } = props
+    const { activeCodes, setActiveCodes, onSave, showCodeSetter, setShowCodeSetter, source } = props
     const [openIndex, setOpenIndex] = React.useState<number>(0)
     const [localCodes, setLocalCodes] = React.useState<string[]>([])
 
@@ -35,8 +36,9 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
         setLocalCodes((prev) => (newVal ? [...prev, codeId] : prev.filter((c) => c !== codeId)))
     }
 
-    function save() {
+    async function save() {
         setActiveCodes(localCodes)
+        if (onSave) await onSave(localCodes)
         setShowCodeSetter(false)
     }
 

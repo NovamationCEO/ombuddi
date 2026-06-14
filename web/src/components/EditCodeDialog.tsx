@@ -25,16 +25,10 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
         setActiveOrgCodes(existing.filter((code) => !ioaCodeIdSet.has(code)))
     }, [caseRes.data])
 
-    async function save() {
-        const newCodes = [...new Set(activeIoaCodes.concat(activeOrgCodes))]
-
-        const payload = {
-            id: caseId,
-            codes: newCodes,
-        }
-        await updater('update_case', payload)
-        caseRes.refetch()
-        onClose()
+    async function persist(ioa: string[], org: string[]) {
+        const newCodes = [...new Set([...ioa, ...org])]
+        await updater('update_case', { id: caseId, codes: newCodes })
+        await caseRes.refetch()
     }
 
     return (
@@ -55,11 +49,13 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
                     <CodeSetterBox
                         activeCodeIds={activeIoaCodes}
                         setActiveCodeIds={setActiveIoaCodes}
+                        onSave={(newIoa) => persist(newIoa, activeOrgCodes)}
                         source={{ kind: 'ioa' }}
                     />
                     <CodeSetterBox
                         activeCodeIds={activeOrgCodes}
                         setActiveCodeIds={setActiveOrgCodes}
+                        onSave={(newOrg) => persist(activeIoaCodes, newOrg)}
                         source={{ kind: 'org', organizationId }}
                     />
                 </Stack>
@@ -67,15 +63,9 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
             <DialogActions>
                 <Button
                     onClick={onClose}
-                    variant={'outlined'}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    onClick={save}
                     variant={'contained'}
                 >
-                    Save
+                    Done
                 </Button>
             </DialogActions>
         </Dialog>
