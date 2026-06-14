@@ -1,4 +1,4 @@
-import { Box, Stack, TextField, Typography } from '@mui/material'
+import { Box, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import Highcharts from 'highcharts'
@@ -7,6 +7,7 @@ import HighchartsReactOfficial from 'highcharts-react-official'
 const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsReactOfficial
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
+import { BarChart, PieChart } from '@mui/icons-material'
 
 const host = window.location.host.includes('localhost')
     ? 'http://localhost:5002'
@@ -43,7 +44,7 @@ function colOptions(
     showLegend = false,
 ): Highcharts.Options {
     return {
-        chart: { type: 'column', height: 240, animation: false },
+        chart: { type: 'column', height: 360, animation: false },
         title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
         xAxis: { categories, labels: { rotation: -45, style: { fontSize: '10px' } } },
         yAxis: { title: { text: yTitle, style: { fontSize: '11px' } }, allowDecimals: false, min: 0 },
@@ -54,7 +55,7 @@ function colOptions(
     }
 }
 
-function barOptions(
+function makeBarOptions(
     title: string,
     categories: string[],
     data: number[],
@@ -62,7 +63,7 @@ function barOptions(
     decimalPlaces = 0,
 ): Highcharts.Options {
     return {
-        chart: { type: 'bar', height: 240, animation: false },
+        chart: { type: 'bar', height: 360, animation: false },
         title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
         xAxis: { categories, labels: { style: { fontSize: '10px' } } },
         yAxis: {
@@ -75,6 +76,56 @@ function barOptions(
         credits: { enabled: false },
         tooltip: { valueDecimals: decimalPlaces },
     }
+}
+
+function makePieOptions(
+    title: string,
+    categories: string[],
+    data: number[],
+    decimalPlaces = 0,
+): Highcharts.Options {
+    return {
+        chart: { type: 'pie', height: 360, animation: false },
+        title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
+        series: [{
+            type: 'pie',
+            data: categories.map((name, i) => ({ name, y: data[i] })),
+        }],
+        credits: { enabled: false },
+        tooltip: { pointFormat: '<b>{point.y}</b> ({point.percentage:.1f}%)', valueDecimals: decimalPlaces },
+        plotOptions: { pie: { dataLabels: { enabled: true, format: '{point.name}', style: { fontSize: '10px' } } } },
+    }
+}
+
+/** Bar chart with a small toggle to switch to pie view. */
+function ToggleChart(props: {
+    title: string
+    categories: string[]
+    data: number[]
+    yTitle: string
+    decimalPlaces?: number
+}) {
+    const { title, categories, data, yTitle, decimalPlaces = 0 } = props
+    const [mode, setMode] = React.useState<'bar' | 'pie'>('bar')
+
+    const options = mode === 'bar'
+        ? makeBarOptions(title, categories, data, yTitle, decimalPlaces)
+        : makePieOptions(title, categories, data, decimalPlaces)
+
+    return (
+        <Box sx={{ position: 'relative', boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+            <Tooltip title={mode === 'bar' ? 'Switch to pie chart' : 'Switch to bar chart'}>
+                <IconButton
+                    size="small"
+                    onClick={() => setMode(m => m === 'bar' ? 'pie' : 'bar')}
+                    sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, opacity: 0.5, '&:hover': { opacity: 1 } }}
+                >
+                    {mode === 'bar' ? <PieChart fontSize="small" /> : <BarChart fontSize="small" />}
+                </IconButton>
+            </Tooltip>
+            <HighchartsReact highcharts={Highcharts} options={options} />
+        </Box>
+    )
 }
 
 export function ReportPage() {
@@ -122,140 +173,132 @@ export function ReportPage() {
             </Stack>
 
             <Grid2 container spacing={2}>
+                {/* Time-series column charts — no toggle */}
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={colOptions(
-                            'Entries per Month',
-                            entryMonths,
-                            [{ type: 'column', name: 'Entries', data: data?.entriesByMonth.map(r => r.count) ?? [] }],
-                            'Entries',
-                        )}
-                    />
+                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+                        <HighchartsReact
+                            highcharts={Highcharts}
+                            options={colOptions(
+                                'Entries per Month',
+                                entryMonths,
+                                [{ type: 'column', name: 'Entries', data: data?.entriesByMonth.map(r => r.count) ?? [] }],
+                                'Entries',
+                            )}
+                        />
+                    </Box>
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={colOptions(
-                            'Contact Time per Month',
-                            entryMonths,
-                            [{
-                                type: 'column',
-                                name: 'Hours',
-                                data: data?.durationByMonth.map(r => +(r.totalMinutes / 60).toFixed(1)) ?? [],
-                            }],
-                            'Hours',
-                        )}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={colOptions(
-                            'Cases Opened per Month',
-                            caseMonths,
-                            [{ type: 'column', name: 'Cases', data: data?.casesByMonth.map(r => r.count) ?? [] }],
-                            'Cases',
-                        )}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={colOptions(
-                            'Persons per Month',
-                            personMonths,
-                            [
-                                {
+                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+                        <HighchartsReact
+                            highcharts={Highcharts}
+                            options={colOptions(
+                                'Contact Time per Month',
+                                entryMonths,
+                                [{
                                     type: 'column',
-                                    name: 'Total appearances',
-                                    data: data?.personsByMonth.map(r => r.totalAppearances) ?? [],
-                                },
-                                {
-                                    type: 'column',
-                                    name: 'Unique persons',
-                                    data: data?.personsByMonth.map(r => r.uniquePersons) ?? [],
-                                },
-                            ],
-                            'Persons',
-                            true,
-                        )}
+                                    name: 'Hours',
+                                    data: data?.durationByMonth.map(r => +(r.totalMinutes / 60).toFixed(1)) ?? [],
+                                }],
+                                'Hours',
+                            )}
+                        />
+                    </Box>
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+                        <HighchartsReact
+                            highcharts={Highcharts}
+                            options={colOptions(
+                                'Cases Opened per Month',
+                                caseMonths,
+                                [{ type: 'column', name: 'Cases', data: data?.casesByMonth.map(r => r.count) ?? [] }],
+                                'Cases',
+                            )}
+                        />
+                    </Box>
+                </Grid2>
+
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+                        <HighchartsReact
+                            highcharts={Highcharts}
+                            options={colOptions(
+                                'Persons per Month',
+                                personMonths,
+                                [
+                                    {
+                                        type: 'column',
+                                        name: 'Total appearances',
+                                        data: data?.personsByMonth.map(r => r.totalAppearances) ?? [],
+                                    },
+                                    {
+                                        type: 'column',
+                                        name: 'Unique persons',
+                                        data: data?.personsByMonth.map(r => r.uniquePersons) ?? [],
+                                    },
+                                ],
+                                'Persons',
+                                true,
+                            )}
+                        />
+                    </Box>
+                </Grid2>
+
+                {/* Categorical charts — bar/pie toggle */}
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                    <ToggleChart
+                        title="Unique Persons by Race / Ethnicity"
+                        categories={data?.personsByRace.map(r => r.race) ?? []}
+                        data={data?.personsByRace.map(r => r.count) ?? []}
+                        yTitle="Persons"
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Unique Persons by Race / Ethnicity',
-                            data?.personsByRace.map(r => r.race) ?? [],
-                            data?.personsByRace.map(r => r.count) ?? [],
-                            'Persons',
-                        )}
+                    <ToggleChart
+                        title="Entries by Contact Method"
+                        categories={data?.entriesByMedium.map(r => r.medium) ?? []}
+                        data={data?.entriesByMedium.map(r => r.count) ?? []}
+                        yTitle="Entries"
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Entries by Contact Method',
-                            data?.entriesByMedium.map(r => r.medium) ?? [],
-                            data?.entriesByMedium.map(r => r.count) ?? [],
-                            'Entries',
-                        )}
+                    <ToggleChart
+                        title="Avg. Contact Time by Method (min)"
+                        categories={data?.avgDurationByMedium.map(r => r.medium) ?? []}
+                        data={data?.avgDurationByMedium.map(r => r.avgMinutes) ?? []}
+                        yTitle="Minutes"
+                        decimalPlaces={1}
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Avg. Contact Time by Method (min)',
-                            data?.avgDurationByMedium.map(r => r.medium) ?? [],
-                            data?.avgDurationByMedium.map(r => r.avgMinutes) ?? [],
-                            'Minutes',
-                            1,
-                        )}
+                    <ToggleChart
+                        title="Unique Persons by Role"
+                        categories={data?.personsByRole.map(r => r.role) ?? []}
+                        data={data?.personsByRole.map(r => r.count) ?? []}
+                        yTitle="Persons"
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Unique Persons by Role',
-                            data?.personsByRole.map(r => r.role) ?? [],
-                            data?.personsByRole.map(r => r.count) ?? [],
-                            'Persons',
-                        )}
+                    <ToggleChart
+                        title="Unique Persons by Generation"
+                        categories={data?.personsByGeneration.map(r => r.generation) ?? []}
+                        data={data?.personsByGeneration.map(r => r.count) ?? []}
+                        yTitle="Persons"
                     />
                 </Grid2>
 
                 <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Unique Persons by Generation',
-                            data?.personsByGeneration.map(r => r.generation) ?? [],
-                            data?.personsByGeneration.map(r => r.count) ?? [],
-                            'Persons',
-                        )}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <HighchartsReact
-                        highcharts={Highcharts}
-                        options={barOptions(
-                            'Cases by Current Status',
-                            data?.casesByStatus.map(r => r.status) ?? [],
-                            data?.casesByStatus.map(r => r.count) ?? [],
-                            'Cases',
-                        )}
+                    <ToggleChart
+                        title="Cases by Current Status"
+                        categories={data?.casesByStatus.map(r => r.status) ?? []}
+                        data={data?.casesByStatus.map(r => r.count) ?? []}
+                        yTitle="Cases"
                     />
                 </Grid2>
             </Grid2>
