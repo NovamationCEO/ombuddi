@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Chip, MenuItem, Paper, Select, Stack, TextField, Typography } from '@mui/material'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType, EntryType, PersonType } from '../types/majorTypes'
@@ -6,10 +6,11 @@ import { CodeChip } from '../components/CodeChip'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import { RoundButton } from '../trusted-components/RoundButton'
-import { Edit } from '@mui/icons-material'
+import { ArrowBack, Edit } from '@mui/icons-material'
 import { EditCodeDialog } from '../components/EditCodeDialog'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
+import { updater } from '../tools/db_tools/updater'
 
 /** Compact demographic-only label for a Person chip (no identity). */
 function personLabel(p: PersonType): string {
@@ -26,6 +27,28 @@ export function CaseSummary() {
     const navigate = useNavigate()
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
     const [showEditCodes, setShowEditCodes] = React.useState(false)
+    const [editing, setEditing] = React.useState(false)
+    const [editName, setEditName] = React.useState('')
+    const [editDescription, setEditDescription] = React.useState('')
+    const [editStatus, setEditStatus] = React.useState('')
+
+    function openEdit() {
+        setEditName(caseRes.data?.name ?? '')
+        setEditDescription(caseRes.data?.description ?? '')
+        setEditStatus(caseRes.data?.status ?? 'active')
+        setEditing(true)
+    }
+
+    async function saveEdit() {
+        await updater('update_case', {
+            id: caseId,
+            name: editName,
+            description: editDescription,
+            status: editStatus,
+        })
+        await caseRes.refetch()
+        setEditing(false)
+    }
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [decryptedNotes, setDecryptedNotes] = React.useState<string | null>(null)
     const [decryptFailed, setDecryptFailed] = React.useState(false)
@@ -100,6 +123,17 @@ export function CaseSummary() {
                     caseRes.refetch()
                 }}
             />
+            {/* Back navigation */}
+            <Box sx={{ mb: 1 }}>
+                <Button
+                    startIcon={<ArrowBack />}
+                    size="small"
+                    onClick={() => navigate('/cases')}
+                    sx={{ textTransform: 'none' }}
+                >
+                    Cases
+                </Button>
+            </Box>
             <Paper
                 elevation={2}
                 sx={{ p: 2 }}
@@ -112,23 +146,43 @@ export function CaseSummary() {
                         alignItems: { xs: 'stretch', sm: 'flex-start' },
                     }}
                 >
+                    {/* Name + description — view or edit */}
                     <Stack
                         spacing={1}
                         sx={{ flex: 2, minWidth: 0 }}
                     >
-                        <Box sx={{
-                            fontWeight: 'bold'
-                        }}>{caseRes.data?.name}</Box>
-                        {caseRes.data?.description?.length > 0 && (
-                            <Box
-                                sx={{
-                                    p: 1,
-                                    bgcolor: 'whitesmoke'
-                                }}>
-                                {caseRes.data?.description}
-                            </Box>
+                        {editing ? (
+                            <>
+                                <TextField
+                                    label="Case Name"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                />
+                                <TextField
+                                    label="Description"
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    size="small"
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Box sx={{ fontWeight: 'bold' }}>{caseRes.data?.name}</Box>
+                                {caseRes.data?.description?.length > 0 && (
+                                    <Box sx={{ p: 1, bgcolor: 'whitesmoke' }}>
+                                        {caseRes.data?.description}
+                                    </Box>
+                                )}
+                            </>
                         )}
                     </Stack>
+
+                    {/* Status + dates — status editable */}
                     <Box
                         sx={{
                             flex: 1,
@@ -137,24 +191,50 @@ export function CaseSummary() {
                             p: 1,
                         }}
                     >
-                        <Box>
-                            <b>Status:</b> {caseRes.data?.status}
+                        <Box sx={{ mb: 0.5 }}>
+                            <b>Status:</b>{' '}
+                            {editing ? (
+                                <Select
+                                    value={editStatus}
+                                    onChange={(e) => setEditStatus(e.target.value)}
+                                    size="small"
+                                    sx={{ ml: 0.5 }}
+                                >
+                                    <MenuItem value="active">Active</MenuItem>
+                                    <MenuItem value="monitoring">Monitoring</MenuItem>
+                                    <MenuItem value="closed">Closed</MenuItem>
+                                </Select>
+                            ) : (
+                                <span style={{ textTransform: 'capitalize' }}>{caseRes.data?.status}</span>
+                            )}
                         </Box>
-                        <Box>
-                            <b>Created:</b> {new Date(caseRes.data?.createdAt || '').toDateString()}
-                        </Box>
-                        <Box>
-                            <b>Updated:</b> {new Date(caseRes.data?.updatedAt || '').toDateString()}
-                        </Box>
+                        <Box><b>Created:</b> {new Date(caseRes.data?.createdAt || '').toDateString()}</Box>
+                        <Box><b>Updated:</b> {new Date(caseRes.data?.updatedAt || '').toDateString()}</Box>
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+
+                    {/* Avatar + edit controls */}
+                    <Stack spacing={1} sx={{ alignItems: 'flex-end' }}>
                         <Box
                             component={'img'}
                             src={`https://picsum.photos/seed/${caseRes.data?.id}/60/60`}
                             alt={caseRes.data?.name}
                             sx={{ width: '60px', height: 60, objectFit: 'cover' }}
                         />
-                    </Box>
+                        {editing ? (
+                            <Stack direction="row" spacing={1}>
+                                <Button size="small" variant="outlined" onClick={() => setEditing(false)}>
+                                    Cancel
+                                </Button>
+                                <Button size="small" variant="contained" onClick={saveEdit}>
+                                    Save
+                                </Button>
+                            </Stack>
+                        ) : (
+                            <RoundButton onClick={openEdit} size={27} tooltipText="Edit case">
+                                <Edit fontSize="small" />
+                            </RoundButton>
+                        )}
+                    </Stack>
                 </Box>
                 <Box
                     sx={{
