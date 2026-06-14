@@ -8,6 +8,18 @@ const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsRe
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
 import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
+// Side-effect imports: highcharts.js sets window._Highcharts in CJS mode, so
+// these modules self-register against it on evaluation. No function call needed.
+// Offline exporting keeps all chart data in-browser — nothing reaches export.highcharts.com.
+import 'highcharts/modules/exporting'
+import 'highcharts/modules/offline-exporting'
+import 'highcharts/modules/export-data'
+Highcharts.setOptions({
+    exporting: {
+        fallbackToExportServer: false,
+        buttons: { contextButton: { menuItems: ['downloadPNG', 'downloadPDF', 'separator', 'downloadCSV'] } },
+    },
+})
 
 const host = window.location.host.includes('localhost')
     ? 'http://localhost:5002'
@@ -161,7 +173,7 @@ function ToggleChart(props: {
                 <IconButton
                     size="small"
                     onClick={() => setChartMode(m => m === 'bar' ? 'pie' : 'bar')}
-                    sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, opacity: 0.5, '&:hover': { opacity: 1 } }}
+                    sx={{ position: 'absolute', top: 4, left: 4, zIndex: 1, opacity: 0.5, '&:hover': { opacity: 1 } }}
                 >
                     {chartMode === 'bar' ? <PieChart fontSize="small" /> : <BarChart fontSize="small" />}
                 </IconButton>
