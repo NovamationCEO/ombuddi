@@ -25,8 +25,8 @@ export function Header() {
 
     return (
         <Box
-            {...style.header}
             sx={{
+                ...style.header,
                 padding: 1,
                 height: `${headerHeight}px`,
                 textAlign: 'center',
