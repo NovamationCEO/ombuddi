@@ -66,11 +66,15 @@ export function PersonFinder(props: {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     label="Full Name"
+                    InputLabelProps={{ shrink: true }}
+                    placeholder="Enter full name"
                 />
                 <TextField
                     value={salt}
                     onChange={(e) => setSalt(e.target.value)}
                     label="Salt Phrase"
+                    InputLabelProps={{ shrink: true }}
+                    placeholder="Enter salt phrase"
                 />
                 <Button
                     variant="contained"
