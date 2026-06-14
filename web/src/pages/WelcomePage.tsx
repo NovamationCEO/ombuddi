@@ -3,7 +3,7 @@ import { Stack } from '@mui/system'
 
 export function WelcomePage() {
     return (
-        <Box>
+        <Box sx={{ p: 1 }}>
             <Stack spacing={2}>
                 <Box>
                     <Typography variant={'h5'}>Welcome to Ombuddi.com</Typography>

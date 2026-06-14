@@ -110,7 +110,7 @@ export function Organization() {
     }
 
     return (
-        <Box>
+        <Box sx={{ p: 1 }}>
             <Stack spacing={2}>
                 <RoundedContainer title={'Organization - Basic Information'}>
                     <Stack spacing={2}>

@@ -68,7 +68,7 @@ export function HomePage() {
     }
 
     return (
-        <Box>
+        <Box sx={{ p: 1 }}>
             <Box
                 sx={{
                     position: 'absolute',

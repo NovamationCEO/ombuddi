@@ -115,7 +115,7 @@ export function CaseSummary() {
     }
 
     return (
-        <Box>
+        <Box sx={{ p: 1 }}>
             <EditCodeDialog
                 open={showEditCodes}
                 onClose={() => {

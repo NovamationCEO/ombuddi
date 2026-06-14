@@ -21,7 +21,7 @@ export function Profile() {
     }, [ombudsRes.data])
 
     return (
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{ p: 1 }}>
             <Box>Profile</Box>
 
             <RoundedContainer title={'Profile'}>
