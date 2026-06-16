@@ -1,7 +1,5 @@
 import keycloak from '../../constants/keycloak'
-
-let host = window.location.host
-host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
+import { apiUrl } from '../../constants/apiUrl'
 
 export async function creator<TReturn = unknown, TPayload = unknown>(address: string, payload: TPayload) {
     await keycloak.updateToken(30).catch(() => keycloak.login())
@@ -15,7 +13,7 @@ export async function creator<TReturn = unknown, TPayload = unknown>(address: st
     }
 
     try {
-        const response = await fetch(`${host}/api/v1/${address}`, requestOptions)
+        const response = await fetch(`${apiUrl}/api/v1/${address}`, requestOptions)
         const isJson = response.headers.get('content-type')?.includes('application/json')
         const data = isJson && (await response.json())
 

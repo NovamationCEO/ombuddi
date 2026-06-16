@@ -1,11 +1,9 @@
 import keycloak from '../../constants/keycloak'
-
-let host = window.location.host
-host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
+import { apiUrl } from '../../constants/apiUrl'
 
 export async function getter<T>(address: string) {
     await keycloak.updateToken(30).catch(() => keycloak.login())
-    const res = await fetch(`${host}/api/v1/${address}`, {
+    const res = await fetch(`${apiUrl}/api/v1/${address}`, {
         headers: { Authorization: `Bearer ${keycloak.token}` },
     })
 

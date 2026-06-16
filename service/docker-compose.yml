@@ -37,6 +37,7 @@ services:
       SALT: ${SALT}
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: ombuddi
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "5002:5000"
     volumes:

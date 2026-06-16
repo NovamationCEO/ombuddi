@@ -57,7 +57,10 @@ export function AccountButton() {
                                         <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
                                         <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
                                         <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
-                                        <MenuItem onClick={() => keycloak.logout()}>Log Out</MenuItem>
+                                        {keycloak.authenticated
+                                            ? <MenuItem onClick={() => keycloak.logout()}>Log Out</MenuItem>
+                                            : <MenuItem onClick={() => keycloak.login()}>Log In</MenuItem>
+                                        }
                                     </MenuList>
                                 </Box>
                             </ClickAwayListener>

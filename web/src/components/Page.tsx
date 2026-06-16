@@ -17,12 +17,13 @@ import { headerHeight } from '../constants/uiSizes'
 import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { useKeycloak } from '@react-keycloak/web'
+import { Navigate } from 'react-router-dom'
 
 export function Page(props: { element: ReactNode }) {
     const style = useStyles()
     const { sessionSalt, setSessionSalt } = useSessionSalt()
     const [draft, setDraft] = React.useState('')
-    const { initialized } = useKeycloak()
+    const { initialized, keycloak } = useKeycloak()
 
     if (!initialized) {
         return (
@@ -30,6 +31,10 @@ export function Page(props: { element: ReactNode }) {
                 <CircularProgress />
             </Box>
         )
+    }
+
+    if (!keycloak.authenticated) {
+        return <Navigate to="/welcome" replace />
     }
 
     // sessionSalt === null means the user hasn't been prompted yet this session.

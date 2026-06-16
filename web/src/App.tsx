@@ -17,7 +17,7 @@ const App: React.FC = () => {
     return (
         <ReactKeycloakProvider
             authClient={keycloak}
-            initOptions={{ onLoad: 'login-required', checkLoginIframe: false }}
+            initOptions={{ onLoad: 'check-sso', checkLoginIframe: false }}
         >
             <ThemingProvider>
                 <QueryWrap />

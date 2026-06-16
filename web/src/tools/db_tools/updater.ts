@@ -1,7 +1,5 @@
 import keycloak from '../../constants/keycloak'
-
-let host = window.location.host
-host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
+import { apiUrl } from '../../constants/apiUrl'
 
 export type UpdateResponse = {
     message: string
@@ -21,7 +19,7 @@ export async function updater<T>(address: string, payload: Partial<T>) {
 
     try {
         if (!payload || (Array.isArray(payload) && !payload.length)) return { message: 'No payload to update.' }
-        const response = await fetch(`${host}/api/v1/${address}`, requestOptions)
+        const response = await fetch(`${apiUrl}/api/v1/${address}`, requestOptions)
         const isJson = response.headers.get('content-type')?.includes('application/json')
         const data = isJson && (await response.json())
 
