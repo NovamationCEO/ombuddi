@@ -33,7 +33,6 @@ export function AccountButton() {
                 role={undefined}
                 placement="bottom-end"
                 transition
-                disablePortal
                 onClick={handleClose}
             >
                 {({ TransitionProps }) => (
@@ -51,16 +50,17 @@ export function AccountButton() {
                                         id="composition-menu"
                                         aria-labelledby="composition-button"
                                     >
-                                        <MenuItem onClick={() => navigate('/welcome')}>Welcome</MenuItem>
-                                        <MenuItem onClick={() => navigate('/')}>Home</MenuItem>
-                                        <MenuItem onClick={() => navigate('/cases')}>Cases</MenuItem>
-                                        <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
-                                        <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
-                                        <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
-                                        {isAuthenticated
-                                            ? <MenuItem onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</MenuItem>
-                                            : <MenuItem onClick={() => loginWithRedirect()}>Log In</MenuItem>
-                                        }
+                                        {isAuthenticated ? <>
+                                            <MenuItem onClick={() => navigate('/welcome')}>Welcome</MenuItem>
+                                            <MenuItem onClick={() => navigate('/')}>Home</MenuItem>
+                                            <MenuItem onClick={() => navigate('/cases')}>Cases</MenuItem>
+                                            <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
+                                            <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
+                                            <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
+                                            <MenuItem onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</MenuItem>
+                                        </> : <>
+                                            <MenuItem onClick={() => loginWithRedirect()}>Log In</MenuItem>
+                                        </>}
                                     </MenuList>
                                 </Box>
                             </ClickAwayListener>

@@ -20,7 +20,7 @@ const App: React.FC = () => {
             domain={auth0Domain}
             clientId={auth0ClientId}
             authorizationParams={{
-                redirect_uri: window.location.origin,
+                redirect_uri: window.location.origin + '/',
                 audience: auth0Audience,
             }}
         >
