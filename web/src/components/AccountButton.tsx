@@ -1,7 +1,7 @@
 import { Person } from '@mui/icons-material'
 import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem } from '@mui/material'
 import { Box } from '@mui/system'
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth0 } from '@auth0/auth0-react'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RoundButton } from '../trusted-components/RoundButton'
@@ -9,7 +9,7 @@ import { zIndex } from '../constants/zIndex'
 
 export function AccountButton() {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
-    const { keycloak } = useKeycloak()
+    const { isAuthenticated, loginWithRedirect, logout } = useAuth0()
     const navigate = useNavigate()
 
     const open = Boolean(anchorEl)
@@ -57,9 +57,9 @@ export function AccountButton() {
                                         <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
                                         <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
                                         <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
-                                        {keycloak.authenticated
-                                            ? <MenuItem onClick={() => keycloak.logout()}>Log Out</MenuItem>
-                                            : <MenuItem onClick={() => keycloak.login()}>Log In</MenuItem>
+                                        {isAuthenticated
+                                            ? <MenuItem onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</MenuItem>
+                                            : <MenuItem onClick={() => loginWithRedirect()}>Log In</MenuItem>
                                         }
                                     </MenuList>
                                 </Box>

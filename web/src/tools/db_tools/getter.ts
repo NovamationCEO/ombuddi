@@ -1,10 +1,10 @@
-import keycloak from '../../constants/keycloak'
+import { getToken } from '../auth/tokenProvider'
 import { apiUrl } from '../../constants/apiUrl'
 
 export async function getter<T>(address: string) {
-    await keycloak.updateToken(30).catch(() => keycloak.login())
+    const token = await getToken()
     const res = await fetch(`${apiUrl}/api/v1/${address}`, {
-        headers: { Authorization: `Bearer ${keycloak.token}` },
+        headers: { Authorization: `Bearer ${token}` },
     })
 
     if (!res.ok) {

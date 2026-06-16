@@ -16,16 +16,16 @@ import {
 import { headerHeight } from '../constants/uiSizes'
 import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate } from 'react-router-dom'
 
 export function Page(props: { element: ReactNode }) {
     const style = useStyles()
     const { sessionSalt, setSessionSalt } = useSessionSalt()
     const [draft, setDraft] = React.useState('')
-    const { initialized, keycloak } = useKeycloak()
+    const { isLoading, isAuthenticated } = useAuth0()
 
-    if (!initialized) {
+    if (isLoading) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
                 <CircularProgress />
@@ -33,7 +33,7 @@ export function Page(props: { element: ReactNode }) {
         )
     }
 
-    if (!keycloak.authenticated) {
+    if (!isAuthenticated) {
         return <Navigate to="/welcome" replace />
     }
 

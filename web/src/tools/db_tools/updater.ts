@@ -1,4 +1,4 @@
-import keycloak from '../../constants/keycloak'
+import { getToken } from '../auth/tokenProvider'
 import { apiUrl } from '../../constants/apiUrl'
 
 export type UpdateResponse = {
@@ -7,12 +7,12 @@ export type UpdateResponse = {
 }
 
 export async function updater<T>(address: string, payload: Partial<T>) {
-    await keycloak.updateToken(30).catch(() => keycloak.login())
+    const token = await getToken()
     const requestOptions = {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${keycloak.token}`,
+            Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
     }

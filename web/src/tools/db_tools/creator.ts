@@ -1,13 +1,13 @@
-import keycloak from '../../constants/keycloak'
+import { getToken } from '../auth/tokenProvider'
 import { apiUrl } from '../../constants/apiUrl'
 
 export async function creator<TReturn = unknown, TPayload = unknown>(address: string, payload: TPayload) {
-    await keycloak.updateToken(30).catch(() => keycloak.login())
+    const token = await getToken()
     const requestOptions = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${keycloak.token}`,
+            Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
     }

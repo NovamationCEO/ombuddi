@@ -2,12 +2,13 @@ import os
 import jwt
 from jwt import PyJWKClient
 
-KEYCLOAK_URL = os.getenv('KEYCLOAK_URL', 'http://localhost:5001')
-KEYCLOAK_REALM = os.getenv('KEYCLOAK_REALM', 'ombuddi')
-JWKS_URL = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'ombuddi-alpha.us.auth0.com')
+AUTH0_AUDIENCE = os.getenv('AUTH0_AUDIENCE', '')
+JWKS_URL = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
 
-# Cached lazily — fetched on first token validation, not at import time.
-# This avoids a startup race when Keycloak is still booting in docker-compose.
+# Custom claim namespace — must match the Auth0 Action that injects organization_id.
+CLAIM_ORG_ID = 'https://ombuddi.com/organization_id'
+
 _jwks_client: PyJWKClient | None = None
 
 def _get_jwks_client() -> PyJWKClient:
@@ -17,12 +18,21 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 def validate_token(token: str) -> dict:
-    """Validate a Keycloak-issued JWT and return its claims."""
+    """Validate an Auth0-issued JWT and return its claims."""
     client = _get_jwks_client()
     signing_key = client.get_signing_key_from_jwt(token)
-    return jwt.decode(
-        token,
-        signing_key.key,
-        algorithms=["RS256"],
-        options={"verify_aud": False},
-    )
+
+    decode_kwargs: dict = {
+        "algorithms": ["RS256"],
+        "issuer": f"https://{AUTH0_DOMAIN}/",
+    }
+    if AUTH0_AUDIENCE:
+        decode_kwargs["audience"] = AUTH0_AUDIENCE
+    else:
+        decode_kwargs["options"] = {"verify_aud": False}
+
+    claims = jwt.decode(token, signing_key.key, **decode_kwargs)
+
+    # Remap the namespaced custom claim to the simple key app.py expects.
+    claims['organization_id'] = claims.get(CLAIM_ORG_ID)
+    return claims

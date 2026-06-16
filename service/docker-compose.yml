@@ -35,8 +35,8 @@ services:
       DB_NAME: ${DB_NAME}
       DATABASE_URL: ${DB_URL}
       SALT: ${SALT}
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_REALM: ombuddi
+      AUTH0_DOMAIN: ombuddi-alpha.us.auth0.com
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "5002:5000"

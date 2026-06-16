@@ -4,8 +4,9 @@ import { router } from './router'
 import { ThemingProvider, useThemingContext } from './libraries/ThemingContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { ReactKeycloakProvider } from '@react-keycloak/web'
-import keycloak from './constants/keycloak'
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react'
+import { auth0Domain, auth0ClientId, auth0Audience } from './constants/auth0Config'
+import { initTokenGetter } from './tools/auth/tokenProvider'
 import { showDevtools } from './constants/showDevtools'
 import { Snack } from './trusted-components/Snack'
 import { Background } from './trusted-components/Background'
@@ -15,14 +16,18 @@ import { useSnack } from './libraries/useSnack'
 
 const App: React.FC = () => {
     return (
-        <ReactKeycloakProvider
-            authClient={keycloak}
-            initOptions={{ onLoad: 'check-sso', checkLoginIframe: false }}
+        <Auth0Provider
+            domain={auth0Domain}
+            clientId={auth0ClientId}
+            authorizationParams={{
+                redirect_uri: window.location.origin,
+                audience: auth0Audience,
+            }}
         >
             <ThemingProvider>
                 <QueryWrap />
             </ThemingProvider>
-        </ReactKeycloakProvider>
+        </Auth0Provider>
     )
 }
 
@@ -56,6 +61,11 @@ const innerBoxStyle: SxProps<Theme> = {
 const InnerApp: React.FC = () => {
     const { theme } = useThemingContext()
     const snack = useSnack((state) => state.snack)
+    const { getAccessTokenSilently } = useAuth0()
+
+    React.useEffect(() => {
+        initTokenGetter(getAccessTokenSilently)
+    }, [getAccessTokenSilently])
 
     return (
         <ThemeProvider theme={theme}>
