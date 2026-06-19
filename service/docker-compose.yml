@@ -24,7 +24,7 @@ services:
       DB_NAME: ${DB_NAME}
       DATABASE_URL: ${DB_URL}
       SALT: ${SALT}
-      AUTH0_DOMAIN: ombuddi-alpha.us.auth0.com
+      AUTH0_DOMAIN: ombuddi.us.auth0.com
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
