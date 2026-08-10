@@ -15,6 +15,14 @@ import { creator } from '../tools/db_tools/creator'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { RoundedContainer } from '../components/RoundedContainer'
 
+type AdminMetrics = {
+    entriesLast30Days: number
+    entriesYtd: number
+    activeSeats: number
+    openCases: number
+    totalCases: number
+}
+
 type AdminOrganization = {
     id: string
     name: string
@@ -50,6 +58,7 @@ type InvitationResult = {
 
 export function AdminUsers() {
     const org = useGetter<AdminOrganization>(['admin', 'organization'])
+    const metrics = useGetter<AdminMetrics>(['admin', 'metrics'])
     const users = useGetter<AdminOmbuds[]>(['admin', 'ombuds'])
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
@@ -135,6 +144,29 @@ export function AdminUsers() {
                             />
                         </Box>
                     </Stack>
+                </RoundedContainer>
+            )}
+
+            {metrics.data && (
+                <RoundedContainer title="Usage">
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2 }}>
+                        {[
+                            { label: 'Entries (30 days)', value: metrics.data.entriesLast30Days },
+                            { label: 'Entries (YTD)',     value: metrics.data.entriesYtd },
+                            { label: 'Active seats',      value: metrics.data.activeSeats },
+                            { label: 'Open cases',        value: metrics.data.openCases },
+                            { label: 'Total cases',       value: metrics.data.totalCases },
+                        ].map(({ label, value }) => (
+                            <Box key={label} sx={{ textAlign: 'center', p: 1 }}>
+                                <Typography variant="h4" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                                    {value}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {label}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Box>
                 </RoundedContainer>
             )}
 

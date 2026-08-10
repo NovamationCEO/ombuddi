@@ -42,6 +42,50 @@ def _seat_json(row) -> dict:
     }
 
 
+@admin_views.route('/api/v1/admin/metrics')
+def get_metrics():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                WITH entry_stats AS (
+                    SELECT
+                        COUNT(*) FILTER (WHERE date >= now() - INTERVAL '30 days') AS last_30,
+                        COUNT(*) FILTER (WHERE date >= date_trunc('year', now()))   AS ytd,
+                        COUNT(DISTINCT ombuds_id)
+                            FILTER (WHERE date >= now() - INTERVAL '30 days')       AS active_seats
+                    FROM entries
+                    WHERE organization_id = %s
+                ),
+                case_stats AS (
+                    SELECT
+                        COUNT(*) FILTER (WHERE status = 'active') AS open_cases,
+                        COUNT(*)                                   AS total_cases
+                    FROM cases
+                    WHERE organization_id = %s
+                )
+                SELECT e.last_30, e.ytd, e.active_seats, c.open_cases, c.total_cases
+                FROM entry_stats e, case_stats c
+                """,
+                (g.organization_id, g.organization_id),
+            )
+            row = cur.fetchone()
+        return jsonify({
+            'entriesLast30Days': row[0],
+            'entriesYtd':        row[1],
+            'activeSeats':       row[2],
+            'openCases':         row[3],
+            'totalCases':        row[4],
+        })
+    except Exception:
+        return jsonify({'error': 'Database error', 'message': 'Unable to load metrics'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @admin_views.route('/api/v1/admin/organization')
 def get_organization():
     conn = None
