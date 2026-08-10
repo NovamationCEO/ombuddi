@@ -81,8 +81,10 @@ class PrincipalTests(unittest.TestCase):
     def test_wraps_database_errors(self):
         connection = FakeConnection(FakeCursor(error=RuntimeError("db unavailable")))
         with patch("src.principal.get_db_connection", return_value=connection):
-            with self.assertRaises(PrincipalLookupError):
-                get_principal("auth0|example")
+            with self.assertLogs("src.principal", level="ERROR") as logs:
+                with self.assertRaises(PrincipalLookupError):
+                    get_principal("auth0|example")
+        self.assertIn("Failed to resolve authenticated Ombuddi principal", logs.output[0])
         self.assertTrue(connection.closed)
 
 

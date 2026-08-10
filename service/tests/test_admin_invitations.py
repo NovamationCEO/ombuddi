@@ -44,6 +44,8 @@ class InvitationCursor:
 
         if self.mode == "create" and normalized.startswith("SELECT o.id, o.auth0_sub"):
             self.current_row = (OMBUDS_ID, None, INVITED_EMAIL, True)
+        elif self.mode == "create_inactive" and normalized.startswith("SELECT o.id, o.auth0_sub"):
+            self.current_row = (OMBUDS_ID, None, INVITED_EMAIL, False)
         elif self.mode == "update_email" and normalized.startswith("SELECT auth0_sub, email"):
             self.current_row = (None, "old-address@example.com", True)
         elif self.mode == "create" and normalized.startswith("INSERT INTO ombuds_invitations"):
@@ -152,6 +154,32 @@ class AdminInvitationTests(unittest.TestCase):
             ("auth0|invited-user", INVITED_EMAIL, INVITATION_ID),
         )
         self.assertTrue(connection.committed)
+        invitation_lookup = next(
+            execution for execution in connection.fake_cursor.executions
+            if execution[0].startswith("SELECT i.id")
+        )
+        self.assertIn("o.is_active = TRUE", invitation_lookup[0])
+        self.assertIn("organization.is_active = TRUE", invitation_lookup[0])
+
+    def test_inactive_seat_cannot_receive_an_invitation(self):
+        connection = InvitationConnection("create_inactive")
+        with app.test_request_context(
+            f"/api/v1/admin/ombuds/{OMBUDS_ID}/invitation",
+            method="POST",
+            json={},
+        ):
+            g.organization_id = str(ORGANIZATION_ID)
+            g.ombuds_id = str(OMBUDS_ID)
+            with patch("src.admin_views.get_db_connection", return_value=connection):
+                response, status = create_invitation(str(OMBUDS_ID))
+
+        self.assertEqual(status, 409)
+        self.assertIn("Reactivate", response.get_json()["message"])
+        self.assertFalse(any(
+            execution[0].startswith("INSERT INTO ombuds_invitations")
+            for execution in connection.fake_cursor.executions
+        ))
+        self.assertTrue(connection.rolled_back)
 
     def test_claim_rejects_a_different_verified_email(self):
         connection = InvitationConnection("claim")

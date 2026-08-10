@@ -4,12 +4,30 @@ from datetime import date, timedelta
 
 report_views = Blueprint('report_views', __name__)
 
+
+def _report_date_range(args, today=None):
+    today = today or date.today()
+    raw_end = args.get('end', today.isoformat())
+    raw_start = args.get(
+        'start',
+        (today.replace(day=1) - timedelta(days=364)).isoformat(),
+    )
+    try:
+        start = date.fromisoformat(raw_start)
+        end = date.fromisoformat(raw_end)
+    except (TypeError, ValueError):
+        raise ValueError('start and end must be valid dates in YYYY-MM-DD format')
+    if start > end:
+        raise ValueError('start must be on or before end')
+    return start, end
+
 @report_views.route('/api/v1/reports')
 def get_reports():
     organization_id = g.organization_id
-    today = date.today()
-    end = request.args.get('end', today.isoformat())
-    start = request.args.get('start', (today.replace(day=1) - timedelta(days=364)).isoformat())
+    try:
+        start, end = _report_date_range(request.args)
+    except ValueError as exc:
+        return jsonify({'error': 'Input error', 'message': str(exc)}), 400
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -35,7 +53,9 @@ def get_reports():
         SELECT TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
                COUNT(*) AS count
         FROM cases
-        WHERE organization_id = %s AND created_at >= %s AND created_at <= %s
+        WHERE organization_id = %s
+          AND created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
+          AND created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
         GROUP BY month ORDER BY month
     """, (organization_id, start, end))
     cases_by_month = [{'month': r[0], 'count': r[1]} for r in cur.fetchall()]
@@ -122,7 +142,9 @@ def get_reports():
         FROM cases c
         CROSS JOIN unnest(c.codes) AS code_id
         LEFT JOIN codes org_code ON org_code.id = code_id
-        WHERE c.organization_id = %s AND c.created_at >= %s AND c.created_at <= %s
+        WHERE c.organization_id = %s
+          AND c.created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
+          AND c.created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
         GROUP BY code_id, org_code.code
         ORDER BY case_count DESC
         LIMIT 20

@@ -3,19 +3,25 @@ import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import Highcharts from 'highcharts'
 import HighchartsReactOfficial from 'highcharts-react-official'
-// highcharts-react-official ships CJS; Vite wraps it in an object at runtime
-const HighchartsReact = (HighchartsReactOfficial as any).default ?? HighchartsReactOfficial
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
 import { getter } from '../tools/db_tools/getter'
 import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
 import { ioaCodesById } from '../constants/ioaConstants'
+import { normalizeMinCellSize, suppressSmallBuckets } from './reportUtils'
 // Side-effect imports: highcharts.js sets window._Highcharts in CJS mode, so
 // these modules self-register against it on evaluation. No function call needed.
 // Offline exporting keeps all chart data in-browser — nothing reaches export.highcharts.com.
 import 'highcharts/modules/exporting'
 import 'highcharts/modules/offline-exporting'
 import 'highcharts/modules/export-data'
+
+// highcharts-react-official ships CJS; Vite can wrap it in a default export.
+const highchartsReactModule = HighchartsReactOfficial as typeof HighchartsReactOfficial & {
+    default?: typeof HighchartsReactOfficial
+}
+const HighchartsReact = highchartsReactModule.default ?? HighchartsReactOfficial
+
 Highcharts.setOptions({
     exporting: {
         fallbackToExportServer: false,
@@ -54,41 +60,6 @@ function defaultRange() {
     return {
         start: start.toISOString().slice(0, 10),
         end: end.toISOString().slice(0, 10),
-    }
-}
-
-/**
- * In shareable mode, merge any bucket below minSize into "Other" so that
- * small groups can't be used to infer individual identity.
- */
-function suppressSmallBuckets(
-    categories: string[],
-    data: number[],
-    minSize: number,
-): { categories: string[]; data: number[] } {
-    let otherTotal = 0
-    const kept: { label: string; value: number }[] = []
-
-    categories.forEach((label, i) => {
-        if (data[i] < minSize) {
-            otherTotal += data[i]
-        } else {
-            kept.push({ label, value: data[i] })
-        }
-    })
-
-    if (otherTotal > 0) {
-        const existingOther = kept.find(k => k.label === 'Other')
-        if (existingOther) {
-            existingOther.value += otherTotal
-        } else {
-            kept.push({ label: 'Other', value: otherTotal })
-        }
-    }
-
-    return {
-        categories: kept.map(k => k.label),
-        data: kept.map(k => k.value),
     }
 }
 
@@ -251,7 +222,7 @@ export function ReportPage() {
                         label="Min. cell size"
                         type="number"
                         value={minCellSize}
-                        onChange={e => setMinCellSize(Math.max(1, Number(e.target.value)))}
+                        onChange={e => setMinCellSize(normalizeMinCellSize(e.target.value))}
                         size="small"
                         sx={{ width: 140 }}
                         slotProps={{

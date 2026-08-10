@@ -78,6 +78,43 @@ class StatusConnection:
 
 
 class DeactivationTests(unittest.TestCase):
+    def test_status_requires_a_boolean_and_limits_audit_reason(self):
+        for payload in (
+            {},
+            {"active": "false"},
+            {"active": False, "reason": "x" * 1001},
+        ):
+            with self.subTest(payload=payload):
+                with app.test_request_context(
+                    f"/api/v1/admin/ombuds/{TARGET_ID}/status",
+                    method="PUT",
+                    json=payload,
+                ):
+                    g.ombuds_id = ACTOR_ID
+                    g.organization_id = ORGANIZATION_ID
+                    with patch("src.admin_views.get_db_connection") as get_connection:
+                        response, status = update_ombuds_status(TARGET_ID)
+
+                self.assertEqual(status, 400)
+                self.assertEqual(response.get_json()["error"], "Input error")
+                get_connection.assert_not_called()
+
+    def test_org_admin_cannot_deactivate_self(self):
+        connection = StatusConnection("deactivate")
+        with app.test_request_context(
+            f"/api/v1/admin/ombuds/{ACTOR_ID}/status",
+            method="PUT",
+            json={"active": False},
+        ):
+            g.ombuds_id = ACTOR_ID
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.admin_views.get_db_connection", return_value=connection):
+                response, status = update_ombuds_status(ACTOR_ID)
+
+        self.assertEqual(status, 409)
+        self.assertIn("own account", response.get_json()["message"])
+        self.assertTrue(connection.rolled_back)
+
     def test_org_admin_deactivation_revokes_invites_and_records_event(self):
         connection = StatusConnection("deactivate")
         with app.test_request_context(
