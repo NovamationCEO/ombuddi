@@ -76,6 +76,17 @@ def authenticate():
     g.is_admin = principal['is_admin']
     g.is_system_admin = principal['is_system_admin']
 
+    if not principal['is_active']:
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'This Ombuddi user account is deactivated',
+        }), 403
+    if not principal['organization_is_active']:
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'This Ombuddi organization is deactivated',
+        }), 403
+
     # During the transition the Auth0 Action may still emit an organization
     # claim. If present, reject stale/misconfigured claims instead of silently
     # accepting an identity mapped to a different organization.

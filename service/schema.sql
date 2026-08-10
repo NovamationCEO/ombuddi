@@ -44,7 +44,14 @@ CREATE TABLE organizations (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name              TEXT NOT NULL,
     subscription_tier TEXT NOT NULL DEFAULT 'alpha',
-    seat_limit        INT  NOT NULL DEFAULT 10
+    seat_limit        INT  NOT NULL DEFAULT 10,
+    is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+    deactivated_at    TIMESTAMPTZ,
+    CONSTRAINT organizations_positive_seat_limit_check CHECK (seat_limit >= 1),
+    CONSTRAINT organizations_active_timestamp_check CHECK (
+        (is_active AND deactivated_at IS NULL)
+        OR (NOT is_active AND deactivated_at IS NOT NULL)
+    )
 );
 
 
@@ -62,8 +69,14 @@ CREATE TABLE ombuds (
     email             TEXT,
     is_admin          BOOLEAN NOT NULL DEFAULT FALSE,
     is_system_admin   BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+    deactivated_at    TIMESTAMPTZ,
     name              TEXT NOT NULL,
-    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    CONSTRAINT ombuds_active_timestamp_check CHECK (
+        (is_active AND deactivated_at IS NULL)
+        OR (NOT is_active AND deactivated_at IS NOT NULL)
+    )
 );
 
 CREATE INDEX ombuds_organization_id_idx ON ombuds (organization_id);
@@ -117,6 +130,52 @@ CREATE INDEX ombuds_invitations_ombuds_id_idx
 CREATE INDEX ombuds_invitations_active_idx
     ON ombuds_invitations (token_hash)
     WHERE claimed_at IS NULL AND revoked_at IS NULL;
+
+
+-- =====================================================================
+-- administrative_status_events
+-- =====================================================================
+-- Immutable audit trail for organization and seat activation changes.
+CREATE TABLE administrative_status_events (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_ombuds_id   UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    target_ombuds_id  UUID REFERENCES ombuds(id) ON DELETE RESTRICT,
+    event_type        TEXT NOT NULL CHECK (event_type IN (
+        'organization_deactivated',
+        'organization_reactivated',
+        'ombuds_deactivated',
+        'ombuds_reactivated'
+    )),
+    reason            TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT administrative_status_events_target_check CHECK (
+        (event_type LIKE 'organization_%' AND target_ombuds_id IS NULL)
+        OR (event_type LIKE 'ombuds_%' AND target_ombuds_id IS NOT NULL)
+    ),
+    CONSTRAINT administrative_status_events_reason_length_check CHECK (
+        reason IS NULL OR char_length(reason) <= 1000
+    )
+);
+
+CREATE INDEX administrative_status_events_organization_idx
+    ON administrative_status_events (organization_id, created_at DESC);
+CREATE INDEX administrative_status_events_target_ombuds_idx
+    ON administrative_status_events (target_ombuds_id, created_at DESC)
+    WHERE target_ombuds_id IS NOT NULL;
+
+CREATE FUNCTION prevent_administrative_status_event_changes()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'administrative status events are immutable';
+END;
+$$;
+
+CREATE TRIGGER administrative_status_events_immutable
+BEFORE UPDATE OR DELETE ON administrative_status_events
+FOR EACH ROW EXECUTE FUNCTION prevent_administrative_status_event_changes();
 
 
 -- =====================================================================

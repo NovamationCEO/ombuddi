@@ -42,10 +42,10 @@ class InvitationCursor:
         self.executions.append((normalized, params))
         self.rowcount = 0
 
-        if self.mode == "create" and normalized.startswith("SELECT id, auth0_sub"):
-            self.current_row = (OMBUDS_ID, None, INVITED_EMAIL)
+        if self.mode == "create" and normalized.startswith("SELECT o.id, o.auth0_sub"):
+            self.current_row = (OMBUDS_ID, None, INVITED_EMAIL, True)
         elif self.mode == "update_email" and normalized.startswith("SELECT auth0_sub, email"):
-            self.current_row = (None, "old-address@example.com")
+            self.current_row = (None, "old-address@example.com", True)
         elif self.mode == "create" and normalized.startswith("INSERT INTO ombuds_invitations"):
             self.current_row = (INVITATION_ID,)
         elif self.mode == "claim" and normalized.startswith("SELECT i.id"):

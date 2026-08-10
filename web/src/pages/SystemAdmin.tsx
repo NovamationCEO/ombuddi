@@ -4,6 +4,10 @@ import {
     Box,
     Button,
     Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Divider,
     Stack,
     TextField,
@@ -20,7 +24,10 @@ type SystemOrg = {
     subscriptionTier: string
     seatLimit: number
     seatCount: number
+    totalSeatCount: number
     linkedCount: number
+    isActive: boolean
+    deactivatedAt: string | null
 }
 
 type CreateOrgResult = {
@@ -52,6 +59,10 @@ export function SystemAdmin() {
     const [editing, setEditing] = React.useState<EditingOrg | null>(null)
     const [saving, setSaving] = React.useState(false)
     const [editError, setEditError] = React.useState('')
+    const [statusTarget, setStatusTarget] = React.useState<SystemOrg | null>(null)
+    const [statusReason, setStatusReason] = React.useState('')
+    const [statusSaving, setStatusSaving] = React.useState(false)
+    const [statusError, setStatusError] = React.useState('')
 
     async function createOrg() {
         setCreating(true)
@@ -112,6 +123,25 @@ export function SystemAdmin() {
         await navigator.clipboard.writeText(newInviteUrl)
     }
 
+    async function changeStatus() {
+        if (!statusTarget) return
+        setStatusSaving(true)
+        setStatusError('')
+        try {
+            await updater(`system/organizations/${statusTarget.id}/status`, {
+                active: !statusTarget.isActive,
+                reason: statusReason,
+            })
+            setStatusTarget(null)
+            setStatusReason('')
+            await orgs.refetch()
+        } catch (reason) {
+            setStatusError(reason instanceof Error ? reason.message : 'Unable to update organization status')
+        } finally {
+            setStatusSaving(false)
+        }
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 1 }}>
             <Typography variant="h5">System Administration</Typography>
@@ -121,6 +151,7 @@ export function SystemAdmin() {
                     Unable to load organizations. Ombuddi system administrator access is required.
                 </Alert>
             )}
+            {statusError && <Alert severity="error">{statusError}</Alert>}
 
             {newInviteUrl && (
                 <Alert severity="success">
@@ -245,14 +276,36 @@ export function SystemAdmin() {
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                             <Typography sx={{ fontWeight: 600 }}>{org.name}</Typography>
                                             <Chip label={org.subscriptionTier} size="small" variant="outlined" sx={{ textTransform: 'capitalize' }} />
+                                            <Chip
+                                                label={org.isActive ? 'Active' : 'Deactivated'}
+                                                size="small"
+                                                color={org.isActive ? 'success' : 'default'}
+                                                variant={org.isActive ? 'outlined' : 'filled'}
+                                            />
                                         </Box>
                                         <Typography variant="caption" color="text.secondary">
-                                            {org.linkedCount} active · {org.seatCount} seats · limit {org.seatLimit}
+                                            {org.linkedCount} linked · {org.seatCount} active seats
+                                            {org.totalSeatCount !== org.seatCount ? ` · ${org.totalSeatCount} total` : ''}
+                                            {' · '}limit {org.seatLimit}
                                         </Typography>
                                     </Box>
-                                    <Button variant="outlined" size="small" onClick={() => startEdit(org)}>
-                                        Edit
-                                    </Button>
+                                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        <Button variant="outlined" size="small" onClick={() => startEdit(org)}>
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant={org.isActive ? 'text' : 'outlined'}
+                                            color={org.isActive ? 'error' : 'primary'}
+                                            size="small"
+                                            onClick={() => {
+                                                setStatusTarget(org)
+                                                setStatusReason('')
+                                                setStatusError('')
+                                            }}
+                                        >
+                                            {org.isActive ? 'Deactivate' : 'Reactivate'}
+                                        </Button>
+                                    </Box>
                                 </Box>
                             )}
                         </Box>
@@ -262,6 +315,45 @@ export function SystemAdmin() {
                     )}
                 </Stack>
             </RoundedContainer>
+
+            <Dialog
+                open={statusTarget !== null}
+                onClose={() => !statusSaving && setStatusTarget(null)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>
+                    {statusTarget?.isActive ? 'Deactivate organization' : 'Reactivate organization'}
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Typography>
+                            {statusTarget?.isActive
+                                ? `New requests from everyone in ${statusTarget.name} will be blocked immediately, and unused invitations will be revoked. No records will be deleted.`
+                                : `${statusTarget?.name} will regain access. Users who were individually deactivated will remain deactivated.`}
+                        </Typography>
+                        <TextField
+                            label="Reason (optional)"
+                            value={statusReason}
+                            onChange={(event) => setStatusReason(event.target.value)}
+                            multiline
+                            minRows={2}
+                            slotProps={{ htmlInput: { maxLength: 1000 } }}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setStatusTarget(null)} disabled={statusSaving}>Cancel</Button>
+                    <Button
+                        onClick={changeStatus}
+                        disabled={statusSaving}
+                        variant="contained"
+                        color={statusTarget?.isActive ? 'error' : 'primary'}
+                    >
+                        {statusTarget?.isActive ? 'Deactivate organization' : 'Reactivate organization'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Stack>
     )
 }

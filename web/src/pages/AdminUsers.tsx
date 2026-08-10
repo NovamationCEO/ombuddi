@@ -5,6 +5,10 @@ import {
     Button,
     Checkbox,
     Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     FormControlLabel,
     LinearProgress,
     Stack,
@@ -30,6 +34,7 @@ type AdminOrganization = {
     subscriptionTier: string
     seatLimit: number
     seatCount: number
+    totalSeatCount: number
     linkedCount: number
 }
 
@@ -48,6 +53,8 @@ type AdminOmbuds = {
     email: string | null
     isAdmin: boolean
     isLinked: boolean
+    isActive: boolean
+    deactivatedAt: string | null
     invitation: InvitationSummary | null
 }
 
@@ -69,6 +76,9 @@ export function AdminUsers() {
     const [inviteUrl, setInviteUrl] = React.useState('')
     const [editingEmailFor, setEditingEmailFor] = React.useState<string | null>(null)
     const [editingEmail, setEditingEmail] = React.useState('')
+    const [statusTarget, setStatusTarget] = React.useState<AdminOmbuds | null>(null)
+    const [statusReason, setStatusReason] = React.useState('')
+    const [statusSaving, setStatusSaving] = React.useState(false)
 
     const atSeatLimit = org.data != null && org.data.seatCount >= org.data.seatLimit
 
@@ -130,6 +140,26 @@ export function AdminUsers() {
         }
     }
 
+    async function changeStatus() {
+        if (!statusTarget) return
+        setStatusSaving(true)
+        setError('')
+        setInviteUrl('')
+        try {
+            await updater(`admin/ombuds/${statusTarget.id}/status`, {
+                active: !statusTarget.isActive,
+                reason: statusReason,
+            })
+            setStatusTarget(null)
+            setStatusReason('')
+            await Promise.all([users.refetch(), org.refetch()])
+        } catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Unable to update user status')
+        } finally {
+            setStatusSaving(false)
+        }
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 1 }}>
             <Typography variant="h5">Manage Users</Typography>
@@ -159,7 +189,7 @@ export function AdminUsers() {
                                     Seats used
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    {org.data.seatCount} / {org.data.seatLimit}
+                                    {org.data.seatCount} active / {org.data.seatLimit}
                                 </Typography>
                             </Box>
                             <LinearProgress
@@ -265,7 +295,15 @@ export function AdminUsers() {
                             }}
                         >
                             <Box>
-                                <Typography sx={{ fontWeight: 600 }}>{user.name}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                    <Typography sx={{ fontWeight: 600 }}>{user.name}</Typography>
+                                    <Chip
+                                        label={user.isActive ? 'Active' : 'Deactivated'}
+                                        size="small"
+                                        color={user.isActive ? 'success' : 'default'}
+                                        variant={user.isActive ? 'outlined' : 'filled'}
+                                    />
+                                </Box>
                                 {editingEmailFor === user.id ? (
                                     <TextField
                                         type="email"
@@ -284,9 +322,9 @@ export function AdminUsers() {
                                     {user.isAdmin ? ' · Administrator' : ''}
                                 </Typography>
                             </Box>
-                            {!user.isLinked && (
-                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                    {editingEmailFor === user.id ? (
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                {!user.isLinked && user.isActive && (
+                                    editingEmailFor === user.id ? (
                                         <>
                                             <Button
                                                 variant="contained"
@@ -312,9 +350,20 @@ export function AdminUsers() {
                                                 {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
                                             </Button>
                                         </>
-                                    )}
-                                </Box>
-                            )}
+                                    )
+                                )}
+                                <Button
+                                    variant={user.isActive ? 'text' : 'outlined'}
+                                    color={user.isActive ? 'error' : 'primary'}
+                                    onClick={() => {
+                                        setStatusTarget(user)
+                                        setStatusReason('')
+                                        setError('')
+                                    }}
+                                >
+                                    {user.isActive ? 'Deactivate' : 'Reactivate'}
+                                </Button>
+                            </Box>
                         </Box>
                     ))}
                     {!users.isLoading && (users.data?.length ?? 0) === 0 && (
@@ -322,6 +371,45 @@ export function AdminUsers() {
                     )}
                 </Stack>
             </RoundedContainer>
+
+            <Dialog
+                open={statusTarget !== null}
+                onClose={() => !statusSaving && setStatusTarget(null)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>
+                    {statusTarget?.isActive ? 'Deactivate user' : 'Reactivate user'}
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Typography>
+                            {statusTarget?.isActive
+                                ? `New requests from ${statusTarget.name} will be blocked immediately. Unused invitations for this seat will be revoked.`
+                                : `${statusTarget?.name} will regain access. Reactivation uses one active seat.`}
+                        </Typography>
+                        <TextField
+                            label="Reason (optional)"
+                            value={statusReason}
+                            onChange={(event) => setStatusReason(event.target.value)}
+                            multiline
+                            minRows={2}
+                            slotProps={{ htmlInput: { maxLength: 1000 } }}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setStatusTarget(null)} disabled={statusSaving}>Cancel</Button>
+                    <Button
+                        onClick={changeStatus}
+                        disabled={statusSaving}
+                        variant="contained"
+                        color={statusTarget?.isActive ? 'error' : 'primary'}
+                    >
+                        {statusTarget?.isActive ? 'Deactivate' : 'Reactivate'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Stack>
     )
 }

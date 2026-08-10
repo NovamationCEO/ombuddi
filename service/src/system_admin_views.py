@@ -38,8 +38,13 @@ def list_organizations():
                     o.name,
                     o.subscription_tier,
                     o.seat_limit,
-                    COUNT(ombuds.id)                                             AS seat_count,
-                    COUNT(ombuds.id) FILTER (WHERE ombuds.auth0_sub IS NOT NULL) AS linked_count
+                    COUNT(ombuds.id) FILTER (WHERE ombuds.is_active)              AS seat_count,
+                    COUNT(ombuds.id)                                             AS total_seat_count,
+                    COUNT(ombuds.id) FILTER (
+                        WHERE ombuds.is_active AND ombuds.auth0_sub IS NOT NULL
+                    )                                                            AS linked_count,
+                    o.is_active,
+                    o.deactivated_at
                 FROM organizations o
                 LEFT JOIN ombuds ON ombuds.organization_id = o.id
                 GROUP BY o.id
@@ -54,7 +59,10 @@ def list_organizations():
                 'subscriptionTier': row[2],
                 'seatLimit': row[3],
                 'seatCount': row[4],
-                'linkedCount': row[5],
+                'totalSeatCount': row[5],
+                'linkedCount': row[6],
+                'isActive': bool(row[7]),
+                'deactivatedAt': row[8].isoformat() if row[8] else None,
             }
             for row in rows
         ])
@@ -77,7 +85,10 @@ def create_organization():
     admin_name = str(payload.get('adminName', '')).strip()
     admin_email = normalize_email(payload.get('adminEmail'))
     tier = str(payload.get('subscriptionTier', 'alpha')).strip()
-    seat_limit = int(payload.get('seatLimit', 10))
+    try:
+        seat_limit = int(payload.get('seatLimit', 10))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Input error', 'message': 'Seat limit must be a number'}), 400
 
     if not org_name:
         return jsonify({'error': 'Input error', 'message': 'Organization name is required'}), 400
@@ -88,6 +99,8 @@ def create_organization():
             'error': 'Input error',
             'message': 'A valid first administrator email is required',
         }), 400
+    if seat_limit < 1:
+        return jsonify({'error': 'Input error', 'message': 'Seat limit must be at least 1'}), 400
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
@@ -161,10 +174,19 @@ def update_organization(org_id):
     fields = {}
     if 'name' in payload:
         fields['name'] = str(payload['name']).strip()
+        if not fields['name']:
+            return jsonify({'error': 'Input error', 'message': 'Organization name is required'}), 400
     if 'subscriptionTier' in payload:
         fields['subscription_tier'] = str(payload['subscriptionTier']).strip()
+        if not fields['subscription_tier']:
+            return jsonify({'error': 'Input error', 'message': 'Subscription tier is required'}), 400
     if 'seatLimit' in payload:
-        fields['seat_limit'] = int(payload['seatLimit'])
+        try:
+            fields['seat_limit'] = int(payload['seatLimit'])
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Input error', 'message': 'Seat limit must be a number'}), 400
+        if fields['seat_limit'] < 1:
+            return jsonify({'error': 'Input error', 'message': 'Seat limit must be at least 1'}), 400
 
     if not fields:
         return jsonify({'error': 'Input error', 'message': 'No fields to update'}), 400
@@ -177,18 +199,128 @@ def update_organization(org_id):
         conn = get_db_connection()
         with conn.cursor() as cur:
             cur.execute(
+                'SELECT id FROM organizations WHERE id = %s FOR UPDATE',
+                (org_id,),
+            )
+            if cur.fetchone() is None:
+                conn.rollback()
+                return jsonify({'error': 'Not found', 'message': 'Organization not found'}), 404
+            if 'seat_limit' in fields:
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM ombuds
+                    WHERE organization_id = %s AND is_active = TRUE
+                    """,
+                    (org_id,),
+                )
+                active_seats = cur.fetchone()[0]
+                if fields['seat_limit'] < active_seats:
+                    conn.rollback()
+                    return jsonify({
+                        'error': 'Conflict',
+                        'message': (
+                            f'Seat limit cannot be lower than the organization\'s '
+                            f'{active_seats} active seats'
+                        ),
+                    }), 409
+            cur.execute(
                 f'UPDATE organizations SET {set_clause} WHERE id = %s',
                 values,
             )
-            if cur.rowcount == 0:
-                conn.rollback()
-                return jsonify({'error': 'Not found', 'message': 'Organization not found'}), 404
         conn.commit()
         return jsonify({'success': True})
     except Exception:
         if conn:
             conn.rollback()
         return jsonify({'error': 'Database error', 'message': 'Unable to update organization'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@system_admin_views.route('/api/v1/system/organizations/<org_id>/status', methods=['PUT'])
+def update_organization_status(org_id):
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload.get('active'), bool):
+        return jsonify({
+            'error': 'Input error',
+            'message': 'active must be true or false',
+        }), 400
+    make_active = payload['active']
+    reason = str(payload.get('reason', '')).strip() or None
+    if reason and len(reason) > 1000:
+        return jsonify({
+            'error': 'Input error',
+            'message': 'Reason must be 1000 characters or fewer',
+        }), 400
+    if not make_active and str(org_id) == str(g.organization_id):
+        return jsonify({
+            'error': 'Conflict',
+            'message': 'You cannot deactivate the organization containing your own account',
+        }), 409
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT is_active FROM organizations WHERE id = %s FOR UPDATE',
+                (org_id,),
+            )
+            organization = cur.fetchone()
+            if organization is None:
+                conn.rollback()
+                return jsonify({'error': 'Not found', 'message': 'Organization not found'}), 404
+            if bool(organization[0]) == make_active:
+                conn.rollback()
+                return jsonify({'success': True, 'isActive': make_active})
+
+            cur.execute(
+                """
+                UPDATE organizations
+                SET is_active = %s,
+                    deactivated_at = CASE WHEN %s THEN NULL ELSE now() END
+                WHERE id = %s
+                """,
+                (make_active, make_active, org_id),
+            )
+            if not make_active:
+                cur.execute(
+                    """
+                    UPDATE ombuds_invitations invitation
+                    SET revoked_at = now()
+                    FROM ombuds
+                    WHERE ombuds.id = invitation.ombuds_id
+                      AND ombuds.organization_id = %s
+                      AND invitation.claimed_at IS NULL
+                      AND invitation.revoked_at IS NULL
+                    """,
+                    (org_id,),
+                )
+            cur.execute(
+                """
+                INSERT INTO administrative_status_events (
+                    actor_ombuds_id, organization_id, event_type, reason
+                )
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    g.ombuds_id,
+                    org_id,
+                    'organization_reactivated' if make_active else 'organization_deactivated',
+                    reason,
+                ),
+            )
+        conn.commit()
+        return jsonify({'success': True, 'isActive': make_active})
+    except Exception:
+        if conn:
+            conn.rollback()
+        return jsonify({
+            'error': 'Database error',
+            'message': 'Unable to update organization status',
+        }), 500
     finally:
         if conn:
             conn.close()
@@ -209,6 +341,7 @@ def list_org_ombuds(org_id):
                 """
                 SELECT
                     o.id, o.name, o.email, o.is_admin, o.auth0_sub,
+                    o.is_active, o.deactivated_at,
                     invitation.id, invitation.created_at, invitation.expires_at,
                     invitation.claimed_at, invitation.revoked_at
                 FROM ombuds o
@@ -245,9 +378,12 @@ def create_org_invitation(org_id, ombuds_id):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, auth0_sub, email FROM ombuds
-                WHERE id = %s AND organization_id = %s
-                FOR UPDATE
+                SELECT o.id, o.auth0_sub, o.email, o.is_active,
+                       organization.is_active
+                FROM ombuds o
+                JOIN organizations organization ON organization.id = o.organization_id
+                WHERE o.id = %s AND o.organization_id = %s
+                FOR UPDATE OF o, organization
                 """,
                 (ombuds_id, org_id),
             )
@@ -260,6 +396,12 @@ def create_org_invitation(org_id, ombuds_id):
                 return jsonify({
                     'error': 'Conflict',
                     'message': 'This seat is already linked to an Auth0 account',
+                }), 409
+            if not seat[3] or not seat[4]:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Conflict',
+                    'message': 'The user seat and organization must be active before creating an invitation',
                 }), 409
             invited_email = normalize_email(seat[2])
             if not invited_email:
@@ -314,16 +456,18 @@ def _seat_json(row) -> dict:
         'email': row[2],
         'isAdmin': bool(row[3]),
         'isLinked': row[4] is not None,
-        'invitation': None if row[5] is None else {
-            'id': str(row[5]),
-            'createdAt': row[6].isoformat(),
-            'expiresAt': row[7].isoformat(),
-            'claimedAt': row[8].isoformat() if row[8] else None,
-            'revokedAt': row[9].isoformat() if row[9] else None,
+        'isActive': bool(row[5]),
+        'deactivatedAt': row[6].isoformat() if row[6] else None,
+        'invitation': None if row[7] is None else {
+            'id': str(row[7]),
+            'createdAt': row[8].isoformat(),
+            'expiresAt': row[9].isoformat(),
+            'claimedAt': row[10].isoformat() if row[10] else None,
+            'revokedAt': row[11].isoformat() if row[11] else None,
             'isActive': (
-                row[8] is None
-                and row[9] is None
-                and row[7] > datetime.now(timezone.utc)
+                row[10] is None
+                and row[11] is None
+                and row[9] > datetime.now(timezone.utc)
             ),
         },
     }

@@ -18,9 +18,16 @@ def get_principal(auth0_sub: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, organization_id, is_admin, is_system_admin
+                SELECT
+                    ombuds.id,
+                    ombuds.organization_id,
+                    ombuds.is_admin,
+                    ombuds.is_system_admin,
+                    ombuds.is_active,
+                    organizations.is_active
                 FROM ombuds
-                WHERE auth0_sub = %s
+                JOIN organizations ON organizations.id = ombuds.organization_id
+                WHERE ombuds.auth0_sub = %s
                 """,
                 (auth0_sub,),
             )
@@ -40,4 +47,6 @@ def get_principal(auth0_sub: str) -> dict | None:
         "organization_id": str(row[1]),
         "is_admin": bool(row[2]),
         "is_system_admin": bool(row[3]),
+        "is_active": bool(row[4]),
+        "organization_is_active": bool(row[5]),
     }

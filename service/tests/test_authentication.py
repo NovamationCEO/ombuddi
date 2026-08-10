@@ -53,6 +53,8 @@ class AuthenticationTests(unittest.TestCase):
                 "organization_id": ORGANIZATION_ID,
                 "is_admin": True,
                 "is_system_admin": False,
+                "is_active": True,
+                "organization_is_active": True,
             },
         )
 
@@ -83,9 +85,41 @@ class AuthenticationTests(unittest.TestCase):
                 "organization_id": ORGANIZATION_ID,
                 "is_admin": False,
                 "is_system_admin": False,
+                "is_active": True,
+                "organization_is_active": True,
             },
         )
         self.assertEqual(response[1], 403)
+
+    def test_rejects_deactivated_user(self):
+        response, _context = self.authenticate_with(
+            {"sub": "auth0|inactive-user"},
+            {
+                "ombuds_id": OMBUDS_ID,
+                "organization_id": ORGANIZATION_ID,
+                "is_admin": False,
+                "is_system_admin": False,
+                "is_active": False,
+                "organization_is_active": True,
+            },
+        )
+        self.assertEqual(response[1], 403)
+        self.assertIn("user account is deactivated", response[0].get_json()["message"])
+
+    def test_rejects_user_in_deactivated_organization(self):
+        response, _context = self.authenticate_with(
+            {"sub": "auth0|suspended-org-user"},
+            {
+                "ombuds_id": OMBUDS_ID,
+                "organization_id": ORGANIZATION_ID,
+                "is_admin": True,
+                "is_system_admin": False,
+                "is_active": True,
+                "organization_is_active": False,
+            },
+        )
+        self.assertEqual(response[1], 403)
+        self.assertIn("organization is deactivated", response[0].get_json()["message"])
 
     def test_allows_unlinked_subject_to_claim_invitation_only(self):
         response, context = self.authenticate_with(

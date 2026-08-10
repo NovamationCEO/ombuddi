@@ -40,11 +40,14 @@ def claim_invitation():
                        i.invited_email
                 FROM ombuds_invitations i
                 JOIN ombuds o ON o.id = i.ombuds_id
+                JOIN organizations organization ON organization.id = o.organization_id
                 WHERE i.token_hash = %s
                   AND i.claimed_at IS NULL
                   AND i.revoked_at IS NULL
                   AND i.expires_at > now()
-                FOR UPDATE OF i, o
+                  AND o.is_active = TRUE
+                  AND organization.is_active = TRUE
+                FOR UPDATE OF i, o, organization
                 """,
                 (token_hash,),
             )
