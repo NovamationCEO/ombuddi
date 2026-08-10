@@ -74,6 +74,22 @@ class AuthenticationTests(unittest.TestCase):
         )
         self.assertEqual(response[1], 403)
 
+    def test_invalid_token_details_are_logged_but_not_returned(self):
+        with app.test_request_context(
+            "/api/v1/example",
+            headers={"Authorization": "Bearer invalid-token"},
+        ):
+            with (
+                patch("app.validate_token", side_effect=RuntimeError("sensitive verifier detail")),
+                self.assertLogs("app", level="WARNING") as logs,
+            ):
+                response, status = authenticate()
+
+        self.assertEqual(status, 401)
+        self.assertEqual(response.get_json()["message"], "Invalid access token")
+        self.assertNotIn("sensitive verifier detail", response.get_data(as_text=True))
+        self.assertIn("Rejected invalid access token", logs.output[0])
+
     def test_rejects_stale_organization_claim(self):
         response, _context = self.authenticate_with(
             {

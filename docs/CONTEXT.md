@@ -4,7 +4,7 @@
 
 ## Guiding principles
 
-1. **Pre-production freedom.** The app has never had real users. Backwards compatibility is not a concern and should be actively avoided as a justification for keeping bad choices around. Until we have a paying customer, schema changes, table renames, and breaking API edits are cheap — take them.
+1. **Alpha-stage freedom, with production care.** The product is still early enough to correct poor designs, but a live alpha database now exists. Keep improving the model, while treating production schema changes as ordered migrations that preserve existing alpha data.
 2. **Confidentiality is the product.** Every design decision is evaluated first against "does this protect a visitor's identity from a hostile party with broad access?" Convenience features lose if they erode this.
 3. **Ombuds-first defaults, organization-customizable.** Ship sensible defaults (university-ombuds-shaped, IOA-aligned), but let every taxonomy — codes, roles, mediums, priorities — be replaced by the org without code changes.
 4. **Aggregate by design, identifiable only when absolutely necessary.** Demographics, codes, mediums, and durations exist precisely so reports can be useful. Names, salt phrases, and notes are the only intentionally-identifying surface; everything else is bucketable.
@@ -35,8 +35,8 @@ A logged-in ombuds, working under their organization's seat, can:
 
 Two layered protections:
 
-1. **Cryptographic name-hashing.** A "person" is stored only as `hashed_name = sha256(name + salt + org_name + server_salt)`. The user must re-supply the exact `name + salt` to retrieve. There is no way to enumerate visitors from the database. Server-side `NAME_SALT` (env var, see `service/hash_name.py`) prevents rainbow-table attacks against a stolen DB.
-2. **Plaintext circumspection.** Even for fields that must be plaintext (case names, notes), the UI nudges toward randomized/non-identifying titles, and a random "security image" per case for visual recognition.
+1. **Cryptographic name-hashing.** A visitor is stored under a hash derived from the name, user-supplied salt phrase, immutable organization UUID, and server-side `NAME_SALT`. The user must re-supply the same identifying inputs to retrieve the visitor. Organization names are deliberately excluded so renames cannot orphan records.
+2. **Plaintext circumspection.** Even for fields that remain plaintext, such as case names, the UI nudges toward randomized/non-identifying titles and provides a random "security image" per case for visual recognition. Entry notes use client-side encryption.
 3. **Demographics are collected, not minimized.** Useful trend reporting requires generation, race, gender, primary role, international/domestic, etc. The protection lives in *aggregation* (bucketing on report) plus the lookup gate (no one without the salt phrase ever pulls these rows back). Edge cases — e.g. an org with only one male employee — collapse to identifying through process of elimination; that's an ombuds-judgment problem we surface in the UI rather than try to algorithmically solve.
 
 Important nuance the user described and we should preserve: an ombuds can choose **how granular** their salt phrases are — one per org, one per ombuds, one per month, one per case, blank, or even with deliberate per-instance spelling variations. Two records of "the same person" under two salts are mathematically two different people. This is a feature, not a bug.
@@ -46,42 +46,57 @@ Important nuance the user described and we should preserve: an ombuds can choose
 - Ombuddi staff, including admins, must NEVER be able to read meaningful visitor data. No "support" backdoor.
 - An ombuds can only see records that hash to the salt phrase they currently supply. Even another ombuds in the same org sees nothing without the same phrase.
 - Trend reports must be derivable from non-identifying fields (demographics, codes, role, medium, duration). Aggregations should respect minimum-cell-size thresholds to prevent re-identification.
-- Notes are the most sensitive payload. Encrypting `entries.notes` at rest under a key derived from a per-user/per-case passphrase is a candidate for a follow-up phase.
+- Notes are encrypted client-side with AES-256-GCM before being stored. The key is derived from the salt phrase and organization UUID; the server and Ombuddi administrators do not receive the plaintext key.
 
 ## Architecture (current)
 
 ```
-/web        Vite + React 18 + TS + MUI v5 + React Query + Zustand + react-router v6
-            Auth scaffolding present (keycloak, @react-keycloak/web) but commented out;
-            Auth0 `sub` maps to a local ombuds UUID through `ombuds.auth0_sub`.
+/web        Vite 8 + React 19 + TypeScript 6 + MUI 9 + React Query + Zustand.
+            npm is the sole package manager. Auth0 handles authentication;
+            the access token is sent to the API and never used as a local ID.
 
 /service    Flask 3 + psycopg2 + Postgres 14 (via docker-compose)
             Generic CRUD helpers in src/utils.py drive most endpoints with a
-            field-mapping dict (camelCase -> snake_case).
+            field-mapping dict (camelCase -> snake_case). Auth0 `sub` resolves
+            through `ombuds.auth0_sub` to local ombuds and organization UUIDs.
 
 /files      Reference material: Ombuds Data .docx, IOA reporting categories.pdf.
 ```
 
-API base: `http://localhost:5002/api/v1/...` in dev; same-host `https://` in prod (per `web/src/tools/db_tools/getter.ts`). CORS in `service/app.py` is currently pinned to `http://localhost:5173`.
+API base: `http://localhost:5002/api/v1/...` in dev; same-host `https://` in prod (per `web/src/tools/db_tools/getter.ts`). CORS currently combines unrestricted Flask-Cors with a `FRONTEND_URL` response header and is bookmarked for consolidation.
 
-## Current functional state (May 2026)
+## Current functional state (August 9, 2026)
 
 Working / wired:
-- Authenticated identity: the API maps Auth0 `sub` to `ombuds.auth0_sub`, then derives the local ombuds and organization UUIDs from that row.
-- Organization page: edit org name (UI only), manage **Codes** and **Code Categories** (create, rename, soft-delete, reorder). Manage **Primary Roles** (org-customizable). IOA's 9 categories + 87 codes are loaded from `web/src/constants/ioaConstants.ts` so they appear in the Code picker alongside the user's own codes.
-- Cases list, case create (`AddNewCase` — has IOA + org code selection, referral source UI scaffolded, randomized name button, picsum-seeded security image).
-- Case summary page: shows case, codes (with `EditCodeDialog`), list of entries by date, hover-to-preview entry details. "Add Entry" button.
-- Add entry form: date, duration, medium, entry priority radios, notes, and a People dialog that includes the `PersonFinder` (name + salt → hashed search) — but the Save button on the people dialog currently only closes; selected people aren't yet stored on the entry.
-- Add person form: full demographics + salt phrase + secure/insecure toggle. Posts to `add_person` (the backend `_salt_name` hook re-hashes `hashedName` before insert).
 
-Not yet working / stubbed:
-- WelcomePage and Report page are placeholders.
-- `/add_case` and `/log_without_case` routes referenced by `Cases.tsx` are NOT defined in `router.tsx`.
-- Entry ↔ Person association: the schema includes `entry_person` (a join used by `SQL_PERSONS_BY_CASE_ID`), but there is no `add_entry_person` endpoint yet and the Add Entry dialog never persists the selection.
-- Codes on entries (vs. only on cases): undecided. User leans toward allowing.
-- Entry priority and medium customization at the org level: not implemented.
-- Timed record purge: not implemented.
-- Real authentication, multi-tenancy enforcement, subscription/billing: not implemented.
+- Auth0 access tokens are validated by the API. Auth0's textual `sub` is stored only in `ombuds.auth0_sub`; local UUIDs remain the primary and foreign keys throughout the application.
+- Every authenticated request resolves the local user and organization from the database. Unlinked identities can only reach the invitation-claim endpoint. Deactivated users and organizations are rejected centrally.
+- Organization administrators can create seats, grant organization-admin status, edit unlinked seat emails, issue one-time invitations, and deactivate/reactivate eligible users. Seat limits have a database-enforced minimum of one.
+- System administrators can create and manage organizations and organization administrators, change seat limits, and deactivate/reactivate organizations. Status changes are written to an immutable audit trail.
+- Invitations are bound to the intended normalized email, expire, are single-use, and store only a token hash. Auth0 supplies signed verified-email claims through the Post-Login Action chain.
+- Tenant ownership is enforced in API writes and by database relationships/triggers for cross-table associations. Local identity and organization fields are force-stamped from the authenticated principal rather than accepted from request data.
+- Cases, entries, entry-person links, encrypted notes, codes/categories, primary roles, public persons, demographic picklists, and report aggregation are implemented.
+- Database errors return stable client-safe messages while detailed exceptions remain in server logs. Shared CRUD/report/person paths use a common commit/rollback/close lifecycle helper.
+- Backend and frontend regression suites are active. As of this update: 43 backend tests and 4 frontend tests pass; frontend lint and production build also pass.
+- Frontend dependency management is standardized on npm. Generated Python bytecode and Yarn runtime files are no longer tracked.
+
+Still incomplete:
+
+- Automated record retention/purge, subscription billing, invitation email delivery, and a self-service organization onboarding flow.
+- `/log_without_case` remains unresolved.
+- Production schema migrations are still applied manually in order; see `docs/ADMIN_USERS.md`.
+
+## Deferred engineering cleanup
+
+These are intentionally bookmarked rather than part of the August 9 hardening work:
+
+- **Production server configuration:** stop setting `app.debug = True` and run Flask behind Gunicorn (already in `requirements.txt`) rather than `python app.py`. Keep the convenient development command local to Docker Compose.
+- **Automated migration deployment:** add a migration runner/release step when the Render plan or deployment model supports it reliably. The free-tier alpha continues to use the documented manual migration sequence for now.
+- **CORS tightening:** configure Flask-Cors from an explicit environment-controlled allowlist instead of calling unrestricted `CORS(app)` and then adding a second header manually.
+- **Connection pooling:** the shared transaction helper fixes cleanup and rollback behavior, but the API still opens one PostgreSQL connection per operation. Pooling can wait until usage warrants it.
+- **Frontend bundle splitting:** the production build passes but warns that the main JavaScript bundle exceeds 500 kB. Add route-level/dynamic imports before performance becomes a user-visible problem.
+- **Broader test coverage and CI:** preserve the current suites and add endpoint/error-path coverage as features change; configure CI when repository/deployment automation is worth maintaining.
+- **Dead frontend code and dependency audit:** continue removing unused `web/src/tools`, `trusted-components`, and questionable dependencies on a read-on-demand basis rather than as a risky bulk deletion.
 
 ## Key files to know
 
@@ -90,7 +105,10 @@ Not yet working / stubbed:
 | App entry, routing | `web/src/App.tsx`, `web/src/router.tsx` |
 | Generic Flask CRUD | `service/src/utils.py` (`add_one`, `get_one`, `get_many`, `update_one`, `return_many`, …) |
 | Name hashing (server) | `service/src/hash_name.py` (server salt via `NAME_SALT` env) |
-| Name hashing (client) | `web/src/tools/useHashName.ts` (combines name + user salt + org name) |
+| Name hashing (client) | `web/src/tools/useHashName.ts` (combines name + user salt + organization UUID) |
+| Authentication/principal resolution | `service/app.py`, `service/src/auth.py`, `service/src/principal.py` |
+| Admin and invitation endpoints | `service/src/admin_views.py`, `service/src/system_admin_views.py`, `service/src/auth_views.py` |
+| Production rollout/migrations | `docs/ADMIN_USERS.md`, `service/migrations/` |
 | Person endpoints | `service/src/person_views.py` |
 | Case/code/role endpoints | `service/src/ombuddi_views.py` |
 | TS data shapes | `web/src/types/majorTypes.ts` |
@@ -113,17 +131,13 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 - **Reports run in two modes**, toggled per render:
   - *Full mode* (ombuds-only): every bucket visible, no suppression. The ombuds can see narrow bands their own memory might be missing.
   - *Shareable mode* (for leadership): minimum cell size enforced (default 5, org-configurable); below-threshold buckets are merged into "Other" or suppressed entirely. This is the only version that can be exported / shared.
-- **Authentication: Keycloak.** The scaffolding is partly in place, the user knows the system, the audience is bounded (rare profession), so the per-seat economics of managed providers don't pay back. Self-hosted Keycloak in the same compose stack.
-- **No backwards compatibility constraints** while pre-production. See Guiding Principle 1.
+- **Authentication: Auth0.** Auth0's `sub` remains an external textual identifier in `ombuds.auth0_sub`; all application relationships use local UUIDs. Old commented Keycloak scaffolding is legacy code, not the current plan.
+- **Alpha migrations may change the model, but must preserve live alpha data.** Apply production migrations in order and avoid destructive rebuild instructions outside development. See Guiding Principle 1.
 - **IOA reporting categories and codes are application-level reference data, not DB rows.** They live in `web/src/constants/ioaConstants.ts`, with deterministic uuid5-derived ids resolved at runtime. A future "Hospital ombuds defaults" or "Government ombuds defaults" pack ships the same way: another constants file with another uuid5 namespace. No "fake organization" rows; no cross-org read exception in the multi-tenancy model.
 
 ## Open product questions (resolve before/with the user)
 
-- Tags on **entries** in addition to cases? Probable yes; need UI and a `entry_codes` join (vs. reusing `cases.codes` only).
-- Entry medium and priority: org-customizable lists, or stay hard-coded? Likely customizable.
 - Salt-phrase UX: how strongly do we guide ombuds toward a sensible default (per-org? per-ombuds? per-month?) without locking them into one?
-- Per-case salt for **entry notes** (encrypted at rest) — phase 2 or phase 1?
-- Public Persons UX: where do they show up vs. visitors? Likely a separate "Public People" admin pane, plus a checkbox in the AddPerson flow.
 - Court-order / legal-hold flow: who can pause purges, how is it audited, and is that audit itself outside the standard purge?
 
 ## Submission target

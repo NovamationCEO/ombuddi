@@ -27,15 +27,17 @@ Open two terminals, and Docker Desktop (or equivalent). Be connected through the
 Frontend prerequisites:
 
 -   Node.js `22.12.0` (or newer in the 22.x/24.x line)
--   Yarn `4.9.1` or newer
+-   npm `10` or newer
 
 If using `nvm`, from `/web` run:
 
 `nvm use`
 
-`/er3_base/web $ yarn dev`
+`/ombuddi/web $ npm install`
 
-`/er3_base/service $ docker-compose down --remove-orphans; docker-compose build; docker-compose up`
+`/ombuddi/web $ npm run dev`
+
+`/ombuddi/service $ docker-compose down --remove-orphans; docker-compose build; docker-compose up`
 
 # Frontend Overview
 

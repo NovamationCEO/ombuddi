@@ -33,17 +33,31 @@ class EmptyReportCursor:
     def close(self):
         self.closed = True
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
 
 class EmptyReportConnection:
     def __init__(self):
         self.fake_cursor = EmptyReportCursor()
         self.closed = False
+        self.committed = False
+        self.rolled_back = False
 
     def cursor(self):
         return self.fake_cursor
 
     def close(self):
         self.closed = True
+
+    def commit(self):
+        self.committed = True
+
+    def rollback(self):
+        self.rolled_back = True
 
 
 class ReportTests(unittest.TestCase):

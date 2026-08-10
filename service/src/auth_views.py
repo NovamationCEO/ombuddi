@@ -1,4 +1,5 @@
 import hashlib
+import logging
 
 from flask import Blueprint, g, jsonify, request
 
@@ -7,6 +8,7 @@ from email_identity import normalize_email
 
 
 auth_views = Blueprint('auth_views', __name__)
+logger = logging.getLogger(__name__)
 
 
 @auth_views.route('/api/v1/auth/claim-invitation', methods=['POST'])
@@ -107,6 +109,7 @@ def claim_invitation():
                 'error': 'Conflict',
                 'message': 'This Auth0 account is already linked to another Ombuddi user',
             }), 409
+        logger.exception('Failed to claim invitation')
         return jsonify({'error': 'Database error', 'message': 'Unable to claim invitation'}), 500
     finally:
         if conn:

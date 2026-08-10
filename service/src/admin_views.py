@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -10,6 +11,7 @@ from email_identity import normalize_email
 
 
 admin_views = Blueprint('admin_views', __name__)
+logger = logging.getLogger(__name__)
 
 
 @admin_views.before_request
@@ -83,6 +85,7 @@ def get_metrics():
             'totalCases':        row[4],
         })
     except Exception:
+        logger.exception('Failed to load organization metrics')
         return jsonify({'error': 'Database error', 'message': 'Unable to load metrics'}), 500
     finally:
         if conn:
@@ -127,6 +130,7 @@ def get_organization():
             'linkedCount': row[6],
         })
     except Exception:
+        logger.exception('Failed to load organization settings')
         return jsonify({'error': 'Database error', 'message': 'Unable to load organization'}), 500
     finally:
         if conn:
@@ -170,6 +174,7 @@ def list_ombuds():
             rows = cur.fetchall()
         return jsonify([_seat_json(row) for row in rows])
     except Exception:
+        logger.exception('Failed to list organization users')
         return jsonify({
             'error': 'Database error',
             'message': 'Unable to load organization users',
@@ -249,6 +254,7 @@ def create_ombuds():
                 'error': 'Conflict',
                 'message': 'That email already has a seat in this organization',
             }), 409
+        logger.exception('Failed to create organization user seat')
         return jsonify({'error': 'Database error', 'message': 'Unable to create user seat'}), 500
     finally:
         if conn:
@@ -321,6 +327,7 @@ def update_unlinked_ombuds_email(ombuds_id):
                 'error': 'Conflict',
                 'message': 'That email already has a seat in this organization',
             }), 409
+        logger.exception('Failed to update unlinked user email')
         return jsonify({'error': 'Database error', 'message': 'Unable to update user email'}), 500
     finally:
         if conn:
@@ -407,6 +414,7 @@ def create_invitation(ombuds_id):
     except Exception:
         if conn:
             conn.rollback()
+        logger.exception('Failed to create user invitation')
         return jsonify({'error': 'Database error', 'message': 'Unable to create invitation'}), 500
     finally:
         if conn:
@@ -555,6 +563,7 @@ def update_ombuds_status(ombuds_id):
     except Exception:
         if conn:
             conn.rollback()
+        logger.exception('Failed to update organization user status')
         return jsonify({'error': 'Database error', 'message': 'Unable to update user status'}), 500
     finally:
         if conn:

@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask, request, Response, jsonify, g
 from flask_cors import CORS
 from src.ombuddi_views import ombuddi_views
@@ -11,6 +12,7 @@ from src.system_admin_views import system_admin_views
 from src.auth import validate_token
 from src.principal import PrincipalLookupError, get_principal
 
+logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.debug = True
 app.register_blueprint(ombuddi_views)
@@ -39,8 +41,9 @@ def authenticate():
     token = auth_header[7:]
     try:
         claims = validate_token(token)
-    except Exception as e:
-        return jsonify({'error': 'Unauthorized', 'message': f'Invalid token: {e}'}), 401
+    except Exception:
+        logger.warning('Rejected invalid access token', exc_info=True)
+        return jsonify({'error': 'Unauthorized', 'message': 'Invalid access token'}), 401
 
     auth0_sub = claims.get('sub')
     if not auth0_sub:

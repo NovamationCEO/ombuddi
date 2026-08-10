@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -10,6 +11,7 @@ from email_identity import normalize_email
 
 
 system_admin_views = Blueprint('system_admin_views', __name__)
+logger = logging.getLogger(__name__)
 
 
 @system_admin_views.before_request
@@ -67,6 +69,7 @@ def list_organizations():
             for row in rows
         ])
     except Exception:
+        logger.exception('Failed to list organizations')
         return jsonify({'error': 'Database error', 'message': 'Unable to list organizations'}), 500
     finally:
         if conn:
@@ -162,6 +165,7 @@ def create_organization():
                 'error': 'Conflict',
                 'message': 'An organization with that name already exists',
             }), 409
+        logger.exception('Failed to create organization')
         return jsonify({'error': 'Database error', 'message': 'Unable to create organization'}), 500
     finally:
         if conn:
@@ -233,6 +237,7 @@ def update_organization(org_id):
     except Exception:
         if conn:
             conn.rollback()
+        logger.exception('Failed to update organization')
         return jsonify({'error': 'Database error', 'message': 'Unable to update organization'}), 500
     finally:
         if conn:
@@ -317,6 +322,7 @@ def update_organization_status(org_id):
     except Exception:
         if conn:
             conn.rollback()
+        logger.exception('Failed to update organization status')
         return jsonify({
             'error': 'Database error',
             'message': 'Unable to update organization status',
@@ -360,6 +366,7 @@ def list_org_ombuds(org_id):
             rows = cur.fetchall()
         return jsonify([_seat_json(row) for row in rows])
     except Exception:
+        logger.exception('Failed to list organization seats')
         return jsonify({'error': 'Database error', 'message': 'Unable to load seats'}), 500
     finally:
         if conn:
@@ -443,6 +450,7 @@ def create_org_invitation(org_id, ombuds_id):
     except Exception:
         if conn:
             conn.rollback()
+        logger.exception('Failed to create organization invitation')
         return jsonify({'error': 'Database error', 'message': 'Unable to create invitation'}), 500
     finally:
         if conn:

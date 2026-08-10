@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, g
-from src.connection import get_db_connection
-from utils import add_one, get_many, get_one, return_many, update_one, remove_one
+from src.connection import get_db_connection, managed_connection
+from utils import add_one, get_many, get_one, return_many, update_one
 from hash_name import hash_name
 import logging
 
@@ -77,25 +77,29 @@ def delete_person():
     if not dead_id:
         return jsonify({'success': False, 'error': 'Missing id'}), 400
     try:
-        with get_db_connection() as conn:
+        with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "DELETE FROM persons WHERE id = %s AND organization_id = %s",
                     (dead_id, g.organization_id),
                 )
         return jsonify({'success': True, 'status': 'success'}), 200
-    except Exception as e:
+    except Exception:
         logger.exception("delete_person failed")
-        return jsonify({'success': False, 'error': 'Database error', 'message': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': 'Database error',
+            'message': 'Unable to delete person',
+        }), 500
 
 def _get_persons_by_sql(sql: str, params: tuple):
     try:
-        with get_db_connection() as conn:
+        with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 rows = cur.fetchall()
                 return return_many(person_model, rows)
-    except Exception as e:
+    except Exception:
         logger.exception("Person query failed")
         return (
             jsonify(
@@ -103,7 +107,7 @@ def _get_persons_by_sql(sql: str, params: tuple):
                     "success": False,
                     "status": "db error",
                     "error": "Database error",
-                    "message": str(e),
+                    "message": "Unable to load people",
                 }
             ),
             500,
@@ -181,7 +185,7 @@ def _exec_entry_person(sql: str, entry_id, person_id):
             400,
         )
     try:
-        with get_db_connection() as conn:
+        with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 # Authorize both sides of the relationship from the principal's
                 # organization.  The key-share locks remain held through the
@@ -209,7 +213,7 @@ def _exec_entry_person(sql: str, entry_id, person_id):
                     )
                 cur.execute(sql, (entry_id, person_id))
         return jsonify({"success": True, "status": "success"}), 200
-    except Exception as e:
+    except Exception:
         logger.exception("entry_person mutation failed")
         return (
             jsonify(
@@ -217,7 +221,7 @@ def _exec_entry_person(sql: str, entry_id, person_id):
                     "success": False,
                     "status": "db error",
                     "error": "Database error",
-                    "message": str(e),
+                    "message": "Unable to update the entry-person relationship",
                 }
             ),
             500,

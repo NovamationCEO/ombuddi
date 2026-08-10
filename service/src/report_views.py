@@ -1,8 +1,12 @@
-from flask import Blueprint, request, jsonify, g
-from src.connection import get_db_connection
+import logging
 from datetime import date, timedelta
 
+from flask import Blueprint, request, jsonify, g
+
+from src.connection import get_db_connection, managed_connection
+
 report_views = Blueprint('report_views', __name__)
+logger = logging.getLogger(__name__)
 
 
 def _report_date_range(args, today=None):
@@ -29,8 +33,19 @@ def get_reports():
     except ValueError as exc:
         return jsonify({'error': 'Input error', 'message': str(exc)}), 400
 
-    conn = get_db_connection()
-    cur = conn.cursor()
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                return _execute_reports(cur, organization_id, start, end)
+    except Exception:
+        logger.exception('Failed to generate reports')
+        return jsonify({
+            'error': 'Database error',
+            'message': 'Unable to generate reports',
+        }), 500
+
+
+def _execute_reports(cur, organization_id, start, end):
 
     cur.execute("""
         SELECT TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month, COUNT(*) AS count
@@ -191,9 +206,6 @@ def get_reports():
         {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
         for r in cur.fetchall()
     ]
-
-    cur.close()
-    conn.close()
 
     return jsonify({
         'entriesByMonth': entries_by_month,

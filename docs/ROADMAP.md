@@ -4,7 +4,7 @@
 
 ## Phase 0 — Plumbing, schema redesign, cleanup  [in progress]
 
-Goal: make the codebase safe to build on top of. Since the app has no real users yet (Principle 1), we use this phase aggressively — anything that would normally be a migration nightmare is just a code edit now.
+Goal: make the codebase safe to build on top of. The live alpha now requires ordered, data-preserving production migrations, while development databases may still be rebuilt freely.
 
 **Tier 1 — trivial cleanups (no design decisions):**
 
@@ -25,20 +25,28 @@ Goal: make the codebase safe to build on top of. Since the app has no real users
 - [x] Rename DB table `person` → `persons` (and the table-name string in `person_views.py`). Wipe + recreate dev DB.
 - [x] Switch hashing input from `organization.name` to `organization.id`.
 - [x] Retire the "IOA organization" sentinel; IOA codes are application constants now. See `web/src/constants/ioaConstants.ts` and `web/src/tools/useCodeSource.ts`.
-- [ ] Decide whether to fully revive the commented-out Keycloak scaffolding now (deferred to Phase 4).
+- [ ] Remove obsolete commented-out Keycloak scaffolding when touching the affected frontend files; Auth0 is the active identity provider.
 - [ ] Strip dead utilities from `web/src/tools/` and `trusted-components/` on a read-on-demand basis.
 
 **Tier 4 — dependency upgrades:**
 
 - [x] MUI → v9, React → 19, react-router → 7, Vite → 8, TypeScript → 6, Zustand → 5, etc. Done out-of-band.
 - [x] Pruned mapping/stats deps (leaflet, georaster, chroma-js, simple-statistics, etc.) at the same time.
-- [ ] Added `uuid` runtime dep for `ioaConstants.ts` uuid5 derivation. **Run `cd web && yarn install` to pick this up.**
+- [x] Added `uuid` runtime dep for `ioaConstants.ts` uuid5 derivation. Run `cd web && npm install` after dependency changes.
 - [ ] Still-questionable deps to audit on demand: `html-to-image`, `jsdom`, `patch-package`, `@dnd-kit/*` (only used in `trusted-components/Sortable*`, which is untouched).
 
 **Tier 5 — multi-tenancy plan (implementation lands with Phase 4 auth):**
 
 - [x] Pre-auth lift complete: `organization_id NOT NULL` on `cases` and `entries`; `owner_constraint` parameter on `utils.py` helpers (default `None`); create-payload sources wired up on the frontend; `update_one` returns 404 when owner-scoped and zero rows match.
-- [ ] Enforcement pending Phase 4: `Principal` decoder, `@requires_principal` decorator, per-view adoption.
+- [x] Auth0 principal resolution and per-view tenant enforcement. Auth0 `sub` stays separate from local ombuds UUIDs; database constraints/triggers protect cross-tenant relationships.
+
+**Tier 6 — August 9, 2026 hardening:**
+
+- [x] Redact database/token-verification details from API responses while retaining server-side exception logs.
+- [x] Centralize routine transaction cleanup, preserve provider database DSNs intact, and cover connection failures with tests.
+- [x] Remove tracked Python bytecode and obsolete duplicate backend utilities.
+- [x] Standardize frontend dependency management on npm and remove checked-in Yarn runtime files.
+- [ ] Deferred production/runtime cleanup is recorded in `docs/CONTEXT.md` under **Deferred engineering cleanup**.
 
 The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/MULTI_TENANCY.md`.
 
@@ -68,32 +76,31 @@ Goal: respect IOA confidentiality on identity.
 - [x] Picklist descriptions / tooltips. `description TEXT NOT NULL DEFAULT ''` added to `picklists` table. Edit dialog in `PicklistManager` now has a second "Tooltip / description" field; description shown inline in italic beneath the option name in the manager, and as a MUI Tooltip when hovering in `DemographicPicker`. Generation options ship with birth-year descriptions.
 - [x] `PicklistManager` preset loader. `defaultSets` prop accepts named preset packs (`DefaultSet[]`). "Load defaults" button appears when the list is empty, opens a picker dialog showing available sets with item preview, and loads the chosen set sequentially. All five Organization-page picklist kinds (medium, priority, gender, generation, race) ship with a Standard preset. Dev seed pre-populates all five for the dev org.
 
-## Phase 3 — Reports  [not started]
+## Phase 3 — Reports  [in progress]
 
 Goal: aggregate trend reports that an org leader can act on, with no identity leakage.
 
-- [ ] Report builder UI under `/report`. Filters: date range, code, code category, primary role, demographic axis, medium, ombuds.
-- [ ] Backend report endpoints. Use `GROUP BY` queries on `entries`, `cases.codes`, `persons` (joined through `entry_person`). Return raw bucketed counts plus computed shares.
-- [ ] **Dual-mode rendering toggle** (see CONTEXT.md "Settled decisions"):
+- [x] Initial report UI under `/report` with date range, trend/category charts, bar/pie toggles, and offline export support.
+- [ ] Add report filters for code, code category, primary role, demographic axis, medium, and ombuds.
+- [x] Backend report aggregation endpoint using tenant-scoped `GROUP BY` queries across entries, cases, codes, and persons.
+- [x] **Dual-mode rendering toggle** (see CONTEXT.md "Settled decisions"):
   - *Full mode* — every bucket as-is. Ombuds-only, not exportable, no share affordance in the UI.
   - *Shareable mode* — enforce minimum cell size (default 5, org-configurable). Below-threshold buckets merge into "Other" or are suppressed. Exports and external-sharing flows are gated to this mode.
-  - The toggle should be visually unambiguous; a small lock icon on Full mode plus a "Ombuds eyes only" banner is a good starting point.
-- [ ] Highcharts is already in deps — use it for the chart layer.
+  - The toggle is visually distinguished with lock/share icons and a mode banner.
+- [ ] Disable export actions while in Full mode so only the suppression-enforced Shareable view can leave the application.
+- [x] Highcharts chart layer with browser-local/offline export modules.
 - [ ] Export: PDF + .docx via the user's "skills" pipeline so the ombuds can drop a yearly summary into a memo.
 - [ ] Stretch: year-over-year comparisons and "topic spike" alerts.
 
-## Phase 4 — Authentication & multi-tenancy  [not started]
+## Phase 4 — Authentication & multi-tenancy  [in progress]
 
 Goal: keep org A from ever seeing org B's data.
 
-- [ ] Auth approach: **Keycloak** (decided — see CONTEXT.md "Settled decisions"). Self-hosted in the same docker-compose stack as Postgres and the Flask app.
-  - Add a `keycloak` service to `service/docker-compose.yml`.
-  - Revive `web/src/constants/keycloak.ts` and the `ReactKeycloakProvider` in `App.tsx` / route guards in `Page.tsx`.
-  - Flask side: validate the access token's `iss`, `aud`, signature against Keycloak's JWKS on every request; derive `organization_id` and `ombuds_id` from the token claims.
-- [ ] Every Flask endpoint must derive the calling ombuds' `organization_id` from the token and enforce it as a WHERE constraint. Stop trusting `<organization_id>` URL params.
-- [ ] Centralize ownership checks. Convert generic CRUD helpers to take an `owner_org_id` constraint that gets ANDed in. Or write per-entity handler classes.
+- [x] Auth approach: **Auth0**. Flask validates access-token issuer, audience, and signature, then resolves the token `sub` through the local `ombuds.auth0_sub` column.
+- [x] Flask derives local ombuds and organization UUIDs from the linked database row and enforces tenant ownership. Client-supplied identity/organization values are not authoritative.
+- [x] Centralized ownership constraints in shared CRUD paths plus tenant-aware database foreign keys/triggers for cross-table relationships.
 - [x] Resolve Auth0 `sub` through `ombuds.auth0_sub`; keep local UUIDs server-side and expose principal-scoped current-user/current-organization endpoints.
-- [ ] CORS: read allowed origins from env.
+- [ ] Replace the current overlapping CORS mechanisms with one environment-controlled origin allowlist.
 
 ## Phase 5 — Record retention & purge  [not started]
 
