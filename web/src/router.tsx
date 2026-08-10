@@ -15,6 +15,7 @@ import { AddEntry } from './pages/AddEntry'
 import { AddNewCase } from './components/AddEntry/AddNewCase'
 import { AdminUsers } from './pages/AdminUsers'
 import { AcceptInvitation } from './pages/AcceptInvitation'
+import { SystemAdmin } from './pages/SystemAdmin'
 
 export const router = createBrowserRouter([
     {
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
     { path: '/profile', element: <Page element={<Profile />} /> },
     { path: '/organization', element: <Page element={<Organization />} /> },
     { path: '/admin/users', element: <Page element={<AdminUsers />} /> },
+    { path: '/system/orgs', element: <Page element={<SystemAdmin />} /> },
     { path: '/case/:caseId/add_entry', element: <Page element={<AddEntry />} /> },
     { path: '/case/:caseId', element: <Page element={<CaseSummary />} /> },
 ])

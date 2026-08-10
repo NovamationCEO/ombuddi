@@ -62,6 +62,7 @@ ombuds_model = {
     'name': 'name',
     'email': 'email',
     'isAdmin': 'is_admin',
+    'isSystemAdmin': 'is_system_admin',
     'organizationId': 'organization_id',
 }
 

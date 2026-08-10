@@ -58,11 +58,12 @@ CREATE TABLE ombuds (
     -- local primary key: entries and other relationships continue to use id.
     -- NULL supports provisioning a seat before its Auth0 account is linked;
     -- UNIQUE allows at most one Ombuddi seat per Auth0 identity.
-    auth0_sub       TEXT UNIQUE,
-    email           TEXT,
-    is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
-    name            TEXT NOT NULL,
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT
+    auth0_sub         TEXT UNIQUE,
+    email             TEXT,
+    is_admin          BOOLEAN NOT NULL DEFAULT FALSE,
+    is_system_admin   BOOLEAN NOT NULL DEFAULT FALSE,
+    name              TEXT NOT NULL,
+    organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT
 );
 
 CREATE INDEX ombuds_organization_id_idx ON ombuds (organization_id);

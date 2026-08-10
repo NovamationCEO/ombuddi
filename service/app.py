@@ -7,6 +7,7 @@ from src.picklist_views import picklist_views
 from src.report_views import report_views
 from src.admin_views import admin_views
 from src.auth_views import auth_views
+from src.system_admin_views import system_admin_views
 from src.auth import validate_token
 from src.principal import PrincipalLookupError, get_principal
 
@@ -18,6 +19,7 @@ app.register_blueprint(picklist_views)
 app.register_blueprint(report_views)
 app.register_blueprint(admin_views)
 app.register_blueprint(auth_views)
+app.register_blueprint(system_admin_views)
 
 CORS(app)
 
@@ -70,6 +72,7 @@ def authenticate():
     g.ombuds_id = principal['ombuds_id']
     g.organization_id = principal['organization_id']
     g.is_admin = principal['is_admin']
+    g.is_system_admin = principal['is_system_admin']
 
     # During the transition the Auth0 Action may still emit an organization
     # claim. If present, reject stale/misconfigured claims instead of silently

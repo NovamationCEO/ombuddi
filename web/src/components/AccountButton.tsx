@@ -63,6 +63,9 @@ export function AccountButton() {
                                             {currentOmbuds.data?.isAdmin && (
                                                 <MenuItem onClick={() => navigate('/admin/users')}>Manage Users</MenuItem>
                                             )}
+                                            {currentOmbuds.data?.isSystemAdmin && (
+                                                <MenuItem onClick={() => navigate('/system/orgs')}>System Admin</MenuItem>
+                                            )}
                                             <MenuItem onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</MenuItem>
                                         </> : <>
                                             <MenuItem onClick={() => loginWithRedirect()}>Log In</MenuItem>
