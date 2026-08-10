@@ -21,5 +21,8 @@ def get_db_connection(db_key="default"):
             password=os.getenv("DB_PASS"),
             database=os.getenv("DB_NAME"),
         )
-    conn.autocommit = True
+    # Callers explicitly commit complete units of work.  Keeping autocommit off
+    # is also required for SELECT ... FOR UPDATE locks to survive until the
+    # corresponding write has completed.
+    conn.autocommit = False
     return conn

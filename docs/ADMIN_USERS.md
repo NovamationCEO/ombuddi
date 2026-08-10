@@ -19,11 +19,18 @@ Apply the identity migration first if it has not already been applied:
 \i /Users/nova/Code/ombuddi/service/migrations/001_add_ombuds_auth0_sub.sql
 ```
 
-Then apply the admin-tools migration:
+Then apply the remaining migrations in order:
 
 ```psql
 \i /Users/nova/Code/ombuddi/service/migrations/002_add_admin_invitations.sql
+\i /Users/nova/Code/ombuddi/service/migrations/003_add_subscription.sql
+\i /Users/nova/Code/ombuddi/service/migrations/004_add_system_admin.sql
+\i /Users/nova/Code/ombuddi/service/migrations/005_enforce_tenant_relationships.sql
 ```
+
+Migration 005 checks existing rows before installing tenant-aware foreign keys
+and the entry-person guard. It aborts without changing the schema if it finds a
+cross-organization relationship that needs manual review.
 
 Bootstrap the existing alpha user as the first administrator:
 

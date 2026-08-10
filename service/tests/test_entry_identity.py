@@ -29,7 +29,10 @@ class EntryIdentityTests(unittest.TestCase):
         ):
             g.ombuds_id = "b73d0105-af49-484f-87a3-217af3feff90"
             g.organization_id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-            with patch("src.ombuddi_views.add_one", return_value="ok") as add_one:
+            with (
+                patch("src.ombuddi_views._require_owned_reference", return_value=None),
+                patch("src.ombuddi_views.add_one", return_value="ok") as add_one,
+            ):
                 self.assertEqual(add_entry(), "ok")
 
         self.assertEqual(

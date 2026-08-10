@@ -67,6 +67,8 @@ CREATE TABLE ombuds (
 );
 
 CREATE INDEX ombuds_organization_id_idx ON ombuds (organization_id);
+CREATE UNIQUE INDEX ombuds_id_organization_id_uidx
+    ON ombuds (id, organization_id);
 CREATE UNIQUE INDEX ombuds_organization_email_idx
     ON ombuds (organization_id, lower(email))
     WHERE email IS NOT NULL;
@@ -111,6 +113,8 @@ CREATE TABLE code_categories (
 );
 
 CREATE INDEX code_categories_organization_id_idx ON code_categories (organization_id);
+CREATE UNIQUE INDEX code_categories_id_organization_id_uidx
+    ON code_categories (id, organization_id);
 
 
 -- =====================================================================
@@ -119,10 +123,14 @@ CREATE INDEX code_categories_organization_id_idx ON code_categories (organizatio
 CREATE TABLE codes (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    category_id     UUID NOT NULL REFERENCES code_categories(id) ON DELETE CASCADE,
+    category_id     UUID NOT NULL,
     code            TEXT NOT NULL,
     description     TEXT NOT NULL DEFAULT '',
-    soft_delete     BOOLEAN NOT NULL DEFAULT FALSE
+    soft_delete     BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT codes_category_organization_fk
+        FOREIGN KEY (category_id, organization_id)
+        REFERENCES code_categories (id, organization_id)
+        ON DELETE CASCADE
 );
 
 CREATE INDEX codes_organization_id_idx ON codes (organization_id);
@@ -204,6 +212,8 @@ CREATE TABLE cases (
 );
 
 CREATE INDEX cases_organization_id_idx ON cases (organization_id);
+CREATE UNIQUE INDEX cases_id_organization_id_uidx
+    ON cases (id, organization_id);
 
 CREATE TRIGGER cases_set_updated_at
     BEFORE UPDATE ON cases
@@ -221,17 +231,25 @@ CREATE TRIGGER cases_set_updated_at
 -- entries.case_id → cases.organization_id, but storing it directly lets
 -- every query AND in an org filter without a join. utils.py's generic
 -- CRUD helpers don't support joins; the redundancy is worth it.
--- Enforce consistency in application code (and eventually a CHECK trigger
--- if we ever see drift).
+-- Composite foreign keys below enforce that the case, ombuds, and entry all
+-- carry the same organization_id; application checks provide friendly 404s.
 CREATE TABLE entries (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    case_id         UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
-    ombuds_id       UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
+    case_id         UUID NOT NULL,
+    ombuds_id       UUID NOT NULL,
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     date            DATE NOT NULL,
     medium          TEXT NOT NULL DEFAULT 'inPerson',
     duration        INT  NOT NULL DEFAULT 0,         -- minutes
-    notes           TEXT NOT NULL DEFAULT ''
+    notes           TEXT NOT NULL DEFAULT '',
+    CONSTRAINT entries_case_organization_fk
+        FOREIGN KEY (case_id, organization_id)
+        REFERENCES cases (id, organization_id)
+        ON DELETE CASCADE,
+    CONSTRAINT entries_ombuds_organization_fk
+        FOREIGN KEY (ombuds_id, organization_id)
+        REFERENCES ombuds (id, organization_id)
+        ON DELETE RESTRICT
 );
 
 CREATE INDEX entries_case_id_idx         ON entries (case_id);
@@ -277,6 +295,30 @@ CREATE TABLE entry_person (
 );
 
 CREATE INDEX entry_person_person_id_idx ON entry_person (person_id);
+
+-- A join row must never connect an entry from one organization to a person
+-- from another.  The join table intentionally remains minimal; this trigger
+-- enforces the invariant without duplicating organization_id on every row.
+CREATE OR REPLACE FUNCTION enforce_entry_person_organization()
+RETURNS TRIGGER AS $$
+DECLARE
+    entry_org  UUID;
+    person_org UUID;
+BEGIN
+    SELECT organization_id INTO entry_org FROM entries WHERE id = NEW.entry_id;
+    SELECT organization_id INTO person_org FROM persons WHERE id = NEW.person_id;
+
+    IF entry_org IS NULL OR person_org IS NULL OR entry_org IS DISTINCT FROM person_org THEN
+        RAISE EXCEPTION 'entry and person must belong to the same organization'
+            USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER entry_person_same_organization
+    BEFORE INSERT OR UPDATE ON entry_person
+    FOR EACH ROW EXECUTE FUNCTION enforce_entry_person_organization();
 
 
 -- =====================================================================

@@ -221,7 +221,14 @@ def get_many_in_by(table, model, list_constraint, by_constraints, db_name="defau
 # UPDATE
 ###
 
-def update_one(table, model, request, db_name="default", owner_constraint=None):
+def update_one(
+    table,
+    model,
+    request,
+    db_name="default",
+    owner_constraint=None,
+    immutable_columns=None,
+):
     """Update a single row by id.
 
     `owner_constraint` (dict of DB column name -> value) is ANDed into the
@@ -236,17 +243,34 @@ def update_one(table, model, request, db_name="default", owner_constraint=None):
     if 'id' not in user_data:
         return jsonify({'success': False, 'status': 'input error', 'error': 'Missing id'}), 400
 
-    valid_data = {k: v for k, v in user_data.items() if k in model}
+    # Ownership columns are authority supplied by the authenticated principal,
+    # not mutable client data.  They remain in the WHERE clause below but are
+    # deliberately excluded from SET so a row cannot be moved to another
+    # tenant by submitting a different organizationId.
+    protected_columns = set(owner_constraint.keys()) | set(immutable_columns or ())
+    valid_data = {
+        k: v
+        for k, v in user_data.items()
+        if k in model and (k == 'id' or model[k] not in protected_columns)
+    }
+    writable_data = {k: v for k, v in valid_data.items() if k != 'id'}
+    if not writable_data:
+        return jsonify({
+            'success': False,
+            'status': 'input error',
+            'error': 'No writable fields supplied',
+        }), 400
+
     set_clause = ', '.join([
-        f"{model[k]} = %s::uuid[]" if isinstance(valid_data[k], list)
+        f"{model[k]} = %s::uuid[]" if isinstance(writable_data[k], list)
         else f"{model[k]} = COALESCE(%s, {model[k]})"
-        for k in valid_data if k != 'id'
+        for k in writable_data
     ])
     where_parts = ['id = %s'] + [f'{k} = %s' for k in owner_constraint.keys()]
     sql_command = f"UPDATE {table} SET {set_clause} WHERE {' AND '.join(where_parts)}"
 
     values = (
-        [v for k, v in valid_data.items() if k != 'id']
+        list(writable_data.values())
         + [user_data['id']]
         + list(owner_constraint.values())
     )
@@ -403,5 +427,3 @@ def return_one(model, res):
         return jsonify(response)
     else:
         return jsonify({'error': "Not Found"}), 404
-
-

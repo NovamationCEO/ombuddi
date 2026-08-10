@@ -183,6 +183,30 @@ def _exec_entry_person(sql: str, entry_id, person_id):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Authorize both sides of the relationship from the principal's
+                # organization.  The key-share locks remain held through the
+                # mutation now that connections are transactional.
+                cur.execute(
+                    """
+                    SELECT 1
+                    FROM entries e
+                    JOIN persons p ON p.id = %s
+                    WHERE e.id = %s
+                      AND e.organization_id = %s
+                      AND p.organization_id = %s
+                    FOR KEY SHARE OF e, p
+                    """,
+                    (person_id, entry_id, g.organization_id, g.organization_id),
+                )
+                if cur.fetchone() is None:
+                    return (
+                        jsonify({
+                            "success": False,
+                            "status": "404 error",
+                            "error": "Not found",
+                        }),
+                        404,
+                    )
                 cur.execute(sql, (entry_id, person_id))
         return jsonify({"success": True, "status": "success"}), 200
     except Exception as e:

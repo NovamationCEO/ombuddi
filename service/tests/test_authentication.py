@@ -34,6 +34,7 @@ class AuthenticationTests(unittest.TestCase):
                     "ombuds_id": getattr(g, "ombuds_id", None),
                     "organization_id": getattr(g, "organization_id", None),
                     "is_admin": getattr(g, "is_admin", None),
+                    "is_system_admin": getattr(g, "is_system_admin", None),
                 }
                 return response, context
 
@@ -43,7 +44,12 @@ class AuthenticationTests(unittest.TestCase):
                 "sub": "auth0|6a416db3b92ce3ffd623bb34",
                 "organization_id": ORGANIZATION_ID,
             },
-            {"ombuds_id": OMBUDS_ID, "organization_id": ORGANIZATION_ID, "is_admin": True},
+            {
+                "ombuds_id": OMBUDS_ID,
+                "organization_id": ORGANIZATION_ID,
+                "is_admin": True,
+                "is_system_admin": False,
+            },
         )
 
         self.assertIsNone(response)
@@ -51,6 +57,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(context["ombuds_id"], OMBUDS_ID)
         self.assertEqual(context["organization_id"], ORGANIZATION_ID)
         self.assertTrue(context["is_admin"])
+        self.assertFalse(context["is_system_admin"])
 
     def test_rejects_unlinked_auth0_subject(self):
         response, _context = self.authenticate_with(
@@ -65,7 +72,12 @@ class AuthenticationTests(unittest.TestCase):
                 "sub": "auth0|6a416db3b92ce3ffd623bb34",
                 "organization_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
             },
-            {"ombuds_id": OMBUDS_ID, "organization_id": ORGANIZATION_ID, "is_admin": False},
+            {
+                "ombuds_id": OMBUDS_ID,
+                "organization_id": ORGANIZATION_ID,
+                "is_admin": False,
+                "is_system_admin": False,
+            },
         )
         self.assertEqual(response[1], 403)
 

@@ -88,7 +88,7 @@ The `organization_id` column exists; the API does not yet *enforce* that the cal
 - `id` UUID, PK
 - `case_id` UUID, FK -> cases.id
 - `ombuds_id` UUID, FK -> ombuds.id
-- `organization_id` UUID, FK -> organizations.id  *(denormalized — must match the parent case's org; application code is responsible for the invariant)*
+- `organization_id` UUID, FK -> organizations.id  *(denormalized; composite foreign keys require it to match both the parent case and ombuds seat)*
 - `date` DATE (the meeting / entry date)
 - `medium` TEXT ('inPerson', 'phone', 'video', 'email', 'other')
 - `duration` INT (minutes)

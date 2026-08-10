@@ -50,7 +50,7 @@ class PrincipalTests(unittest.TestCase):
     def test_resolves_auth0_sub_to_local_ids(self):
         ombuds_id = UUID("b73d0105-af49-484f-87a3-217af3feff90")
         organization_id = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
-        cursor = FakeCursor((ombuds_id, organization_id, True))
+        cursor = FakeCursor((ombuds_id, organization_id, True, False))
         connection = FakeConnection(cursor)
 
         with patch("src.principal.get_db_connection", return_value=connection):
@@ -62,6 +62,7 @@ class PrincipalTests(unittest.TestCase):
                 "ombuds_id": str(ombuds_id),
                 "organization_id": str(organization_id),
                 "is_admin": True,
+                "is_system_admin": False,
             },
         )
         self.assertEqual(
