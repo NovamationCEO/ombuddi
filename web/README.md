@@ -26,7 +26,7 @@ Open two terminals, and Docker Desktop (or equivalent). Be connected through the
 
 Frontend prerequisites:
 
--   Node.js `22.12.0` (or newer in the 22.x/24.x line)
+-   Node.js `22.13.0` (or newer in the 22.x/24.x line)
 -   npm `10` or newer
 
 If using `nvm`, from `/web` run:
@@ -36,6 +36,15 @@ If using `nvm`, from `/web` run:
 `/ombuddi/web $ npm install`
 
 `/ombuddi/web $ npm run dev`
+
+For deterministic production installs (including Render), use:
+
+`/ombuddi/web $ npm ci --include=optional && npm run build`
+
+The Linux Rolldown binding is an explicit optional dependency because npm can
+otherwise omit platform-specific transitive packages from a lockfile generated
+on macOS. After changing the lockfile or package-manager configuration on
+Render, run **Clear build cache & deploy** once.
 
 `/ombuddi/service $ docker-compose down --remove-orphans; docker-compose build; docker-compose up`
 
