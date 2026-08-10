@@ -12,6 +12,10 @@ export type CaseType = {
 export type OrganizationType = {
     id: string
     name: string
+    subscriptionTier?: string
+    seatLimit?: number
+    seatCount?: number
+    linkedCount?: number
 }
 
 export type OmbudsType = {

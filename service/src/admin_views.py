@@ -42,6 +42,46 @@ def _seat_json(row) -> dict:
     }
 
 
+@admin_views.route('/api/v1/admin/organization')
+def get_organization():
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    o.id,
+                    o.name,
+                    o.subscription_tier,
+                    o.seat_limit,
+                    COUNT(ombuds.id)                                    AS seat_count,
+                    COUNT(ombuds.id) FILTER (WHERE ombuds.auth0_sub IS NOT NULL) AS linked_count
+                FROM organizations o
+                LEFT JOIN ombuds ON ombuds.organization_id = o.id
+                WHERE o.id = %s
+                GROUP BY o.id
+                """,
+                (g.organization_id,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return jsonify({'error': 'Not found', 'message': 'Organization not found'}), 404
+        return jsonify({
+            'id': str(row[0]),
+            'name': row[1],
+            'subscriptionTier': row[2],
+            'seatLimit': row[3],
+            'seatCount': row[4],
+            'linkedCount': row[5],
+        })
+    except Exception:
+        return jsonify({'error': 'Database error', 'message': 'Unable to load organization'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @admin_views.route('/api/v1/admin/ombuds')
 def list_ombuds():
     conn = None
@@ -100,6 +140,24 @@ def create_ombuds():
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT seat_limit, COUNT(ombuds.id) AS seat_count
+                FROM organizations
+                LEFT JOIN ombuds ON ombuds.organization_id = organizations.id
+                WHERE organizations.id = %s
+                GROUP BY organizations.seat_limit
+                """,
+                (g.organization_id,),
+            )
+            row = cur.fetchone()
+            if row and row[1] >= row[0]:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Seat limit reached',
+                    'message': f'Your organization has reached its {row[0]}-seat limit',
+                }), 409
+
             cur.execute(
                 """
                 INSERT INTO ombuds (name, email, is_admin, organization_id)

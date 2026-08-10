@@ -4,7 +4,9 @@ import {
     Box,
     Button,
     Checkbox,
+    Chip,
     FormControlLabel,
+    LinearProgress,
     Stack,
     TextField,
     Typography,
@@ -13,6 +15,14 @@ import { creator } from '../tools/db_tools/creator'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { RoundedContainer } from '../components/RoundedContainer'
 
+type AdminOrganization = {
+    id: string
+    name: string
+    subscriptionTier: string
+    seatLimit: number
+    seatCount: number
+    linkedCount: number
+}
 
 type InvitationSummary = {
     id: string
@@ -39,6 +49,7 @@ type InvitationResult = {
 
 
 export function AdminUsers() {
+    const org = useGetter<AdminOrganization>(['admin', 'organization'])
     const users = useGetter<AdminOmbuds[]>(['admin', 'ombuds'])
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
@@ -46,6 +57,8 @@ export function AdminUsers() {
     const [saving, setSaving] = React.useState(false)
     const [error, setError] = React.useState('')
     const [inviteUrl, setInviteUrl] = React.useState('')
+
+    const atSeatLimit = org.data != null && org.data.seatCount >= org.data.seatLimit
 
     async function createSeat() {
         setSaving(true)
@@ -87,10 +100,42 @@ export function AdminUsers() {
             <Typography variant="h5">Manage Users</Typography>
 
             {error && <Alert severity="error">{error}</Alert>}
-            {users.error && (
+            {(users.error || org.error) && (
                 <Alert severity="error">
                     Unable to load users. Organization administrator access is required.
                 </Alert>
+            )}
+
+            {org.data && (
+                <RoundedContainer title="Organization">
+                    <Stack spacing={1.5}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography sx={{ fontWeight: 600 }}>{org.data.name}</Typography>
+                            <Chip
+                                label={org.data.subscriptionTier}
+                                size="small"
+                                variant="outlined"
+                                sx={{ textTransform: 'capitalize' }}
+                            />
+                        </Box>
+                        <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Seats used
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {org.data.seatCount} / {org.data.seatLimit}
+                                </Typography>
+                            </Box>
+                            <LinearProgress
+                                variant="determinate"
+                                value={Math.min(100, (org.data.seatCount / org.data.seatLimit) * 100)}
+                                color={atSeatLimit ? 'error' : 'primary'}
+                                sx={{ borderRadius: 1, height: 6 }}
+                            />
+                        </Box>
+                    </Stack>
+                </RoundedContainer>
             )}
 
             {inviteUrl && (
@@ -103,38 +148,45 @@ export function AdminUsers() {
                 </Alert>
             )}
 
-            <RoundedContainer title="Create user seat">
-                <Stack spacing={2}>
-                    <TextField
-                        label="Name"
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        required
-                    />
-                    <TextField
-                        label="Email"
-                        type="email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                    />
-                    <FormControlLabel
-                        control={(
-                            <Checkbox
-                                checked={isAdmin}
-                                onChange={(event) => setIsAdmin(event.target.checked)}
-                            />
-                        )}
-                        label="Organization administrator"
-                    />
-                    <Button
-                        variant="contained"
-                        onClick={createSeat}
-                        disabled={saving || !name.trim()}
-                    >
-                        Create seat
-                    </Button>
-                </Stack>
-            </RoundedContainer>
+            {atSeatLimit ? (
+                <Alert severity="warning">
+                    Your organization has reached its {org.data?.seatLimit}-seat limit.
+                    Contact Ombuddi to add more seats.
+                </Alert>
+            ) : (
+                <RoundedContainer title="Create user seat">
+                    <Stack spacing={2}>
+                        <TextField
+                            label="Name"
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            required
+                        />
+                        <TextField
+                            label="Email"
+                            type="email"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
+                        />
+                        <FormControlLabel
+                            control={(
+                                <Checkbox
+                                    checked={isAdmin}
+                                    onChange={(event) => setIsAdmin(event.target.checked)}
+                                />
+                            )}
+                            label="Organization administrator"
+                        />
+                        <Button
+                            variant="contained"
+                            onClick={createSeat}
+                            disabled={saving || !name.trim()}
+                        >
+                            Create seat
+                        </Button>
+                    </Stack>
+                </RoundedContainer>
+            )}
 
             <RoundedContainer title="Organization users">
                 <Stack spacing={1.5}>

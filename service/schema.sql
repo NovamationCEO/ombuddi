@@ -41,8 +41,10 @@ $$ LANGUAGE plpgsql;
 -- Org `name` is decorative (CONTEXT.md "Settled decisions"). All hashing,
 -- ownership, and lookup keys off `id`. Names may change freely.
 CREATE TABLE organizations (
-    id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name              TEXT NOT NULL,
+    subscription_tier TEXT NOT NULL DEFAULT 'alpha',
+    seat_limit        INT  NOT NULL DEFAULT 10
 );
 
 
