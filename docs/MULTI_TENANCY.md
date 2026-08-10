@@ -10,20 +10,19 @@ Stated as a rule the codebase enforces: *no query is allowed without an `organiz
 
 ## The principal
 
-Once Keycloak is wired in, every request resolves to a `Principal` constructed by middleware. Proposed shape:
+Every authenticated request resolves to a principal constructed by middleware:
 
 ```python
 @dataclass(frozen=True)
 class Principal:
-    ombuds_id: UUID          # from token sub, mapped to ombuds.id
-    organization_id: UUID    # derived from ombuds.organization_id at login,
-                             # or carried as a token claim and re-validated
+    ombuds_id: UUID          # Auth0 token sub -> ombuds.auth0_sub -> ombuds.id
+    organization_id: UUID    # derived from the linked ombuds row
     roles: frozenset[str]    # e.g. {"ombuds"}, {"ombuds", "org_admin"}
 ```
 
-Middleware contract: if the token is missing, expired, or its `sub` doesn't map to an active ombuds row, the request gets `401` before touching a view. Views never see an unauthenticated request.
-
-For the moment, `useUserId.ts` returns a hard-coded UUID and there is no server-side check at all. That's the current debt this plan retires.
+Middleware contract: missing or invalid tokens receive `401`; authenticated
+subjects not linked to an ombuds row receive `403`; identity lookup failures
+receive `503`. Views only receive local UUIDs resolved from the database.
 
 ## Current gaps — endpoint by endpoint
 
@@ -35,8 +34,8 @@ Sourced from `service/src/ombuddi_views.py` and `service/src/person_views.py`. "
 | `GET /get_case_by_id/<id>` | None | Anyone can read any case by guessing/leaking a UUID. |
 | `POST /create_case` | None | No org_id on cases at all today. |
 | `PUT /update_case` | None | Same. |
-| `GET /get_organization_by_id/<id>` | None | Currently used to fetch the *caller's* org name only; once auth lands, drop the parameter and just return the principal's org. |
-| `GET /get_ombuds_by_id/<id>` | None | Same — drop the parameter, return the principal's ombuds row. |
+| `GET /get_current_organization` | Principal | Returns the principal's linked organization. |
+| `GET /get_current_ombuds` | Principal | Returns the principal's local ombuds row. |
 | `GET /get_code_categories_by_organization_id/<id>` | URL only | Must match principal.org_id. |
 | `POST /add_code_category` | None | Body says org_id; verify it matches principal. |
 | `PUT /update_code_category` | None | Verify the target row's org_id matches principal. |
@@ -62,7 +61,7 @@ Sourced from `service/src/ombuddi_views.py` and `service/src/person_views.py`. "
 
 1. **`cases.organization_id UUID NOT NULL`** (FK to organizations). Populated at case-create time from the frontend's `useOrganization()`; will be force-stamped from the principal once auth lands.
 2. **`entries.organization_id UUID NOT NULL`** (FK to organizations). Denormalized from `cases.organization_id`; lets every `entries`-touching query AND in the org constraint without a join. Frontend source is `caseRes.data?.organizationId` so the invariant `case.org_id === entry.org_id` is explicit.
-3. **No changes to `persons`, `codes`, `code_categories`, `primary_roles`, `ombuds`** — they already carried `organization_id`.
+3. **`ombuds.auth0_sub TEXT UNIQUE`** maps Auth0's external subject to the local UUID primary key. It may be null while a seat awaits account linking.
 4. **`entry_person`** — pure join table, no org column needed; ownership is verified via the parent `entries` row.
 
 The columns exist now. Enforcement (refusing reads/writes that don't match the principal's org) lands with Phase 4 auth.
@@ -122,7 +121,7 @@ There are none. IOA reference codes are loaded from `web/src/constants/ioaConsta
 2. `auth.py`: token decode, JWKS verification, principal construction, the `@requires_principal` decorator.
 3. `utils.py` rewrite: every generic helper takes `owner_constraint`.
 4. View rewrite: every route adopts `@requires_principal`, drops the `<organization_id>` URL parameter where present (it's now redundant), and passes the principal's org as owner.
-5. Frontend: replace `useUserId.ts` and `useOrganization.ts` with hooks that read claims off the Keycloak token instead of fetching `/get_ombuds_by_id`.
+5. Frontend: never use the Auth0 subject as a local ID. Fetch current-user and current-organization resources from principal-scoped endpoints.
 6. Manual run-through of the test scenarios above. Convert to automated tests when we add a test harness (Phase 0 follow-up).
 
 ## Pre-auth lift  *(complete)*

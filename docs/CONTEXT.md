@@ -53,7 +53,7 @@ Important nuance the user described and we should preserve: an ombuds can choose
 ```
 /web        Vite + React 18 + TS + MUI v5 + React Query + Zustand + react-router v6
             Auth scaffolding present (keycloak, @react-keycloak/web) but commented out;
-            currently relies on a hard-coded user id in useUserId().
+            Auth0 `sub` maps to a local ombuds UUID through `ombuds.auth0_sub`.
 
 /service    Flask 3 + psycopg2 + Postgres 14 (via docker-compose)
             Generic CRUD helpers in src/utils.py drive most endpoints with a
@@ -67,7 +67,7 @@ API base: `http://localhost:5002/api/v1/...` in dev; same-host `https://` in pro
 ## Current functional state (May 2026)
 
 Working / wired:
-- Sign-in stub: `useUserId()` returns a hard-coded UUID. Profile shows that ombuds row, links to their org.
+- Authenticated identity: the API maps Auth0 `sub` to `ombuds.auth0_sub`, then derives the local ombuds and organization UUIDs from that row.
 - Organization page: edit org name (UI only), manage **Codes** and **Code Categories** (create, rename, soft-delete, reorder). Manage **Primary Roles** (org-customizable). IOA's 9 categories + 87 codes are loaded from `web/src/constants/ioaConstants.ts` so they appear in the Code picker alongside the user's own codes.
 - Cases list, case create (`AddNewCase` — has IOA + org code selection, referral source UI scaffolded, randomized name button, picsum-seeded security image).
 - Case summary page: shows case, codes (with `EditCodeDialog`), list of entries by date, hover-to-preview entry details. "Add Entry" button.

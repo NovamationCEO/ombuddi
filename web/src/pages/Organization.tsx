@@ -100,7 +100,7 @@ export function Organization() {
         setSaving(true)
         try {
             await updater<OrganizationType>('update_organization', { id: organization.id, name: orgName })
-            queryClient.invalidateQueries({ queryKey: ['get_organization_by_id', organization.id] })
+            queryClient.invalidateQueries({ queryKey: ['get_current_organization'] })
             setSnack({ message: 'Organization saved.', severity: 'success' })
         } catch {
             setSnack({ message: 'Failed to save organization.', severity: 'error' })

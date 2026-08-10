@@ -17,11 +17,9 @@ import { Lock } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { useSnack } from '../../libraries/useSnack'
 import { creator } from '../../tools/db_tools/creator'
-import { useUserId } from '../../tools/useUserId'
-import { useGetter } from '../../tools/db_tools/useGetter'
 import { CodeSetterBox } from '../CodeSetterBox'
-import { OmbudsType } from '../../types/majorTypes'
 import { RoundedContainer } from '../RoundedContainer'
+import { useOrganization } from '../../tools/useOrganization'
 
 const referralOptionsRes = {
     data: [
@@ -48,9 +46,7 @@ export function AddNewCase() {
     const theme = useTheme()
     const setSnack = useSnack((state) => state.setSnack)
     const [description, setDescription] = React.useState('')
-    const userId = useUserId()
-    const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
-    const organizationId = ombudsRes.data?.organizationId
+    const organizationId = useOrganization().id
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
     const newId = React.useMemo(() => crypto.randomUUID(), [])
@@ -87,10 +83,8 @@ export function AddNewCase() {
     }, [newId])
 
     async function save() {
-        if (!organizationId) return
         const payload = {
             id: newId,
-            organizationId,
             name: caseName,
             description: description,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],

@@ -25,7 +25,7 @@
 
 - `useGetter<T>([address, param1, param2])` joins its query-key segments with `/` to build the URL and uses them as the React Query cache key. So a key like `['get_case_by_id', undefined]` is correctly disabled (the `enabled` check skips it). Always pass `undefined` rather than `''` for "I don't have it yet."
 - `creator`, `updater`, `deleter` are imperative — they do NOT invalidate React Query caches on success. Callers refetch by hand (e.g. `caseRes.refetch()`). When adding new mutations, remember to refetch or wire up `useMutation` + `queryClient.invalidateQueries`.
-- The hard-coded `useUserId` returns the same UUID always. Many other components compute the org by chaining `useUserId -> get_ombuds_by_id -> get_organization_by_id`. The two requests run on every page that wants the org. There's an opportunity to centralize this in a `useCurrentUser` once auth lands.
+- Auth0's `sub` is an external textual identity, not an Ombuddi UUID. The API maps it through `ombuds.auth0_sub` and exposes principal-scoped current-user/current-organization endpoints. Frontend code must never submit `sub` as `ombuds_id`.
 - Keycloak scaffolding is everywhere (commented out) — `App.tsx`, `Page.tsx`, `constants/keycloak.ts`, deps in `package.json`. We can either revive it or rip it out, but the half-state is confusing.
 - `useHashName` hashes off `organization.id` (UUID), not name. Don't reintroduce the name into the hash — renames would orphan persons.
 - Dependencies were bumped to current major versions in early 2026 (MUI v9, React 19, react-router 7, Vite 8, TypeScript 6). Mapping/stats deps (leaflet, georaster, chroma-js, simple-statistics) were pruned at the same time. Treat any older code patterns (Unstable_Grid2, MUI v5 sx-prop quirks, etc.) as bugs.

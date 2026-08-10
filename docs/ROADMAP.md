@@ -92,7 +92,7 @@ Goal: keep org A from ever seeing org B's data.
   - Flask side: validate the access token's `iss`, `aud`, signature against Keycloak's JWKS on every request; derive `organization_id` and `ombuds_id` from the token claims.
 - [ ] Every Flask endpoint must derive the calling ombuds' `organization_id` from the token and enforce it as a WHERE constraint. Stop trusting `<organization_id>` URL params.
 - [ ] Centralize ownership checks. Convert generic CRUD helpers to take an `owner_org_id` constraint that gets ANDed in. Or write per-entity handler classes.
-- [ ] Replace `useUserId.ts` and `useOrganization.ts` with the JWT-derived identity.
+- [x] Resolve Auth0 `sub` through `ombuds.auth0_sub`; keep local UUIDs server-side and expose principal-scoped current-user/current-organization endpoints.
 - [ ] CORS: read allowed origins from env.
 
 ## Phase 5 — Record retention & purge  [not started]
@@ -113,7 +113,7 @@ Goal: deliver on the IOA standard that makes Ombuddi different from generic reco
 Goal: actually take money.
 
 - [ ] Stripe (most likely). Per-seat per-month, per-org subscription.
-- [ ] Org-admin role distinct from ombuds (creates the org, adds seats, billing).
+- [x] Alpha org-admin foundation: local `is_admin`, user-seat creation, one-time invitation links, and Auth0 subject claiming. Billing remains future work.
 - [ ] Self-serve org creation flow.
 - [ ] First-run wizard: pick defaults (retention windows, primary roles, code categories — pre-seed IOA codes for them).
 - [ ] Email / support flow that does NOT depend on Ombuddi staff seeing user data.

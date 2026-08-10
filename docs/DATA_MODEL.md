@@ -12,10 +12,28 @@ No "well-known" organization rows. The IOA reporting categories and codes are ap
 
 ### `ombuds`
 - `id` UUID, PK
+- `auth0_sub` TEXT, unique, nullable until an invited seat is linked to Auth0
+- `email` TEXT, optional invitation/contact address
+- `is_admin` BOOL, organization-level user-management permission
 - `name` TEXT
 - `organization_id` UUID, FK -> organizations.id
 
-The "current user" is hard-coded in `web/src/tools/useUserId.ts` as `b73d0105-af49-484f-87a3-217af3feff90`.
+Auth0's textual `sub` claim is an external identity only. Authentication
+middleware resolves it through `ombuds.auth0_sub`, then uses the row's local
+UUID `id` for relationships and its `organization_id` for ownership checks.
+
+### `ombuds_invitations`
+- `id` UUID, PK
+- `ombuds_id` UUID, FK -> ombuds.id
+- `token_hash` TEXT, unique SHA-256 hash (the raw token is never stored)
+- `created_by_ombuds_id` UUID, FK -> ombuds.id
+- `created_at`, `expires_at` TIMESTAMPTZ
+- `claimed_at`, `revoked_at` nullable TIMESTAMPTZ
+- `claimed_by_auth0_sub` TEXT
+
+An administrator creates an unlinked seat, generates a seven-day invitation,
+and shares the one-time URL. Claiming it atomically connects the authenticated
+Auth0 subject to the existing local ombuds UUID.
 
 ### `code_categories`
 - `id` UUID, PK

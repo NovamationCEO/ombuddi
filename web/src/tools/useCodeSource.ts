@@ -1,6 +1,7 @@
 import { useGetter } from './db_tools/useGetter'
 import { ioaCodeCategories, ioaCodesFull } from '../constants/ioaConstants'
-import { CodeCategoryType, CodeType, OrganizationType } from '../types/majorTypes'
+import { CodeCategoryType, CodeType } from '../types/majorTypes'
+import { useOrganization } from './useOrganization'
 
 /**
  * A "code source" is either:
@@ -29,7 +30,7 @@ export function useCodeSource(source: CodeSource): CodeSourceResult {
     // org-side queries are disabled because `organizationId` is undefined
     // (useGetter skips when any key segment is falsy).
     const orgId = source.kind === 'org' ? source.organizationId : undefined
-    const orgRes = useGetter<OrganizationType>(['get_organization_by_id', orgId])
+    const organization = useOrganization()
     const codesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', orgId])
     const categoriesRes = useGetter<CodeCategoryType[]>([
         'get_code_categories_by_organization_id',
@@ -46,9 +47,9 @@ export function useCodeSource(source: CodeSource): CodeSourceResult {
     }
 
     return {
-        title: orgRes.data?.name ? `${orgRes.data.name} Codes` : 'Codes',
+        title: organization.name ? `${organization.name} Codes` : 'Codes',
         codes: codesRes.data ?? [],
         codeCategories: categoriesRes.data ?? [],
-        isReady: !!(orgRes.data && codesRes.data && categoriesRes.data),
+        isReady: !!(organization.id && codesRes.data && categoriesRes.data),
     }
 }

@@ -43,24 +43,31 @@ organization_model = {
     'name': 'name'
 }
 
-@ombuddi_views.route('/api/v1/get_organization_by_id/<id>')
-def get_organization_by_id(id):
+@ombuddi_views.route('/api/v1/get_current_organization')
+def get_current_organization():
     # Organizations don't carry organization_id themselves — id IS the org.
-    return get_one('organizations', organization_model, {'id': id})
+    return get_one('organizations', organization_model, {'id': g.organization_id})
 
 @ombuddi_views.route('/api/v1/update_organization', methods=['PUT'])
 def update_organization():
-    return update_one('organizations', organization_model, request)
+    return update_one(
+        'organizations',
+        organization_model,
+        request,
+        owner_constraint={'id': g.organization_id},
+    )
 
 ombuds_model = {
     'id': 'id',
     'name': 'name',
-    'organizationId': 'organization_id'
+    'email': 'email',
+    'isAdmin': 'is_admin',
+    'organizationId': 'organization_id',
 }
 
-@ombuddi_views.route('/api/v1/get_ombuds_by_id/<id>')
-def get_ombuds_by_id(id):
-    return get_one('ombuds', ombuds_model, {'id': id}, owner_constraint=_org())
+@ombuddi_views.route('/api/v1/get_current_ombuds')
+def get_current_ombuds():
+    return get_one('ombuds', ombuds_model, {'id': g.ombuds_id}, owner_constraint=_org())
 
 code_category_model = {
     'id': 'id',
@@ -164,7 +171,15 @@ def get_entry_by_id(id):
 
 @ombuddi_views.route('/api/v1/add_entry', methods=['POST'])
 def add_entry():
-    return add_one('entries', entry_model, request, owner_constraint=_org())
+    return add_one(
+        'entries',
+        entry_model,
+        request,
+        owner_constraint={
+            'organization_id': g.organization_id,
+            'ombuds_id': g.ombuds_id,
+        },
+    )
 
 @ombuddi_views.route('/api/v1/get_entries_by_case_id/<case_id>')
 def get_entries_by_case_id(case_id):

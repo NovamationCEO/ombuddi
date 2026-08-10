@@ -2,8 +2,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from
 import { CodeSetterBox } from './CodeSetterBox'
 import React from 'react'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType, OmbudsType } from '../types/majorTypes'
-import { useUserId } from '../tools/useUserId'
+import { CaseType } from '../types/majorTypes'
 import { useParams } from 'react-router-dom'
 import { updater } from '../tools/db_tools/updater'
 import { ioaCodeIdSet } from '../constants/ioaConstants'
@@ -14,9 +13,7 @@ export function EditCodeDialog(props: { open: boolean; onClose: () => void }) {
     const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
     const { caseId } = useParams()
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
-    const userId = useUserId()
-    const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
-    const organizationId = ombudsRes.data?.organizationId
+    const organizationId = caseRes.data?.organizationId
 
     React.useEffect(() => {
         if (!caseRes.data) return

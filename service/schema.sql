@@ -52,11 +52,46 @@ CREATE TABLE organizations (
 -- One row per ombuds seat at an organization.
 CREATE TABLE ombuds (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Auth0's external user identifier (the JWT `sub` claim). This is not a
+    -- local primary key: entries and other relationships continue to use id.
+    -- NULL supports provisioning a seat before its Auth0 account is linked;
+    -- UNIQUE allows at most one Ombuddi seat per Auth0 identity.
+    auth0_sub       TEXT UNIQUE,
+    email           TEXT,
+    is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
     name            TEXT NOT NULL,
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT
 );
 
 CREATE INDEX ombuds_organization_id_idx ON ombuds (organization_id);
+CREATE UNIQUE INDEX ombuds_organization_email_idx
+    ON ombuds (organization_id, lower(email))
+    WHERE email IS NOT NULL;
+
+
+-- =====================================================================
+-- ombuds_invitations
+-- =====================================================================
+-- Raw invitation tokens are shown once and never stored. Only their SHA-256
+-- hashes live in the database. A seat may be re-invited; older active links
+-- are revoked when a new invitation is issued.
+CREATE TABLE ombuds_invitations (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ombuds_id             UUID NOT NULL REFERENCES ombuds(id) ON DELETE CASCADE,
+    token_hash            TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64),
+    created_by_ombuds_id  UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at            TIMESTAMPTZ NOT NULL,
+    claimed_at            TIMESTAMPTZ,
+    claimed_by_auth0_sub  TEXT,
+    revoked_at            TIMESTAMPTZ
+);
+
+CREATE INDEX ombuds_invitations_ombuds_id_idx
+    ON ombuds_invitations (ombuds_id);
+CREATE INDEX ombuds_invitations_active_idx
+    ON ombuds_invitations (token_hash)
+    WHERE claimed_at IS NULL AND revoked_at IS NULL;
 
 
 -- =====================================================================

@@ -17,6 +17,8 @@ export type OrganizationType = {
 export type OmbudsType = {
     id: string
     name: string
+    email?: string | null
+    isAdmin: boolean
     organizationId: string
 }
 

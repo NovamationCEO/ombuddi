@@ -23,6 +23,13 @@ const App: React.FC = () => {
                 redirect_uri: window.location.origin + '/',
                 audience: auth0Audience,
             }}
+            onRedirectCallback={(appState) => {
+                const requestedPath = appState?.returnTo
+                const returnTo = typeof requestedPath === 'string' && requestedPath.startsWith('/')
+                    ? requestedPath
+                    : '/'
+                window.history.replaceState({}, document.title, returnTo)
+            }}
         >
             <ThemingProvider>
                 <QueryWrap />

@@ -21,7 +21,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
-import { useUserId } from '../tools/useUserId'
 import { PersonFinder } from '../components/PersonFinder'
 import { PersonForm } from '../components/AddPerson/PersonForm'
 import { RoundButton } from '../trusted-components/RoundButton'
@@ -50,7 +49,6 @@ export function AddEntry() {
     const queryClient = useQueryClient()
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
-    const ombudsId = useUserId()
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
 
@@ -105,11 +103,6 @@ export function AddEntry() {
             : ''
         const payload = {
             caseId,
-            ombudsId,
-            // Entry's org is denormalized from the parent case so every entry
-            // query can scope on it without joining; sourcing from caseRes
-            // here makes the invariant case.org_id === entry.org_id explicit.
-            organizationId,
             date: eventDate,
             medium,
             duration,

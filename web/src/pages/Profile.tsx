@@ -1,19 +1,15 @@
 import { Box, Button, Stack, TextField } from '@mui/material'
-import { useGetter } from '../tools/db_tools/useGetter'
 import React from 'react'
-import { OmbudsType, OrganizationType } from '../types/majorTypes'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate } from 'react-router-dom'
-import { useUserId } from '../tools/useUserId'
+import { useOrganization } from '../tools/useOrganization'
+import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
 export function Profile() {
-    const userId = useUserId()
-    const ombudsRes = useGetter<OmbudsType>(['get_ombuds_by_id', userId])
-    const organizationId = ombudsRes.data?.organizationId
+    const ombudsRes = useCurrentOmbuds()
+    const organization = useOrganization()
     const [ombudsName, setOmbudsName] = React.useState<string>('')
     const navigate = useNavigate()
-
-    const orgRes = useGetter<OrganizationType>(['get_organization_by_id', organizationId])
 
     React.useEffect(() => {
         if (!ombudsRes.data) return
@@ -38,7 +34,7 @@ export function Profile() {
                 onClick={() => navigate('/organization')}
                 variant={'contained'}
             >
-                View / Edit {orgRes?.data?.name || 'Organization'}
+                View / Edit {organization.name || 'Organization'}
             </Button>
         </Stack>
     )

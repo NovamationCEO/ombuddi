@@ -1,5 +1,5 @@
--- Development seed: one organization + one ombuds row matching the hard-coded
--- IDs that the frontend currently uses. Apply this *after* schema.sql.
+-- Development seed: one organization + one unlinked ombuds row. Apply this
+-- *after* schema.sql, then set ombuds.auth0_sub to your Auth0 user's `sub`.
 --
 -- Run from the service/ directory after a wipe:
 --   set -a; source .env; set +a
@@ -7,19 +7,20 @@
 --
 -- Idempotent: ON CONFLICT DO NOTHING. Safe to re-run.
 --
--- Once Phase 4 (Keycloak) lands and useUserId.ts is replaced with token-derived
--- identity, this file can be retired or replaced with per-developer seeds.
+-- Example after signing in and finding the `sub` in the Auth0 user details:
+--   UPDATE ombuds SET auth0_sub = 'auth0|...' WHERE id =
+--     'b73d0105-af49-484f-87a3-217af3feff90';
 
 INSERT INTO organizations (id, name)
 VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Dev University')
 ON CONFLICT (id) DO NOTHING;
 
--- The ombuds id must match web/src/tools/useUserId.ts.
-INSERT INTO ombuds (id, organization_id, name)
+INSERT INTO ombuds (id, organization_id, name, is_admin)
 VALUES (
     'b73d0105-af49-484f-87a3-217af3feff90',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'Dev Ombuds'
+    'Dev Ombuds',
+    TRUE
 )
 ON CONFLICT (id) DO NOTHING;
 
