@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
+from email_identity import normalize_email
 
 
 admin_views = Blueprint('admin_views', __name__)
@@ -174,11 +175,16 @@ def list_ombuds():
 def create_ombuds():
     payload = request.get_json(silent=True) or {}
     name = str(payload.get('name', '')).strip()
-    email = str(payload.get('email', '')).strip().lower() or None
+    email = normalize_email(payload.get('email'))
     is_admin = payload.get('isAdmin') is True
 
     if not name:
         return jsonify({'error': 'Input error', 'message': 'Name is required'}), 400
+    if not email:
+        return jsonify({
+            'error': 'Input error',
+            'message': 'A valid email is required for invitation identity verification',
+        }), 400
 
     conn = None
     try:
@@ -227,6 +233,72 @@ def create_ombuds():
             conn.close()
 
 
+@admin_views.route('/api/v1/admin/ombuds/<ombuds_id>', methods=['PUT'])
+def update_unlinked_ombuds_email(ombuds_id):
+    payload = request.get_json(silent=True) or {}
+    email = normalize_email(payload.get('email'))
+    if not email:
+        return jsonify({
+            'error': 'Input error',
+            'message': 'A valid email is required for invitation identity verification',
+        }), 400
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT auth0_sub, email
+                FROM ombuds
+                WHERE id = %s AND organization_id = %s
+                FOR UPDATE
+                """,
+                (ombuds_id, g.organization_id),
+            )
+            seat = cur.fetchone()
+            if seat is None:
+                conn.rollback()
+                return jsonify({'error': 'Not found', 'message': 'User seat not found'}), 404
+            if seat[0] is not None:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Conflict',
+                    'message': 'The invitation email cannot be changed after the seat is linked',
+                }), 409
+
+            old_email = normalize_email(seat[1])
+            if old_email != email:
+                cur.execute(
+                    'UPDATE ombuds SET email = %s WHERE id = %s',
+                    (email, ombuds_id),
+                )
+                cur.execute(
+                    """
+                    UPDATE ombuds_invitations
+                    SET revoked_at = now()
+                    WHERE ombuds_id = %s
+                      AND claimed_at IS NULL
+                      AND revoked_at IS NULL
+                    """,
+                    (ombuds_id,),
+                )
+        conn.commit()
+        return jsonify({'success': True, 'email': email})
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        if getattr(exc, 'pgcode', None) == '23505':
+            return jsonify({
+                'error': 'Conflict',
+                'message': 'That email already has a seat in this organization',
+            }), 409
+        return jsonify({'error': 'Database error', 'message': 'Unable to update user email'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
 @admin_views.route('/api/v1/admin/ombuds/<ombuds_id>/invitation', methods=['POST'])
 def create_invitation(ombuds_id):
     raw_token = secrets.token_urlsafe(32)
@@ -239,7 +311,7 @@ def create_invitation(ombuds_id):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, auth0_sub
+                SELECT id, auth0_sub, email
                 FROM ombuds
                 WHERE id = %s AND organization_id = %s
                 FOR UPDATE
@@ -256,6 +328,13 @@ def create_invitation(ombuds_id):
                     'error': 'Conflict',
                     'message': 'This user seat is already linked to an Auth0 account',
                 }), 409
+            invited_email = normalize_email(seat[2])
+            if not invited_email:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Input error',
+                    'message': 'This user seat needs a valid email before it can be invited',
+                }), 400
 
             cur.execute(
                 """
@@ -270,12 +349,13 @@ def create_invitation(ombuds_id):
             cur.execute(
                 """
                 INSERT INTO ombuds_invitations (
-                    ombuds_id, token_hash, created_by_ombuds_id, expires_at
+                    ombuds_id, token_hash, created_by_ombuds_id, expires_at,
+                    invited_email
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (ombuds_id, token_hash, g.ombuds_id, expires_at),
+                (ombuds_id, token_hash, g.ombuds_id, expires_at, invited_email),
             )
             invitation_id = cur.fetchone()[0]
         conn.commit()

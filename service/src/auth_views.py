@@ -3,6 +3,7 @@ import hashlib
 from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
+from email_identity import normalize_email
 
 
 auth_views = Blueprint('auth_views', __name__)
@@ -21,6 +22,13 @@ def claim_invitation():
             'message': 'This Auth0 account is already linked to an Ombuddi user',
         }), 409
 
+    authenticated_email = normalize_email(getattr(g, 'auth0_email', None))
+    if not getattr(g, 'auth0_email_verified', False) or not authenticated_email:
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'A verified Auth0 email is required to accept an invitation',
+        }), 403
+
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     conn = None
     try:
@@ -28,7 +36,8 @@ def claim_invitation():
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT i.id, o.id, o.organization_id, o.auth0_sub
+                SELECT i.id, o.id, o.organization_id, o.auth0_sub,
+                       i.invited_email
                 FROM ombuds_invitations i
                 JOIN ombuds o ON o.id = i.ombuds_id
                 WHERE i.token_hash = %s
@@ -52,6 +61,13 @@ def claim_invitation():
                     'error': 'Conflict',
                     'message': 'This user seat is already linked to an Auth0 account',
                 }), 409
+            invited_email = normalize_email(invitation[4])
+            if not invited_email or authenticated_email != invited_email:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Forbidden',
+                    'message': 'The signed-in Auth0 account does not match this invitation',
+                }), 403
 
             cur.execute(
                 """
@@ -68,10 +84,11 @@ def claim_invitation():
             cur.execute(
                 """
                 UPDATE ombuds_invitations
-                SET claimed_at = now(), claimed_by_auth0_sub = %s
+                SET claimed_at = now(), claimed_by_auth0_sub = %s,
+                    claimed_by_email = %s
                 WHERE id = %s
                 """,
-                (g.auth0_sub, invitation[0]),
+                (g.auth0_sub, authenticated_email, invitation[0]),
             )
         conn.commit()
         return jsonify({

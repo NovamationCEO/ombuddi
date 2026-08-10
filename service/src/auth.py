@@ -8,6 +8,8 @@ JWKS_URL = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
 
 # Custom claim namespace — must match the Auth0 Action that injects organization_id.
 CLAIM_ORG_ID = 'https://ombuddi.com/organization_id'
+CLAIM_EMAIL = 'https://ombuddi.com/email'
+CLAIM_EMAIL_VERIFIED = 'https://ombuddi.com/email_verified'
 
 _jwks_client: PyJWKClient | None = None
 
@@ -35,4 +37,6 @@ def validate_token(token: str) -> dict:
 
     # Remap the namespaced custom claim to the simple key app.py expects.
     claims['organization_id'] = claims.get(CLAIM_ORG_ID)
+    claims['ombuddi_email'] = claims.get(CLAIM_EMAIL)
+    claims['ombuddi_email_verified'] = claims.get(CLAIM_EMAIL_VERIFIED) is True
     return claims

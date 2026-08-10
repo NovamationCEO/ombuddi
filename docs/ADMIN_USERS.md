@@ -11,6 +11,15 @@ The first admin workflow supports:
 Email delivery is not implemented yet. The administrator copies the generated
 link and sends it through an appropriate channel.
 
+Invitation claiming requires these signed, namespaced claims in the Auth0
+access token:
+
+- `https://ombuddi.com/email`
+- `https://ombuddi.com/email_verified` (the boolean value `true`)
+
+They are populated by the **Add Verified Email Claims** Post-Login Action. The
+Action must run for unlinked invitees as well as existing Ombuddi users.
+
 ## Production rollout
 
 Apply the identity migration first if it has not already been applied:
@@ -26,11 +35,15 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/003_add_subscription.sql
 \i /Users/nova/Code/ombuddi/service/migrations/004_add_system_admin.sql
 \i /Users/nova/Code/ombuddi/service/migrations/005_enforce_tenant_relationships.sql
+\i /Users/nova/Code/ombuddi/service/migrations/006_bind_invitations_to_email.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys
 and the entry-person guard. It aborts without changing the schema if it finds a
 cross-organization relationship that needs manual review.
+
+Migration 006 binds invitations to the target seat email. Existing active
+invitations without a usable email are revoked and must be reissued.
 
 Bootstrap the existing alpha user as the first administrator:
 
@@ -59,6 +72,8 @@ invitation URL can load `/accept-invite` directly.
 - Only a locally linked row with `is_admin = TRUE` can use admin endpoints.
 - Admin queries and writes are constrained to the administrator's organization.
 - Raw invitation tokens are returned once and only their SHA-256 hashes are stored.
+- Each invitation snapshots the target seat email and can only be claimed by an
+  Auth0 account presenting that same verified email in its signed access token.
 - Creating a replacement invitation revokes earlier unclaimed links for the seat.
 - Invitations expire after seven days and can be claimed once.
 - The claim endpoint accepts an authenticated but unlinked Auth0 user, and no

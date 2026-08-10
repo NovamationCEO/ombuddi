@@ -28,8 +28,10 @@ UUID `id` for relationships and its `organization_id` for ownership checks.
 - `token_hash` TEXT, unique SHA-256 hash (the raw token is never stored)
 - `created_by_ombuds_id` UUID, FK -> ombuds.id
 - `created_at`, `expires_at` TIMESTAMPTZ
+- `invited_email` normalized target email captured when the invitation is issued
 - `claimed_at`, `revoked_at` nullable TIMESTAMPTZ
 - `claimed_by_auth0_sub` TEXT
+- `claimed_by_email` verified Auth0 email recorded when claimed
 
 An administrator creates an unlinked seat, generates a seven-day invitation,
 and shares the one-time URL. Claiming it atomically connects the authenticated

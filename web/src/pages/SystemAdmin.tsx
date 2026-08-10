@@ -155,11 +155,13 @@ export function SystemAdmin() {
                         onChange={(e) => setAdminName(e.target.value)}
                         required
                     />
-                    <TextField
-                        label="First administrator email"
-                        type="email"
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
+                        <TextField
+                            label="First administrator email"
+                            type="email"
+                            value={adminEmail}
+                            onChange={(e) => setAdminEmail(e.target.value)}
+                            required
+                            helperText="The invitation is bound to this verified Auth0 email."
                     />
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <TextField
@@ -181,7 +183,7 @@ export function SystemAdmin() {
                     <Button
                         variant="contained"
                         onClick={createOrg}
-                        disabled={creating || !orgName.trim() || !adminName.trim()}
+                        disabled={creating || !orgName.trim() || !adminName.trim() || !adminEmail.trim()}
                     >
                         Create organization
                     </Button>

@@ -40,7 +40,7 @@ export function AcceptInvitation() {
                     {!token && <Alert severity="error">This invitation link is incomplete.</Alert>}
                     {error && <Alert severity="error">{error}</Alert>}
                     <Typography>
-                        Sign in with the Auth0 account you want linked to this Ombuddi seat.
+                        Sign in with the Auth0 account whose verified email matches this invitation.
                     </Typography>
                     {!isAuthenticated ? (
                         <Button variant="contained" onClick={signIn} disabled={!token}>

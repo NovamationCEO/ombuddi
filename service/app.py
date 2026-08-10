@@ -50,6 +50,8 @@ def authenticate():
     # only identity available to the invitation-claim endpoint for a user who
     # has authenticated with Auth0 but has not linked an Ombuddi seat yet.
     g.auth0_sub = auth0_sub
+    g.auth0_email = claims.get('ombuddi_email')
+    g.auth0_email_verified = claims.get('ombuddi_email_verified') is True
 
     try:
         principal = get_principal(auth0_sub)

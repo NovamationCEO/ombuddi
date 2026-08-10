@@ -35,6 +35,8 @@ class AuthenticationTests(unittest.TestCase):
                     "organization_id": getattr(g, "organization_id", None),
                     "is_admin": getattr(g, "is_admin", None),
                     "is_system_admin": getattr(g, "is_system_admin", None),
+                    "auth0_email": getattr(g, "auth0_email", None),
+                    "auth0_email_verified": getattr(g, "auth0_email_verified", None),
                 }
                 return response, context
 
@@ -43,6 +45,8 @@ class AuthenticationTests(unittest.TestCase):
             {
                 "sub": "auth0|6a416db3b92ce3ffd623bb34",
                 "organization_id": ORGANIZATION_ID,
+                "ombuddi_email": "invited@example.com",
+                "ombuddi_email_verified": True,
             },
             {
                 "ombuds_id": OMBUDS_ID,
@@ -58,6 +62,8 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(context["organization_id"], ORGANIZATION_ID)
         self.assertTrue(context["is_admin"])
         self.assertFalse(context["is_system_admin"])
+        self.assertEqual(context["auth0_email"], "invited@example.com")
+        self.assertTrue(context["auth0_email_verified"])
 
     def test_rejects_unlinked_auth0_subject(self):
         response, _context = self.authenticate_with(

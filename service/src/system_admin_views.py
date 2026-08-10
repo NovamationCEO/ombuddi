@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
+from email_identity import normalize_email
 
 
 system_admin_views = Blueprint('system_admin_views', __name__)
@@ -74,7 +75,7 @@ def create_organization():
     payload = request.get_json(silent=True) or {}
     org_name = str(payload.get('name', '')).strip()
     admin_name = str(payload.get('adminName', '')).strip()
-    admin_email = str(payload.get('adminEmail', '')).strip().lower() or None
+    admin_email = normalize_email(payload.get('adminEmail'))
     tier = str(payload.get('subscriptionTier', 'alpha')).strip()
     seat_limit = int(payload.get('seatLimit', 10))
 
@@ -82,6 +83,11 @@ def create_organization():
         return jsonify({'error': 'Input error', 'message': 'Organization name is required'}), 400
     if not admin_name:
         return jsonify({'error': 'Input error', 'message': 'First administrator name is required'}), 400
+    if not admin_email:
+        return jsonify({
+            'error': 'Input error',
+            'message': 'A valid first administrator email is required',
+        }), 400
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
@@ -114,12 +120,13 @@ def create_organization():
             cur.execute(
                 """
                 INSERT INTO ombuds_invitations (
-                    ombuds_id, token_hash, created_by_ombuds_id, expires_at
+                    ombuds_id, token_hash, created_by_ombuds_id, expires_at,
+                    invited_email
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (ombuds_id, token_hash, g.ombuds_id, expires_at),
+                (ombuds_id, token_hash, g.ombuds_id, expires_at, admin_email),
             )
             invitation_id = cur.fetchone()[0]
 
@@ -238,7 +245,7 @@ def create_org_invitation(org_id, ombuds_id):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, auth0_sub FROM ombuds
+                SELECT id, auth0_sub, email FROM ombuds
                 WHERE id = %s AND organization_id = %s
                 FOR UPDATE
                 """,
@@ -254,6 +261,13 @@ def create_org_invitation(org_id, ombuds_id):
                     'error': 'Conflict',
                     'message': 'This seat is already linked to an Auth0 account',
                 }), 409
+            invited_email = normalize_email(seat[2])
+            if not invited_email:
+                conn.rollback()
+                return jsonify({
+                    'error': 'Input error',
+                    'message': 'This user seat needs a valid email before it can be invited',
+                }), 400
 
             cur.execute(
                 """
@@ -266,12 +280,13 @@ def create_org_invitation(org_id, ombuds_id):
             cur.execute(
                 """
                 INSERT INTO ombuds_invitations (
-                    ombuds_id, token_hash, created_by_ombuds_id, expires_at
+                    ombuds_id, token_hash, created_by_ombuds_id, expires_at,
+                    invited_email
                 )
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (ombuds_id, token_hash, g.ombuds_id, expires_at),
+                (ombuds_id, token_hash, g.ombuds_id, expires_at, invited_email),
             )
             invitation_id = cur.fetchone()[0]
         conn.commit()

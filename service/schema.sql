@@ -87,9 +87,29 @@ CREATE TABLE ombuds_invitations (
     created_by_ombuds_id  UUID NOT NULL REFERENCES ombuds(id) ON DELETE RESTRICT,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at            TIMESTAMPTZ NOT NULL,
+    invited_email         TEXT NOT NULL,
     claimed_at            TIMESTAMPTZ,
     claimed_by_auth0_sub  TEXT,
-    revoked_at            TIMESTAMPTZ
+    claimed_by_email      TEXT,
+    revoked_at            TIMESTAMPTZ,
+    CONSTRAINT ombuds_invitations_email_format_check CHECK (
+        invited_email = lower(btrim(invited_email))
+        AND length(invited_email) BETWEEN 3 AND 254
+        AND invited_email ~ '^[^[:space:]@]+@[^[:space:]@]+$'
+        AND (
+            claimed_by_email IS NULL
+            OR (
+                claimed_by_email = lower(btrim(claimed_by_email))
+                AND length(claimed_by_email) BETWEEN 3 AND 254
+                AND claimed_by_email ~ '^[^[:space:]@]+@[^[:space:]@]+$'
+            )
+        )
+    ),
+    CONSTRAINT ombuds_invitations_active_email_check CHECK (
+        invited_email IS NOT NULL
+        OR claimed_at IS NOT NULL
+        OR revoked_at IS NOT NULL
+    )
 );
 
 CREATE INDEX ombuds_invitations_ombuds_id_idx

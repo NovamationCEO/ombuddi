@@ -12,6 +12,7 @@ import {
     Typography,
 } from '@mui/material'
 import { creator } from '../tools/db_tools/creator'
+import { updater } from '../tools/db_tools/updater'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { RoundedContainer } from '../components/RoundedContainer'
 
@@ -66,6 +67,8 @@ export function AdminUsers() {
     const [saving, setSaving] = React.useState(false)
     const [error, setError] = React.useState('')
     const [inviteUrl, setInviteUrl] = React.useState('')
+    const [editingEmailFor, setEditingEmailFor] = React.useState<string | null>(null)
+    const [editingEmail, setEditingEmail] = React.useState('')
 
     const atSeatLimit = org.data != null && org.data.seatCount >= org.data.seatLimit
 
@@ -102,6 +105,29 @@ export function AdminUsers() {
 
     async function copyInvite() {
         await navigator.clipboard.writeText(inviteUrl)
+    }
+
+    function beginEmailEdit(user: AdminOmbuds) {
+        setEditingEmailFor(user.id)
+        setEditingEmail(user.email ?? '')
+        setError('')
+    }
+
+    async function saveSeatEmail() {
+        if (!editingEmailFor) return
+        setSaving(true)
+        setError('')
+        setInviteUrl('')
+        try {
+            await updater(`admin/ombuds/${editingEmailFor}`, { email: editingEmail })
+            setEditingEmailFor(null)
+            setEditingEmail('')
+            await users.refetch()
+        } catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Unable to update user email')
+        } finally {
+            setSaving(false)
+        }
     }
 
     return (
@@ -199,6 +225,8 @@ export function AdminUsers() {
                             type="email"
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
+                            required
+                            helperText="The invitation can only be claimed by an Auth0 account with this verified email."
                         />
                         <FormControlLabel
                             control={(
@@ -212,7 +240,7 @@ export function AdminUsers() {
                         <Button
                             variant="contained"
                             onClick={createSeat}
-                            disabled={saving || !name.trim()}
+                            disabled={saving || !name.trim() || !email.trim()}
                         >
                             Create seat
                         </Button>
@@ -238,16 +266,54 @@ export function AdminUsers() {
                         >
                             <Box>
                                 <Typography sx={{ fontWeight: 600 }}>{user.name}</Typography>
-                                <Typography variant="body2">{user.email || 'No email recorded'}</Typography>
+                                {editingEmailFor === user.id ? (
+                                    <TextField
+                                        type="email"
+                                        size="small"
+                                        value={editingEmail}
+                                        onChange={(event) => setEditingEmail(event.target.value)}
+                                        label="Invitation email"
+                                        required
+                                        sx={{ mt: 1 }}
+                                    />
+                                ) : (
+                                    <Typography variant="body2">{user.email || 'No email recorded'}</Typography>
+                                )}
                                 <Typography variant="caption">
                                     {user.isLinked ? 'Linked' : 'Awaiting account'}
                                     {user.isAdmin ? ' · Administrator' : ''}
                                 </Typography>
                             </Box>
                             {!user.isLinked && (
-                                <Button variant="outlined" onClick={() => invite(user.id)}>
-                                    {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    {editingEmailFor === user.id ? (
+                                        <>
+                                            <Button
+                                                variant="contained"
+                                                onClick={saveSeatEmail}
+                                                disabled={saving || !editingEmail.trim()}
+                                            >
+                                                Save email
+                                            </Button>
+                                            <Button onClick={() => setEditingEmailFor(null)} disabled={saving}>
+                                                Cancel
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Button variant="text" onClick={() => beginEmailEdit(user)}>
+                                                Edit email
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => invite(user.id)}
+                                                disabled={!user.email}
+                                            >
+                                                {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
+                                            </Button>
+                                        </>
+                                    )}
+                                </Box>
                             )}
                         </Box>
                     ))}
