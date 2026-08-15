@@ -226,6 +226,7 @@ class AdminInvitationTests(unittest.TestCase):
             json={"email": " New.Address@Example.COM "},
         ):
             g.organization_id = str(ORGANIZATION_ID)
+            g.ombuds_id = str(OMBUDS_ID)
             with patch("src.admin_views.get_db_connection", return_value=connection):
                 response = update_unlinked_ombuds_email(str(OMBUDS_ID))
 

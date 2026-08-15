@@ -8,6 +8,13 @@ The first admin workflow supports:
 - allowing the invited Auth0 account to claim the local seat;
 - keeping Auth0 subjects separate from local UUID primary keys.
 
+System administrators can additionally manage seats in an existing
+organization: create and invite users, edit the recorded email, promote or
+remove organization-admin status, deactivate/reactivate seats, cancel pending
+invitations, review invitation history, and inspect the administrative audit
+log. These tools expose user names, emails, roles, and lifecycle state only;
+they do not expose cases, visitors, entries, or notes.
+
 Email delivery is not implemented yet. The administrator copies the generated
 link and sends it through an appropriate channel.
 
@@ -37,6 +44,7 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/005_enforce_tenant_relationships.sql
 \i /Users/nova/Code/ombuddi/service/migrations/006_bind_invitations_to_email.sql
 \i /Users/nova/Code/ombuddi/service/migrations/007_add_deactivation.sql
+\i /Users/nova/Code/ombuddi/service/migrations/008_expand_administrative_audit.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys
@@ -102,5 +110,50 @@ invitation URL can load `/accept-invite` directly.
 - Reactivating an organization does not reactivate users who were individually
   deactivated.
 - Every status change records the actor, target, timestamp, event type, and an
-  optional reason in `administrative_status_events`. Database triggers prevent
+  optional reason in `administrative_events`. Database triggers prevent
   those events from being updated or deleted.
+
+## Lost Auth0 account recovery
+
+Do not overwrite `ombuds.auth0_sub` with a new subject as an ordinary support
+operation. A subject change is an account takeover if identity verification is
+wrong, and overwriting it destroys the identity history.
+
+The safe alpha recovery procedure is:
+
+1. Verify the request outside Ombuddi through an established organization
+   contact, not through information supplied only in the recovery request.
+2. Have a system administrator create and invite a replacement organization
+   administrator seat.
+3. Require the replacement Auth0 identity to claim its email-bound invitation.
+4. Confirm that the replacement administrator can sign in and use the admin
+   tools.
+5. Deactivate the lost seat. Do not delete it or rewrite its historical entries.
+6. Record the recovery reason in the audit log and retain the old Auth0 subject
+   on the deactivated seat.
+
+If the replacement must use the same email as the lost seat, the current unique
+email constraint requires a separately reviewed identity-recovery feature or a
+manual database procedure. Do not work around it by silently unlinking the old
+subject. A future recovery feature should preserve external-identity history in
+a separate table and should require stronger verification (and eventually
+step-up authentication) before rebinding a seat.
+
+Changing a linked seat's recorded email changes Ombuddi's administrative
+contact information only. Authentication continues to use the linked Auth0
+subject.
+
+## Hashing salt configuration
+
+`NAME_SALT` is a server-side secret mixed into every private-person name hash.
+It is not an encryption key and it cannot recover a name, but it ensures that a
+copied database cannot be tested against candidate names without also knowing a
+deployment secret.
+
+The previous sample environment used `SALT` while the application read
+`NAME_SALT`; the application then silently used the literal `fallback-salt`.
+That made deployments appear configured while removing the deployment-specific
+secret. `NAME_SALT` is now canonical, the legacy `SALT` name remains accepted
+temporarily, and startup fails if neither exists. Never rotate this value after
+private persons have been stored: without the original value, existing hashes
+cannot be reproduced for lookup.

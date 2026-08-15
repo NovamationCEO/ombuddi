@@ -15,6 +15,8 @@ No "well-known" organization rows. The IOA reporting categories and codes are ap
 - `auth0_sub` TEXT, unique, nullable until an invited seat is linked to Auth0
 - `email` TEXT, optional invitation/contact address
 - `is_admin` BOOL, organization-level user-management permission
+- `is_system_admin` BOOL, Ombuddi system-administration permission
+- `is_active`, `deactivated_at`, reversible seat status
 - `name` TEXT
 - `organization_id` UUID, FK -> organizations.id
 
@@ -36,6 +38,13 @@ UUID `id` for relationships and its `organization_id` for ownership checks.
 An administrator creates an unlinked seat, generates a seven-day invitation,
 and shares the one-time URL. Claiming it atomically connects the authenticated
 Auth0 subject to the existing local ombuds UUID.
+
+### `administrative_events`
+- immutable append-only audit rows for organization, seat, role, status, email,
+  and invitation lifecycle actions;
+- actor, organization, optional target seat, event type, reason, structured
+  non-secret details, and timestamp;
+- raw invitation tokens and visitor/case content are never recorded.
 
 ### `code_categories`
 - `id` UUID, PK

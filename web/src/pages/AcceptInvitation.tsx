@@ -9,8 +9,14 @@ export function AcceptInvitation() {
     const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0()
     const [claiming, setClaiming] = React.useState(false)
     const [error, setError] = React.useState('')
-    const token = new URLSearchParams(window.location.search).get('token') ?? ''
+    const [token] = React.useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
     const returnTo = `/accept-invite?token=${encodeURIComponent(token)}`
+
+    React.useEffect(() => {
+        if (token && window.location.search) {
+            window.history.replaceState({}, document.title, '/accept-invite')
+        }
+    }, [token])
 
     async function signIn() {
         await loginWithRedirect({ appState: { returnTo } })

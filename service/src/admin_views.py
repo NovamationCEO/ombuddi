@@ -8,6 +8,7 @@ from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
 from email_identity import normalize_email
+from admin_audit import record_administrative_event
 
 
 admin_views = Blueprint('admin_views', __name__)
@@ -244,6 +245,14 @@ def create_ombuds():
                 (name, email, is_admin, g.organization_id),
             )
             ombuds_id = cur.fetchone()[0]
+            record_administrative_event(
+                cur,
+                actor_ombuds_id=g.ombuds_id,
+                organization_id=g.organization_id,
+                target_ombuds_id=ombuds_id,
+                event_type='ombuds_created',
+                details={'name': name, 'email': email, 'isAdmin': is_admin},
+            )
         conn.commit()
         return jsonify({'success': True, 'id': str(ombuds_id)}), 201
     except Exception as exc:
@@ -316,6 +325,14 @@ def update_unlinked_ombuds_email(ombuds_id):
                       AND revoked_at IS NULL
                     """,
                     (ombuds_id,),
+                )
+                record_administrative_event(
+                    cur,
+                    actor_ombuds_id=g.ombuds_id,
+                    organization_id=g.organization_id,
+                    target_ombuds_id=ombuds_id,
+                    event_type='ombuds_email_changed',
+                    details={'oldEmail': old_email, 'newEmail': email},
                 )
         conn.commit()
         return jsonify({'success': True, 'email': email})
@@ -390,6 +407,7 @@ def create_invitation(ombuds_id):
                 """,
                 (ombuds_id,),
             )
+            revoked_count = cur.rowcount
             cur.execute(
                 """
                 INSERT INTO ombuds_invitations (
@@ -402,6 +420,19 @@ def create_invitation(ombuds_id):
                 (ombuds_id, token_hash, g.ombuds_id, expires_at, invited_email),
             )
             invitation_id = cur.fetchone()[0]
+            record_administrative_event(
+                cur,
+                actor_ombuds_id=g.ombuds_id,
+                organization_id=g.organization_id,
+                target_ombuds_id=ombuds_id,
+                event_type='ombuds_invitation_created',
+                details={
+                    'invitationId': str(invitation_id),
+                    'invitedEmail': invited_email,
+                    'expiresAt': expires_at.isoformat(),
+                    'replacedInvitationCount': revoked_count,
+                },
+            )
         conn.commit()
 
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
@@ -542,21 +573,13 @@ def update_ombuds_status(ombuds_id):
                     """,
                     (ombuds_id,),
                 )
-            cur.execute(
-                """
-                INSERT INTO administrative_status_events (
-                    actor_ombuds_id, organization_id, target_ombuds_id,
-                    event_type, reason
-                )
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    g.ombuds_id,
-                    g.organization_id,
-                    ombuds_id,
-                    'ombuds_reactivated' if make_active else 'ombuds_deactivated',
-                    reason,
-                ),
+            record_administrative_event(
+                cur,
+                actor_ombuds_id=g.ombuds_id,
+                organization_id=g.organization_id,
+                target_ombuds_id=ombuds_id,
+                event_type='ombuds_reactivated' if make_active else 'ombuds_deactivated',
+                reason=reason,
             )
         conn.commit()
         return jsonify({'success': True, 'isActive': make_active})
@@ -565,6 +588,105 @@ def update_ombuds_status(ombuds_id):
             conn.rollback()
         logger.exception('Failed to update organization user status')
         return jsonify({'error': 'Database error', 'message': 'Unable to update user status'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@admin_views.route('/api/v1/admin/ombuds/<ombuds_id>/invitation/cancel', methods=['POST'])
+def cancel_invitation(ombuds_id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id
+                FROM ombuds
+                WHERE id = %s AND organization_id = %s
+                FOR UPDATE
+                """,
+                (ombuds_id, g.organization_id),
+            )
+            if cur.fetchone() is None:
+                conn.rollback()
+                return jsonify({'error': 'Not found', 'message': 'User seat not found'}), 404
+            cur.execute(
+                """
+                UPDATE ombuds_invitations
+                SET revoked_at = now()
+                WHERE ombuds_id = %s
+                  AND claimed_at IS NULL
+                  AND revoked_at IS NULL
+                  AND expires_at > now()
+                """,
+                (ombuds_id,),
+            )
+            cancelled_count = cur.rowcount
+            if cancelled_count:
+                record_administrative_event(
+                    cur,
+                    actor_ombuds_id=g.ombuds_id,
+                    organization_id=g.organization_id,
+                    target_ombuds_id=ombuds_id,
+                    event_type='ombuds_invitation_cancelled',
+                    details={'cancelledInvitationCount': cancelled_count},
+                )
+        conn.commit()
+        return jsonify({'success': True, 'cancelledCount': cancelled_count})
+    except Exception:
+        if conn:
+            conn.rollback()
+        logger.exception('Failed to cancel user invitation')
+        return jsonify({'error': 'Database error', 'message': 'Unable to cancel invitation'}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@admin_views.route('/api/v1/admin/audit')
+def list_audit_events():
+    return _list_audit_events(g.organization_id)
+
+
+def _list_audit_events(organization_id):
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    event.id, event.event_type, event.reason, event.details,
+                    event.created_at,
+                    actor.id, actor.name, actor.email,
+                    target.id, target.name, target.email
+                FROM administrative_events event
+                JOIN ombuds actor ON actor.id = event.actor_ombuds_id
+                LEFT JOIN ombuds target ON target.id = event.target_ombuds_id
+                WHERE event.organization_id = %s
+                ORDER BY event.created_at DESC, event.id DESC
+                """,
+                (organization_id,),
+            )
+            rows = cur.fetchall()
+        return jsonify([
+            {
+                'id': str(row[0]),
+                'eventType': row[1],
+                'reason': row[2],
+                'details': row[3] or {},
+                'createdAt': row[4].isoformat(),
+                'actor': {'id': str(row[5]), 'name': row[6], 'email': row[7]},
+                'target': None if row[8] is None else {
+                    'id': str(row[8]), 'name': row[9], 'email': row[10],
+                },
+            }
+            for row in rows
+        ])
+    except Exception:
+        logger.exception('Failed to list administrative audit events')
+        return jsonify({'error': 'Database error', 'message': 'Unable to load audit log'}), 500
     finally:
         if conn:
             conn.close()

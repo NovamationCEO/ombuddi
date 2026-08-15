@@ -77,7 +77,7 @@ Working / wired:
 - Tenant ownership is enforced in API writes and by database relationships/triggers for cross-table associations. Local identity and organization fields are force-stamped from the authenticated principal rather than accepted from request data.
 - Cases, entries, entry-person links, encrypted notes, codes/categories, primary roles, public persons, demographic picklists, and report aggregation are implemented.
 - Database errors return stable client-safe messages while detailed exceptions remain in server logs. Shared CRUD/report/person paths use a common commit/rollback/close lifecycle helper.
-- Backend and frontend regression suites are active. As of this update: 43 backend tests and 4 frontend tests pass; frontend lint and production build also pass.
+- Backend and frontend regression suites are active. As of this update: 48 backend tests and 4 frontend tests pass; frontend lint and production build also pass.
 - Frontend dependency management is standardized on npm. Generated Python bytecode and Yarn runtime files are no longer tracked.
 
 Still incomplete:
@@ -136,6 +136,8 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 - **IOA reporting categories and codes are application-level reference data, not DB rows.** They live in `web/src/constants/ioaConstants.ts`, with deterministic uuid5-derived ids resolved at runtime. A future "Hospital ombuds defaults" or "Government ombuds defaults" pack ships the same way: another constants file with another uuid5 namespace. No "fake organization" rows; no cross-org read exception in the multi-tenancy model.
 
 ## Open product questions (resolve before/with the user)
+
+The working decision queue is maintained in `docs/OPEN_DECISIONS.md`.
 
 - Salt-phrase UX: how strongly do we guide ombuds toward a sensible default (per-org? per-ombuds? per-month?) without locking them into one?
 - Court-order / legal-hold flow: who can pause purges, how is it audited, and is that audit itself outside the standard purge?

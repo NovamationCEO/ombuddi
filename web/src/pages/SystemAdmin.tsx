@@ -17,6 +17,7 @@ import { creator } from '../tools/db_tools/creator'
 import { updater } from '../tools/db_tools/updater'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { RoundedContainer } from '../components/RoundedContainer'
+import { SystemOrganizationSeats } from '../components/SystemOrganizationSeats'
 
 type SystemOrg = {
     id: string
@@ -51,7 +52,7 @@ export function SystemAdmin() {
     const [adminName, setAdminName] = React.useState('')
     const [adminEmail, setAdminEmail] = React.useState('')
     const [tier, setTier] = React.useState('alpha')
-    const [seatLimit, setSeatLimit] = React.useState('10')
+    const [seatLimit, setSeatLimit] = React.useState('25')
     const [creating, setCreating] = React.useState(false)
     const [createError, setCreateError] = React.useState('')
     const [newInviteUrl, setNewInviteUrl] = React.useState('')
@@ -63,6 +64,7 @@ export function SystemAdmin() {
     const [statusReason, setStatusReason] = React.useState('')
     const [statusSaving, setStatusSaving] = React.useState(false)
     const [statusError, setStatusError] = React.useState('')
+    const [managedOrganization, setManagedOrganization] = React.useState<SystemOrg | null>(null)
 
     async function createOrg() {
         setCreating(true)
@@ -81,7 +83,7 @@ export function SystemAdmin() {
             setAdminName('')
             setAdminEmail('')
             setTier('alpha')
-            setSeatLimit('10')
+            setSeatLimit('25')
             await orgs.refetch()
         } catch (reason) {
             setCreateError(reason instanceof Error ? reason.message : 'Unable to create organization')
@@ -294,6 +296,13 @@ export function SystemAdmin() {
                                             Edit
                                         </Button>
                                         <Button
+                                            variant="contained"
+                                            size="small"
+                                            onClick={() => setManagedOrganization(org)}
+                                        >
+                                            Manage seats
+                                        </Button>
+                                        <Button
                                             variant={org.isActive ? 'text' : 'outlined'}
                                             color={org.isActive ? 'error' : 'primary'}
                                             size="small"
@@ -315,6 +324,24 @@ export function SystemAdmin() {
                     )}
                 </Stack>
             </RoundedContainer>
+
+            {managedOrganization && (
+                <Box>
+                    <Button onClick={() => setManagedOrganization(null)} sx={{ mb: 1 }}>
+                        Close seat management
+                    </Button>
+                    <SystemOrganizationSeats
+                        key={managedOrganization.id}
+                        organization={managedOrganization}
+                        onOrganizationChanged={async () => {
+                            const result = await orgs.refetch()
+                            const refreshed = result.data?.find((org) => org.id === managedOrganization.id)
+                            if (refreshed) setManagedOrganization(refreshed)
+                            return result
+                        }}
+                    />
+                </Box>
+            )}
 
             <Dialog
                 open={statusTarget !== null}

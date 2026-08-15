@@ -21,7 +21,9 @@ try:
 except ImportError:
     pass  # fine — NAME_SALT may already be in the environment
 
-NAME_SALT = os.environ.get('NAME_SALT', 'fallback-salt')
+NAME_SALT = os.environ.get('NAME_SALT') or os.environ.get('SALT')
+if not NAME_SALT:
+    raise RuntimeError('NAME_SALT is required to seed deterministic demo identities')
 ORG_ID    = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 DEMO_SALT = 'demo'
 

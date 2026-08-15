@@ -23,7 +23,9 @@ services:
       DB_PASS: ${DB_PASS}
       DB_NAME: ${DB_NAME}
       DATABASE_URL: ${DB_URL}
-      SALT: ${SALT}
+      # SALT is retained temporarily as a compatibility input for existing .env files.
+      NAME_SALT: ${NAME_SALT:-}
+      SALT: ${SALT:-}
       AUTH0_DOMAIN: ombuddi.us.auth0.com
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}

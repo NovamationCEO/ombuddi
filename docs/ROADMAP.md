@@ -121,6 +121,7 @@ Goal: actually take money.
 
 - [ ] Stripe (most likely). Per-seat per-month, per-org subscription.
 - [x] Alpha org-admin foundation: local `is_admin`, user-seat creation, one-time invitation links, and Auth0 subject claiming. Billing remains future work.
+- [x] System-admin management of existing-organization seats, administrator promotion/demotion, invitation cancellation/history, and administrative audit visibility.
 - [ ] Self-serve org creation flow.
 - [ ] First-run wizard: pick defaults (retention windows, primary roles, code categories — pre-seed IOA codes for them).
 - [ ] Email / support flow that does NOT depend on Ombuddi staff seeing user data.

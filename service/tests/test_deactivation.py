@@ -133,7 +133,7 @@ class DeactivationTests(unittest.TestCase):
         self.assertTrue(any(statement.startswith("UPDATE ombuds_invitations") for statement in statements))
         audit = next(
             execution for execution in connection.fake_cursor.executions
-            if execution[0].startswith("INSERT INTO administrative_status_events")
+            if execution[0].startswith("INSERT INTO administrative_events")
         )
         self.assertIn("ombuds_deactivated", audit[1])
         self.assertIn("Left the organization", audit[1])
@@ -201,7 +201,7 @@ class DeactivationTests(unittest.TestCase):
         self.assertTrue(response.get_json()["success"])
         audit = next(
             execution for execution in connection.fake_cursor.executions
-            if execution[0].startswith("INSERT INTO administrative_status_events")
+            if execution[0].startswith("INSERT INTO administrative_events")
         )
         self.assertIn("organization_deactivated", audit[1])
         self.assertTrue(connection.committed)

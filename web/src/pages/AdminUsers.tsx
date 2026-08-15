@@ -113,6 +113,17 @@ export function AdminUsers() {
         }
     }
 
+    async function cancelInvitation(ombudsId: string) {
+        setError('')
+        setInviteUrl('')
+        try {
+            await creator(`admin/ombuds/${ombudsId}/invitation/cancel`, {})
+            await users.refetch()
+        } catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Unable to cancel invitation')
+        }
+    }
+
     async function copyInvite() {
         await navigator.clipboard.writeText(inviteUrl)
     }
@@ -349,6 +360,14 @@ export function AdminUsers() {
                                             >
                                                 {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
                                             </Button>
+                                            {user.invitation?.isActive && (
+                                                <Button
+                                                    color="warning"
+                                                    onClick={() => cancelInvitation(user.id)}
+                                                >
+                                                    Cancel invitation
+                                                </Button>
+                                            )}
                                         </>
                                     )
                                 )}

@@ -5,6 +5,7 @@ from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
 from email_identity import normalize_email
+from admin_audit import record_administrative_event
 
 
 auth_views = Blueprint('auth_views', __name__)
@@ -94,6 +95,17 @@ def claim_invitation():
                 WHERE id = %s
                 """,
                 (g.auth0_sub, authenticated_email, invitation[0]),
+            )
+            record_administrative_event(
+                cur,
+                actor_ombuds_id=invitation[1],
+                organization_id=invitation[2],
+                target_ombuds_id=invitation[1],
+                event_type='ombuds_invitation_claimed',
+                details={
+                    'invitationId': str(invitation[0]),
+                    'claimedByEmail': authenticated_email,
+                },
             )
         conn.commit()
         return jsonify({

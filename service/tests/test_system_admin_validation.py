@@ -33,8 +33,8 @@ class OrganizationCursor:
     def execute(self, sql, params):
         normalized = " ".join(sql.split())
         self.executions.append((normalized, params))
-        if normalized.startswith("SELECT id FROM organizations"):
-            self.current_row = (ORGANIZATION_ID,)
+        if normalized.startswith("SELECT id, name, subscription_tier, seat_limit"):
+            self.current_row = (ORGANIZATION_ID, "Example Organization", "alpha", 5)
         elif normalized.startswith("SELECT COUNT"):
             self.current_row = (3,)
         else:
@@ -107,6 +107,7 @@ class SystemAdminValidationTests(unittest.TestCase):
             method="PUT",
             json={"seatLimit": 2},
         ):
+            g.ombuds_id = ACTOR_ID
             with patch(
                 "src.system_admin_views.get_db_connection",
                 return_value=connection,
