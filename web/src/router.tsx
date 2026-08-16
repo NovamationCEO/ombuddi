@@ -23,7 +23,16 @@ export const router = createBrowserRouter([
         element: <Page element={<HomePage />} />,
         errorElement: <ErrorElement />,
     },
-    { path: '/welcome', element: <PageAlternate element={<WelcomePage />} /> },
+    {
+        path: '/welcome',
+        element: (
+            <PageAlternate
+                element={<WelcomePage />}
+                hideHeader
+                fullBleed
+            />
+        ),
+    },
     { path: '/accept-invite', element: <PageAlternate element={<AcceptInvitation />} /> },
     { path: '/select_case', element: <Page element={<SelectCase />} /> },
     { path: '/cases', element: <Page element={<Cases />} /> },

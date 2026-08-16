@@ -5,8 +5,13 @@ import type { ReactNode } from 'react'
 
 import { headerHeight } from '../constants/uiSizes'
 
-export function PageAlternate(props: { element: ReactNode }) {
-    const { element } = props
+type PageAlternateProps = {
+    element: ReactNode
+    hideHeader?: boolean
+    fullBleed?: boolean
+}
+
+export function PageAlternate({ element, hideHeader = false, fullBleed = false }: PageAlternateProps) {
     const style = useStyles()
 
     return (
@@ -17,33 +22,41 @@ export function PageAlternate(props: { element: ReactNode }) {
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                color: style.contrast
-            }}>
-            <Header />
+                color: style.contrast,
+            }}
+        >
+            {!hideHeader && <Header />}
             <Box
                 sx={{
-                    height: `calc(100% - ${headerHeight}px)`,
+                    height: hideHeader ? '100%' : `calc(100% - ${headerHeight}px)`,
                     flex: 1,
                     position: 'relative',
-                    display: 'flex'
-                }}>
+                    display: 'flex',
+                }}
+            >
                 <Box
                     sx={{
                         flex: 1,
                         display: 'flex',
-                        flexDirection: 'column'
-                    }}>
+                        flexDirection: 'column',
+                        minWidth: 0,
+                    }}
+                >
                     <Box
-                        {...style.mainContainer}
+                        {...(!fullBleed ? style.mainContainer : {})}
                         sx={{
                             flex: 1,
-                            marginTop: `${headerHeight + 20}px`,
-                            overflow: 'auto'
-                        }}>
+                            width: '100%',
+                            minWidth: 0,
+                            boxSizing: 'border-box',
+                            marginTop: hideHeader ? 0 : `${headerHeight + 20}px`,
+                            overflow: 'auto',
+                        }}
+                    >
                         {element}
                     </Box>
                 </Box>
             </Box>
         </Box>
-    );
+    )
 }
