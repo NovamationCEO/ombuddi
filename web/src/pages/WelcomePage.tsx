@@ -12,20 +12,7 @@ import {
 import { Box, Button, Divider, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
 import mascot from '../assets/images/mascot.png'
-
-const palette = {
-    background: '#10272B',
-    backgroundDeep: '#0B1D20',
-    surface: '#193438',
-    surfaceRaised: '#204146',
-    border: 'rgba(202, 220, 218, 0.2)',
-    borderStrong: 'rgba(202, 220, 218, 0.34)',
-    text: '#F3F2EC',
-    muted: '#B6C5C3',
-    blueGreen: '#8CB5B2',
-    purple: '#9A6CAE',
-    purpleLight: '#C4A7D0',
-} as const
+import { institutionalPalette as palette } from '../theme/institutionalPalette'
 
 type PrivacyCardProps = {
     icon: ReactNode
@@ -163,7 +150,7 @@ export function WelcomePage() {
                                     color: '#fff',
                                     px: 2.5,
                                     py: 1.15,
-                                    '&:hover': { bgcolor: '#875C9B' },
+                                    '&:hover': { bgcolor: palette.purpleDark },
                                 }}
                             >
                                 Log in to Ombuddi

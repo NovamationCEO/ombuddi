@@ -1,5 +1,4 @@
 import { useStyles } from '../tools/useStyles'
-import { Header } from './Header'
 import type { ReactNode } from 'react'
 
 import {
@@ -13,13 +12,14 @@ import {
     DialogTitle,
     TextField,
 } from '@mui/material'
-import { headerHeight } from '../constants/uiSizes'
 import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate } from 'react-router-dom'
+import { AppRail } from './AppRail'
+import { institutionalPalette as palette } from '../theme/institutionalPalette'
 
-export function Page(props: { element: ReactNode }) {
+export function Page(props: { element: ReactNode; fullBleed?: boolean }) {
     const style = useStyles()
     const { sessionSalt, setSessionSalt } = useSessionSalt()
     const [draft, setDraft] = React.useState('')
@@ -34,7 +34,12 @@ export function Page(props: { element: ReactNode }) {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/welcome" replace />
+        return (
+            <Navigate
+                to="/welcome"
+                replace
+            />
+        )
     }
 
     // sessionSalt === null means the user hasn't been prompted yet this session.
@@ -55,42 +60,53 @@ export function Page(props: { element: ReactNode }) {
                 height: '100vh',
                 position: 'relative',
                 display: 'flex',
-                flexDirection: 'column',
-                color: style.contrast
-            }}>
-            <Header />
+                flexDirection: { xs: 'column', md: 'row' },
+                color: style.contrast,
+                bgcolor: palette.backgroundDeep,
+            }}
+        >
+            <AppRail />
             <Box
                 sx={{
-                    height: `calc(100% - ${headerHeight}px)`,
                     flex: 1,
+                    minWidth: 0,
+                    minHeight: 0,
                     position: 'relative',
-                    display: 'flex'
-                }}>
+                    display: 'flex',
+                    order: { xs: 1, md: 0 },
+                }}
+            >
                 <Box
                     sx={{
                         flex: 1,
                         display: 'flex',
-                        flexDirection: 'column'
-                    }}>
+                        flexDirection: 'column',
+                        minWidth: 0,
+                    }}
+                >
                     <Box
-                        {...style.mainContainer}
+                        {...(!props.fullBleed ? style.mainContainer : {})}
                         sx={{
                             flex: 1,
-                            marginTop: `${headerHeight + 20}px`,
-                            overflow: 'auto'
-                        }}>
+                            minWidth: 0,
+                            boxSizing: 'border-box',
+                            overflow: 'auto',
+                        }}
+                    >
                         {props.element}
                     </Box>
                 </Box>
             </Box>
 
-            <Dialog open={promptOpen} onClose={skip}>
+            <Dialog
+                open={promptOpen}
+                onClose={skip}
+            >
                 <DialogTitle>Session Salt Phrase</DialogTitle>
                 <DialogContent>
                     <DialogContentText sx={{ mb: 2 }}>
-                        Enter your salt phrase for this session. It will pre-fill the salt field
-                        when adding visitors and will be used to encrypt and decrypt entry notes.
-                        Leave blank to use no additional salt.
+                        Enter your salt phrase for this session. It will pre-fill the salt field when adding visitors
+                        and will be used to encrypt and decrypt entry notes. Leave blank to use no additional salt.
                     </DialogContentText>
                     <TextField
                         autoFocus
@@ -105,7 +121,10 @@ export function Page(props: { element: ReactNode }) {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={skip}>Skip (no salt)</Button>
-                    <Button variant="contained" onClick={confirm}>
+                    <Button
+                        variant="contained"
+                        onClick={confirm}
+                    >
                         Set Salt
                     </Button>
                 </DialogActions>

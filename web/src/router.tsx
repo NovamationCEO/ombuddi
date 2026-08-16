@@ -20,7 +20,12 @@ import { SystemAdmin } from './pages/SystemAdmin'
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <Page element={<HomePage />} />,
+        element: (
+            <Page
+                element={<HomePage />}
+                fullBleed
+            />
+        ),
         errorElement: <ErrorElement />,
     },
     {
