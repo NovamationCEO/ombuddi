@@ -57,5 +57,13 @@ export const router = createBrowserRouter([
     { path: '/admin/users', element: <Page element={<AdminUsers />} /> },
     { path: '/system/orgs', element: <Page element={<SystemAdmin />} /> },
     { path: '/case/:caseId/add_entry', element: <Page element={<AddEntry />} /> },
-    { path: '/case/:caseId', element: <Page element={<CaseSummary />} /> },
+    {
+        path: '/case/:caseId',
+        element: (
+            <Page
+                element={<CaseSummary />}
+                fullBleed
+            />
+        ),
+    },
 ])
