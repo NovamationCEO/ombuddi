@@ -1,6 +1,5 @@
-import { Box, Stack } from '@mui/system'
 import { RoundedContainer } from '../components/RoundedContainer'
-import { Button, TextField } from '@mui/material'
+import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import React from 'react'
 import { CodeSummary } from '../components/organization/CodeSummary'
 import { useOrganization } from '../tools/useOrganization'
@@ -17,11 +16,11 @@ const MEDIUM_SETS: DefaultSet[] = [
         label: 'Standard',
         description: 'Common contact methods used by most ombuds offices.',
         items: [
-            { name: 'In Person',       description: '' },
-            { name: 'Phone',           description: '' },
+            { name: 'In Person', description: '' },
+            { name: 'Phone', description: '' },
             { name: 'Videoconference', description: '' },
-            { name: 'Email',           description: '' },
-            { name: 'Other',           description: '' },
+            { name: 'Email', description: '' },
+            { name: 'Other', description: '' },
         ],
     },
 ]
@@ -31,7 +30,7 @@ const PRIORITY_SETS: DefaultSet[] = [
         label: 'Standard',
         description: 'Simple two-tier priority for distinguishing primary contacts from follow-ups.',
         items: [
-            { name: 'Primary',   description: '' },
+            { name: 'Primary', description: '' },
             { name: 'Secondary', description: '' },
         ],
     },
@@ -42,11 +41,11 @@ const GENDER_SETS: DefaultSet[] = [
         label: 'Standard',
         description: 'A concise set covering the most common reporting categories.',
         items: [
-            { name: 'N/A',        description: '' },
-            { name: 'Male',       description: '' },
-            { name: 'Female',     description: '' },
+            { name: 'N/A', description: '' },
+            { name: 'Male', description: '' },
+            { name: 'Female', description: '' },
             { name: 'Non-Binary', description: '' },
-            { name: 'Unknown',    description: '' },
+            { name: 'Unknown', description: '' },
         ],
     },
 ]
@@ -56,12 +55,12 @@ const GENERATION_SETS: DefaultSet[] = [
         label: 'Standard',
         description: 'Pew Research generational definitions with birth-year tooltips.',
         items: [
-            { name: 'Unknown',    description: '' },
-            { name: 'Boomer',     description: 'Born 1946–1964' },
-            { name: 'Gen X',      description: 'Born 1965–1980' },
+            { name: 'Unknown', description: '' },
+            { name: 'Boomer', description: 'Born 1946–1964' },
+            { name: 'Gen X', description: 'Born 1965–1980' },
             { name: 'Millennial', description: 'Born 1981–1996' },
-            { name: 'Gen Z',      description: 'Born 1997–2012' },
-            { name: 'Gen Alpha',  description: 'Born 2013–2025' },
+            { name: 'Gen Z', description: 'Born 1997–2012' },
+            { name: 'Gen Alpha', description: 'Born 2013–2025' },
         ],
     },
 ]
@@ -71,14 +70,14 @@ const RACE_SETS: DefaultSet[] = [
         label: 'Standard',
         description: 'Categories broadly aligned with U.S. federal reporting guidelines.',
         items: [
-            { name: 'Unknown',                                    description: '' },
-            { name: 'Asian',                                      description: '' },
+            { name: 'Unknown', description: '' },
+            { name: 'Asian', description: '' },
             { name: 'Black / African American / Afro-Caribbean', description: '' },
-            { name: 'Native Hawaiian / Pacific Islander',         description: '' },
-            { name: 'Hispanic of any Race',                       description: '' },
-            { name: 'Native American / Alaskan Native',          description: '' },
-            { name: 'White',                                      description: '' },
-            { name: 'Multiracial',                               description: '' },
+            { name: 'Native Hawaiian / Pacific Islander', description: '' },
+            { name: 'Hispanic of any Race', description: '' },
+            { name: 'Native American / Alaskan Native', description: '' },
+            { name: 'White', description: '' },
+            { name: 'Multiracial', description: '' },
         ],
     },
 ]
@@ -110,8 +109,32 @@ export function Organization() {
     }
 
     return (
-        <Box sx={{ p: 1 }}>
-            <Stack spacing={2}>
+        <Box
+            sx={{
+                minHeight: '100%',
+                boxSizing: 'border-box',
+                bgcolor: '#F2F6F5',
+                color: '#183337',
+                p: { xs: 2, sm: 3, lg: 4 },
+            }}
+        >
+            <Stack
+                spacing={2.5}
+                sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}
+            >
+                <Box sx={{ mb: 0.5 }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{ color: '#183337', fontWeight: 700 }}
+                    >
+                        Organization settings
+                    </Typography>
+                    <Typography sx={{ mt: 0.5, color: '#647578' }}>
+                        Configure the terminology and options used throughout {organization.name || 'your organization'}
+                        .
+                    </Typography>
+                </Box>
                 <RoundedContainer title={'Organization - Basic Information'}>
                     <Stack spacing={2}>
                         <TextField
@@ -124,10 +147,22 @@ export function Organization() {
                             value={'Active'}
                             label={'License Status'}
                             disabled
+                            sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#647578' } }}
                         />
                         <Box>
-                            <Button variant='contained' onClick={saveOrg} disabled={saving || !orgName.trim()}>
-                                Save
+                            <Button
+                                variant="contained"
+                                onClick={saveOrg}
+                                disabled={saving || !orgName.trim()}
+                                sx={{
+                                    color: '#FFFFFF',
+                                    bgcolor: '#2F6668',
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    '&:hover': { color: '#FFFFFF', bgcolor: '#234E51' },
+                                }}
+                            >
+                                {saving ? 'Saving…' : 'Save organization'}
                             </Button>
                         </Box>
                     </Stack>

@@ -20,20 +20,82 @@ import { SystemAdmin } from './pages/SystemAdmin'
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <Page element={<HomePage />} />,
+        element: (
+            <Page
+                element={<HomePage />}
+                fullBleed
+            />
+        ),
         errorElement: <ErrorElement />,
     },
-    { path: '/welcome', element: <PageAlternate element={<WelcomePage />} /> },
+    {
+        path: '/welcome',
+        element: (
+            <PageAlternate
+                element={<WelcomePage />}
+                hideHeader
+                fullBleed
+            />
+        ),
+    },
     { path: '/accept-invite', element: <PageAlternate element={<AcceptInvitation />} /> },
     { path: '/select_case', element: <Page element={<SelectCase />} /> },
-    { path: '/cases', element: <Page element={<Cases />} /> },
+    {
+        path: '/cases',
+        element: (
+            <Page
+                element={<Cases />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/add_case', element: <Page element={<AddNewCase />} /> },
-    { path: '/report', element: <Page element={<ReportPage />} /> },
+    {
+        path: '/report',
+        element: (
+            <Page
+                element={<ReportPage />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
-    { path: '/profile', element: <Page element={<Profile />} /> },
-    { path: '/organization', element: <Page element={<Organization />} /> },
+    {
+        path: '/profile',
+        element: (
+            <Page
+                element={<Profile />}
+                fullBleed
+            />
+        ),
+    },
+    {
+        path: '/organization',
+        element: (
+            <Page
+                element={<Organization />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/admin/users', element: <Page element={<AdminUsers />} /> },
     { path: '/system/orgs', element: <Page element={<SystemAdmin />} /> },
-    { path: '/case/:caseId/add_entry', element: <Page element={<AddEntry />} /> },
-    { path: '/case/:caseId', element: <Page element={<CaseSummary />} /> },
+    {
+        path: '/case/:caseId/add_entry',
+        element: (
+            <Page
+                element={<AddEntry />}
+                fullBleed
+            />
+        ),
+    },
+    {
+        path: '/case/:caseId',
+        element: (
+            <Page
+                element={<CaseSummary />}
+                fullBleed
+            />
+        ),
+    },
 ])

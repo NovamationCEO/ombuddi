@@ -7,26 +7,28 @@ export function RoundedContainer(props: { title: string; children?: ReactNode })
         <Box
             sx={{
                 flex: 1,
-                border: '1px solid black',
-                borderRadius: 2,
+                minWidth: 0,
+                color: '#183337',
+                bgcolor: '#FFFFFF',
+                border: '1px solid #D7E1DF',
+                borderRadius: 3,
                 overflow: 'hidden',
-                boxShadow: 2,
-                position: 'relative'
-            }}>
+                boxShadow: '0 5px 16px rgba(24, 51, 55, 0.07)',
+                position: 'relative',
+            }}
+        >
             <Box
                 sx={{
-                    bgcolor: '#1976d2',
-                    color: 'white',
-                    paddingLeft: 2,
-                    paddingTop: 1,
-                    paddingBottom: 1,
-                    fontWeight: 'bold'
-                }}>
+                    px: 2,
+                    py: 1.25,
+                    bgcolor: '#234E51',
+                    color: '#F3F2EC',
+                    fontWeight: 700,
+                }}
+            >
                 {title}
             </Box>
-            <Box sx={{
-                padding: 2
-            }}>{children}</Box>
+            <Box sx={{ p: 2 }}>{children}</Box>
         </Box>
-    );
+    )
 }
