@@ -1,31 +1,50 @@
-import { useStyles } from '../../tools/useStyles'
-import { Card, SxProps, Theme } from '@mui/material'
+import { Card, CardActionArea, SxProps, Theme } from '@mui/material'
+import { institutionalPalette as palette } from '../../theme/institutionalPalette'
 
-export function CaseCardWrapper(props: { children: React.ReactNode; onClick?: () => void; sx?: SxProps<Theme> }) {
-    const style = useStyles()
-    const { children, onClick, sx } = props
+export function CaseCardWrapper(props: {
+    children: React.ReactNode
+    onClick?: () => void
+    accentColor?: string
+    sx?: SxProps<Theme>
+}) {
+    const { children, onClick, accentColor = palette.blueGreen, sx } = props
 
     return (
         <Card
-            elevation={1}
-            onClick={onClick}
+            elevation={0}
             sx={{
-                borderRadius: 2,
-                transition: 'transform 120ms ease, box-shadow 120ms ease, all 0.5s ease',
+                position: 'relative',
+                height: '100%',
+                overflow: 'hidden',
+                color: palette.text,
+                bgcolor: palette.surface,
+                border: `1px solid ${palette.border}`,
+                borderRadius: 3,
+                transition: 'transform 140ms ease, background-color 140ms ease, border-color 140ms ease',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    width: 4,
+                    bgcolor: accentColor,
+                    zIndex: 1,
+                },
                 '&:hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: 4,
-                    bgcolor: '#F2FAF3FF',
+                    bgcolor: palette.surfaceRaised,
+                    borderColor: palette.borderStrong,
                 },
-                borderColor: style.header.bgcolor,
-                borderWidth: 2,
-                borderStyle: 'solid',
-                bgcolor: '#eeeeee',
-                cursor: 'pointer',
-                ...sx,
+                ...(sx as object),
             }}
         >
-            {children}
+            <CardActionArea
+                onClick={onClick}
+                sx={{ height: '100%', display: 'block', color: 'inherit' }}
+            >
+                {children}
+            </CardActionArea>
         </Card>
     )
 }

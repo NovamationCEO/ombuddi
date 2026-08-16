@@ -1,11 +1,14 @@
-import { ArrowForward, FolderOpenRounded, ShieldOutlined } from '@mui/icons-material'
-import { Box, Button, ButtonBase, Stack, Typography } from '@mui/material'
+import { ArrowForward, ShieldOutlined } from '@mui/icons-material'
+import { Box, ButtonBase, Stack, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import casesImage from '../assets/images/cases.png'
 import profileImage from '../assets/images/profile.png'
 import reportImage from '../assets/images/report.png'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
+import { useOrganization } from '../tools/useOrganization'
+import { getTimeOfDayGreeting } from './homeGreeting'
 
 type Destination = {
     name: string
@@ -98,9 +101,15 @@ function DestinationCard({ name, url, image, description, action }: Destination)
 }
 
 export function HomePage() {
-    const navigate = useNavigate()
     const currentOmbuds = useCurrentOmbuds()
+    const organization = useOrganization()
     const firstName = currentOmbuds.data?.name?.trim().split(/\s+/)[0]
+    const [greeting, setGreeting] = useState(() => getTimeOfDayGreeting())
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setGreeting(getTimeOfDayGreeting()), 60_000)
+        return () => window.clearInterval(timer)
+    }, [])
 
     return (
         <Box
@@ -116,11 +125,6 @@ export function HomePage() {
                 <Box
                     sx={{
                         mb: { xs: 4, md: 5 },
-                        display: 'flex',
-                        flexDirection: { xs: 'column', md: 'row' },
-                        alignItems: { md: 'flex-start' },
-                        justifyContent: 'space-between',
-                        gap: 3,
                     }}
                 >
                     <Box>
@@ -135,7 +139,7 @@ export function HomePage() {
                                 mb: 1.25,
                             }}
                         >
-                            Your practice
+                            {organization.name || 'Your organization'}
                         </Typography>
                         <Typography
                             component="h1"
@@ -148,29 +152,13 @@ export function HomePage() {
                                 mb: 1.5,
                             }}
                         >
-                            Good morning{firstName ? `, ${firstName}` : ''}.
+                            {greeting}
+                            {firstName ? `, ${firstName}` : ''}.
                         </Typography>
                         <Typography sx={{ maxWidth: 600, color: palette.muted, fontSize: '1.02rem' }}>
                             Everything you need to continue your confidential case work.
                         </Typography>
                     </Box>
-
-                    <Button
-                        variant="contained"
-                        startIcon={<FolderOpenRounded />}
-                        onClick={() => navigate('/cases')}
-                        sx={{
-                            flexShrink: 0,
-                            alignSelf: { xs: 'stretch', md: 'flex-start' },
-                            bgcolor: palette.purple,
-                            color: '#fff',
-                            px: 2.5,
-                            py: 1.15,
-                            '&:hover': { bgcolor: palette.purpleDark },
-                        }}
-                    >
-                        Open cases
-                    </Button>
                 </Box>
 
                 <Typography

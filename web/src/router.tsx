@@ -40,7 +40,15 @@ export const router = createBrowserRouter([
     },
     { path: '/accept-invite', element: <PageAlternate element={<AcceptInvitation />} /> },
     { path: '/select_case', element: <Page element={<SelectCase />} /> },
-    { path: '/cases', element: <Page element={<Cases />} /> },
+    {
+        path: '/cases',
+        element: (
+            <Page
+                element={<Cases />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/add_case', element: <Page element={<AddNewCase />} /> },
     { path: '/report', element: <Page element={<ReportPage />} /> },
     { path: '/add_person', element: <Page element={<AddPerson />} /> },

@@ -1,73 +1,129 @@
 import { Add, Commit } from '@mui/icons-material'
-import { Box, Typography } from '@mui/material'
-import React from 'react'
+import { Box, Button, Stack, Typography } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
 import { CaseCard } from '../components/LoadAllCases/CaseCard'
-import { CaseCardThin } from '../components/LoadAllCases/CaseCardThin'
+import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType } from '../types/majorTypes'
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
-    return (
-        <Typography
-            variant="overline"
-            sx={{ display: 'block', mt: 2, mb: 0.5, color: 'text.secondary', fontWeight: 600 }}
-        >
-            {children}
-        </Typography>
-    )
-}
-
 export function Cases() {
+    const navigate = useNavigate()
     const activeRes = useGetter<CaseType[]>(['get_cases_by_status', 'active'])
     const monitoringRes = useGetter<CaseType[]>(['get_cases_by_status', 'monitoring'])
     const closedRes = useGetter<CaseType[]>(['get_cases_by_status', 'closed'])
-
-    const grid = {
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: '1fr',
-        '@media (min-width: 1100px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
-    }
+    const cases = [...(activeRes.data ?? []), ...(monitoringRes.data ?? []), ...(closedRes.data ?? [])]
 
     return (
-        <Box sx={{ p: 1 }}>
-            <Box sx={grid}>
-                <CaseCardThin Icon={<Add />} text={'Add Case'} link={'/add_case'} />
-                <CaseCardThin Icon={<Commit />} text={'Log Without Case'} link={'/log_without_case'} />
+        <Box
+            sx={{
+                minHeight: '100%',
+                p: { xs: 3, sm: 4, lg: 5 },
+                boxSizing: 'border-box',
+                color: palette.text,
+                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
+            }}
+        >
+            <Box sx={{ maxWidth: 1360, mx: 'auto' }}>
+                <Box
+                    sx={{
+                        mb: 3.5,
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        alignItems: { md: 'flex-start' },
+                        justifyContent: 'space-between',
+                        gap: 2.5,
+                    }}
+                >
+                    <Box>
+                        <Typography
+                            component="h1"
+                            sx={{
+                                color: palette.text,
+                                fontSize: { xs: '2.35rem', sm: '3rem' },
+                                fontWeight: 650,
+                                letterSpacing: '-0.045em',
+                                lineHeight: 1.03,
+                                mb: 1.25,
+                            }}
+                        >
+                            Cases
+                        </Typography>
+                        <Typography sx={{ color: palette.muted }}>
+                            Review and continue your confidential case work.
+                        </Typography>
+                    </Box>
+
+                    <Stack
+                        direction={{ xs: 'column-reverse', sm: 'row' }}
+                        spacing={1.25}
+                        sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
+                    >
+                        <Button
+                            variant="outlined"
+                            startIcon={<Commit />}
+                            onClick={() => navigate('/log_without_case')}
+                            sx={{
+                                color: palette.purpleLight,
+                                borderColor: 'rgba(196, 167, 208, 0.42)',
+                                '&:hover': {
+                                    borderColor: palette.purpleLight,
+                                    bgcolor: 'rgba(154, 108, 174, 0.08)',
+                                },
+                            }}
+                        >
+                            Log without case
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<Add />}
+                            onClick={() => navigate('/add_case')}
+                            sx={{
+                                bgcolor: palette.purple,
+                                color: '#fff',
+                                '&:hover': { bgcolor: palette.purpleDark },
+                            }}
+                        >
+                            New case
+                        </Button>
+                    </Stack>
+                </Box>
+
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' },
+                        gap: 1.5,
+                    }}
+                >
+                    {cases.map((caseItem) => (
+                        <CaseCard
+                            key={caseItem.id}
+                            caseItem={caseItem}
+                        />
+                    ))}
+                </Box>
+
+                {!cases.length && activeRes.data && monitoringRes.data && closedRes.data && (
+                    <Box
+                        sx={{
+                            p: 4,
+                            textAlign: 'center',
+                            color: palette.muted,
+                            bgcolor: palette.surface,
+                            border: `1px solid ${palette.border}`,
+                            borderRadius: 3,
+                        }}
+                    >
+                        <Typography
+                            variant="h6"
+                            sx={{ color: palette.text, mb: 0.75 }}
+                        >
+                            No cases yet
+                        </Typography>
+                        <Typography>Create a case when you are ready to begin recording work.</Typography>
+                    </Box>
+                )}
             </Box>
-
-            {!!activeRes.data?.length && (
-                <>
-                    <SectionHeader>Active</SectionHeader>
-                    <Box sx={grid}>
-                        {activeRes.data.map((c) => (
-                            <CaseCard key={c.id} caseItem={c} />
-                        ))}
-                    </Box>
-                </>
-            )}
-
-            {!!monitoringRes.data?.length && (
-                <>
-                    <SectionHeader>Monitoring</SectionHeader>
-                    <Box sx={grid}>
-                        {monitoringRes.data.map((c) => (
-                            <CaseCard key={c.id} caseItem={c} />
-                        ))}
-                    </Box>
-                </>
-            )}
-
-            {!!closedRes.data?.length && (
-                <>
-                    <SectionHeader>Closed</SectionHeader>
-                    <Box sx={grid}>
-                        {closedRes.data.map((c) => (
-                            <CaseCard key={c.id} caseItem={c} muted />
-                        ))}
-                    </Box>
-                </>
-            )}
         </Box>
     )
 }
