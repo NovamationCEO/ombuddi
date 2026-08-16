@@ -50,10 +50,34 @@ export const router = createBrowserRouter([
         ),
     },
     { path: '/add_case', element: <Page element={<AddNewCase />} /> },
-    { path: '/report', element: <Page element={<ReportPage />} /> },
+    {
+        path: '/report',
+        element: (
+            <Page
+                element={<ReportPage />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/add_person', element: <Page element={<AddPerson />} /> },
-    { path: '/profile', element: <Page element={<Profile />} /> },
-    { path: '/organization', element: <Page element={<Organization />} /> },
+    {
+        path: '/profile',
+        element: (
+            <Page
+                element={<Profile />}
+                fullBleed
+            />
+        ),
+    },
+    {
+        path: '/organization',
+        element: (
+            <Page
+                element={<Organization />}
+                fullBleed
+            />
+        ),
+    },
     { path: '/admin/users', element: <Page element={<AdminUsers />} /> },
     { path: '/system/orgs', element: <Page element={<SystemAdmin />} /> },
     {

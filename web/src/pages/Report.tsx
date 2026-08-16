@@ -1,4 +1,14 @@
-import { Box, IconButton, InputAdornment, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material'
+import {
+    Box,
+    IconButton,
+    InputAdornment,
+    Stack,
+    TextField,
+    ToggleButton,
+    ToggleButtonGroup,
+    Tooltip,
+    Typography,
+} from '@mui/material'
 import Grid2 from '@mui/material/Grid'
 import React from 'react'
 import Highcharts from 'highcharts'
@@ -23,12 +33,21 @@ const highchartsReactModule = HighchartsReactOfficial as typeof HighchartsReactO
 const HighchartsReact = highchartsReactModule.default ?? HighchartsReactOfficial
 
 Highcharts.setOptions({
+    colors: ['#2F6668', '#875C9B', '#8CB5B2', '#D9A85E', '#5E7F83'],
     exporting: {
         fallbackToExportServer: false,
         buttons: { contextButton: { menuItems: ['downloadPNG', 'downloadPDF', 'separator', 'downloadCSV'] } },
     },
 })
 
+const chartPanelStyle = {
+    position: 'relative',
+    bgcolor: '#FFFFFF',
+    border: '1px solid #D7E1DF',
+    borderRadius: 3,
+    overflow: 'hidden',
+    boxShadow: '0 5px 16px rgba(24, 51, 55, 0.07)',
+} as const
 
 type CodeRow = { codeId: string; codeLabel: string | null; count?: number; totalMinutes?: number }
 
@@ -105,19 +124,16 @@ function makeBarOptions(
     }
 }
 
-function makePieOptions(
-    title: string,
-    categories: string[],
-    data: number[],
-    decimalPlaces = 0,
-): Highcharts.Options {
+function makePieOptions(title: string, categories: string[], data: number[], decimalPlaces = 0): Highcharts.Options {
     return {
         chart: { type: 'pie', height: 360, animation: false },
         title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
-        series: [{
-            type: 'pie',
-            data: categories.map((name, i) => ({ name, y: data[i] })),
-        }],
+        series: [
+            {
+                type: 'pie',
+                data: categories.map((name, i) => ({ name, y: data[i] })),
+            },
+        ],
         credits: { enabled: false },
         tooltip: { pointFormat: '<b>{point.y}</b> ({point.percentage:.1f}%)', valueDecimals: decimalPlaces },
         plotOptions: { pie: { dataLabels: { enabled: true, format: '{point.name}', style: { fontSize: '10px' } } } },
@@ -139,26 +155,31 @@ function ToggleChart(props: {
     const { title, yTitle, decimalPlaces = 0, suppressable = false, shareMode, minCellSize } = props
     const [chartMode, setChartMode] = React.useState<'bar' | 'pie'>('bar')
 
-    const { categories, data } = (suppressable && shareMode)
-        ? suppressSmallBuckets(props.categories, props.data, minCellSize)
-        : { categories: props.categories, data: props.data }
+    const { categories, data } =
+        suppressable && shareMode
+            ? suppressSmallBuckets(props.categories, props.data, minCellSize)
+            : { categories: props.categories, data: props.data }
 
-    const options = chartMode === 'bar'
-        ? makeBarOptions(title, categories, data, yTitle, decimalPlaces)
-        : makePieOptions(title, categories, data, decimalPlaces)
+    const options =
+        chartMode === 'bar'
+            ? makeBarOptions(title, categories, data, yTitle, decimalPlaces)
+            : makePieOptions(title, categories, data, decimalPlaces)
 
     return (
-        <Box sx={{ position: 'relative', boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
+        <Box sx={chartPanelStyle}>
             <Tooltip title={chartMode === 'bar' ? 'Switch to pie chart' : 'Switch to bar chart'}>
                 <IconButton
                     size="small"
-                    onClick={() => setChartMode(m => m === 'bar' ? 'pie' : 'bar')}
+                    onClick={() => setChartMode((m) => (m === 'bar' ? 'pie' : 'bar'))}
                     sx={{ position: 'absolute', top: 4, left: 4, zIndex: 1, opacity: 0.5, '&:hover': { opacity: 1 } }}
                 >
                     {chartMode === 'bar' ? <PieChart fontSize="small" /> : <BarChart fontSize="small" />}
                 </IconButton>
             </Tooltip>
-            <HighchartsReact highcharts={Highcharts} options={options} />
+            <HighchartsReact
+                highcharts={Highcharts}
+                options={options}
+            />
         </Box>
     )
 }
@@ -179,265 +200,344 @@ export function ReportPage() {
     })
 
     const shareMode = reportMode === 'shareable'
-    const entryMonths = data?.entriesByMonth.map(r => r.month) ?? []
-    const caseMonths = data?.casesByMonth.map(r => r.month) ?? []
-    const personMonths = data?.personsByMonth.map(r => r.month) ?? []
+    const entryMonths = data?.entriesByMonth.map((r) => r.month) ?? []
+    const caseMonths = data?.casesByMonth.map((r) => r.month) ?? []
+    const personMonths = data?.personsByMonth.map((r) => r.month) ?? []
 
     return (
-        <Box sx={{ p: 1 }}>
-            <Typography variant="h5" sx={{ mb: 2 }}>Reports</Typography>
+        <Box
+            sx={{
+                minHeight: '100%',
+                boxSizing: 'border-box',
+                bgcolor: '#F2F6F5',
+                color: '#183337',
+                p: { xs: 2, sm: 3, lg: 4 },
+            }}
+        >
+            <Box sx={{ width: '100%', maxWidth: 1480, mx: 'auto' }}>
+                <Box sx={{ mb: 2.5 }}>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{ color: '#183337', fontWeight: 700 }}
+                    >
+                        Reports
+                    </Typography>
+                    <Typography sx={{ mt: 0.5, color: '#647578' }}>
+                        Explore activity and outcomes while keeping small groups protected.
+                    </Typography>
+                </Box>
 
-            <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                <TextField
-                    type="date"
-                    label="From"
-                    value={start}
-                    onChange={e => setStart(e.target.value)}
-                    size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                />
-                <TextField
-                    type="date"
-                    label="To"
-                    value={end}
-                    onChange={e => setEnd(e.target.value)}
-                    size="small"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                />
-                <ToggleButtonGroup
-                    value={reportMode}
-                    exclusive
-                    onChange={(_, v) => { if (v) setReportMode(v) }}
-                    size="small"
+                <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{
+                        mb: 2,
+                        p: 2,
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        bgcolor: '#FFFFFF',
+                        border: '1px solid #D7E1DF',
+                        borderRadius: 3,
+                    }}
                 >
-                    <ToggleButton value="full">
-                        <Lock fontSize="small" sx={{ mr: 0.5 }} /> Full
-                    </ToggleButton>
-                    <ToggleButton value="shareable">
-                        <Share fontSize="small" sx={{ mr: 0.5 }} /> Shareable
-                    </ToggleButton>
-                </ToggleButtonGroup>
-                {shareMode && (
                     <TextField
-                        label="Min. cell size"
-                        type="number"
-                        value={minCellSize}
-                        onChange={e => setMinCellSize(normalizeMinCellSize(e.target.value))}
+                        type="date"
+                        label="From"
+                        value={start}
+                        onChange={(e) => setStart(e.target.value)}
                         size="small"
-                        sx={{ width: 140 }}
-                        slotProps={{
-                            htmlInput: { min: 1, step: 1 },
-                            inputLabel: { shrink: true },
-                            input: { startAdornment: <InputAdornment position="start">&ge;</InputAdornment> },
+                        slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                    <TextField
+                        type="date"
+                        label="To"
+                        value={end}
+                        onChange={(e) => setEnd(e.target.value)}
+                        size="small"
+                        slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                    <ToggleButtonGroup
+                        value={reportMode}
+                        exclusive
+                        onChange={(_, v) => {
+                            if (v) setReportMode(v)
                         }}
-                    />
-                )}
-            </Stack>
+                        size="small"
+                        sx={{
+                            '& .MuiToggleButton-root': { color: '#40595C', borderColor: '#AEBFBD' },
+                            '& .MuiToggleButton-root.Mui-selected': {
+                                color: '#FFFFFF',
+                                bgcolor: '#2F6668',
+                                '&:hover': { color: '#FFFFFF', bgcolor: '#234E51' },
+                            },
+                        }}
+                    >
+                        <ToggleButton value="full">
+                            <Lock
+                                fontSize="small"
+                                sx={{ mr: 0.5 }}
+                            />{' '}
+                            Full
+                        </ToggleButton>
+                        <ToggleButton value="shareable">
+                            <Share
+                                fontSize="small"
+                                sx={{ mr: 0.5 }}
+                            />{' '}
+                            Shareable
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                    {shareMode && (
+                        <TextField
+                            label="Min. cell size"
+                            type="number"
+                            value={minCellSize}
+                            onChange={(e) => setMinCellSize(normalizeMinCellSize(e.target.value))}
+                            size="small"
+                            sx={{ width: 140 }}
+                            slotProps={{
+                                htmlInput: { min: 1, step: 1 },
+                                inputLabel: { shrink: true },
+                                input: { startAdornment: <InputAdornment position="start">&ge;</InputAdornment> },
+                            }}
+                        />
+                    )}
+                </Stack>
 
-            {/* Mode banner */}
-            <Box
-                sx={{
-                    mb: 2,
-                    px: 2,
-                    py: 1,
-                    borderRadius: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    bgcolor: shareMode ? 'success.light' : 'warning.light',
-                    color: shareMode ? 'success.contrastText' : 'warning.contrastText',
-                }}
-            >
-                {shareMode
-                    ? <><Share fontSize="small" /> Shareable view &mdash; buckets with fewer than {minCellSize} {minCellSize === 1 ? 'entry' : 'entries'} are merged into &ldquo;Other&rdquo;</>
-                    : <><Lock fontSize="small" /> Ombuds eyes only &mdash; all data shown without suppression</>
-                }
+                {/* Mode banner */}
+                <Box
+                    sx={{
+                        mb: 2,
+                        px: 2,
+                        py: 1,
+                        borderRadius: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        bgcolor: shareMode ? '#E5F2EF' : '#FFF4DF',
+                        color: shareMode ? '#285B58' : '#805B20',
+                        border: '1px solid',
+                        borderColor: shareMode ? '#B9D8D3' : '#E9CF9D',
+                        fontWeight: 650,
+                    }}
+                >
+                    {shareMode ? (
+                        <>
+                            <Share fontSize="small" /> Shareable view &mdash; buckets with fewer than {minCellSize}{' '}
+                            {minCellSize === 1 ? 'entry' : 'entries'} are merged into &ldquo;Other&rdquo;
+                        </>
+                    ) : (
+                        <>
+                            <Lock fontSize="small" /> Ombuds eyes only &mdash; all data shown without suppression
+                        </>
+                    )}
+                </Box>
+
+                <Grid2
+                    container
+                    spacing={2}
+                >
+                    {/* Time-series column charts */}
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <Box sx={chartPanelStyle}>
+                            <HighchartsReact
+                                highcharts={Highcharts}
+                                options={colOptions(
+                                    'Entries per Month',
+                                    entryMonths,
+                                    [
+                                        {
+                                            type: 'column',
+                                            name: 'Entries',
+                                            data: data?.entriesByMonth.map((r) => r.count) ?? [],
+                                        },
+                                    ],
+                                    'Entries',
+                                )}
+                            />
+                        </Box>
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <Box sx={chartPanelStyle}>
+                            <HighchartsReact
+                                highcharts={Highcharts}
+                                options={colOptions(
+                                    'Contact Time per Month',
+                                    entryMonths,
+                                    [
+                                        {
+                                            type: 'column',
+                                            name: 'Hours',
+                                            data:
+                                                data?.durationByMonth.map((r) => +(r.totalMinutes / 60).toFixed(1)) ??
+                                                [],
+                                        },
+                                    ],
+                                    'Hours',
+                                )}
+                            />
+                        </Box>
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <Box sx={chartPanelStyle}>
+                            <HighchartsReact
+                                highcharts={Highcharts}
+                                options={colOptions(
+                                    'Cases Opened per Month',
+                                    caseMonths,
+                                    [
+                                        {
+                                            type: 'column',
+                                            name: 'Cases',
+                                            data: data?.casesByMonth.map((r) => r.count) ?? [],
+                                        },
+                                    ],
+                                    'Cases',
+                                )}
+                            />
+                        </Box>
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <Box sx={chartPanelStyle}>
+                            <HighchartsReact
+                                highcharts={Highcharts}
+                                options={colOptions(
+                                    'Persons per Month',
+                                    personMonths,
+                                    [
+                                        {
+                                            type: 'column',
+                                            name: 'Total appearances',
+                                            data: data?.personsByMonth.map((r) => r.totalAppearances) ?? [],
+                                        },
+                                        {
+                                            type: 'column',
+                                            name: 'Unique persons',
+                                            data: data?.personsByMonth.map((r) => r.uniquePersons) ?? [],
+                                        },
+                                    ],
+                                    'Persons',
+                                    true,
+                                )}
+                            />
+                        </Box>
+                    </Grid2>
+
+                    {/* Categorical charts — bar/pie toggle + shareable suppression */}
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Unique Persons by Race / Ethnicity"
+                            categories={data?.personsByRace.map((r) => r.race) ?? []}
+                            data={data?.personsByRace.map((r) => r.count) ?? []}
+                            yTitle="Persons"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Entries by Contact Method"
+                            categories={data?.entriesByMedium.map((r) => r.medium) ?? []}
+                            data={data?.entriesByMedium.map((r) => r.count) ?? []}
+                            yTitle="Entries"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        {/* Avg duration is not a count — suppression doesn't apply */}
+                        <ToggleChart
+                            title="Avg. Contact Time by Method (min)"
+                            categories={data?.avgDurationByMedium.map((r) => r.medium) ?? []}
+                            data={data?.avgDurationByMedium.map((r) => r.avgMinutes) ?? []}
+                            yTitle="Minutes"
+                            decimalPlaces={1}
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Unique Persons by Role"
+                            categories={data?.personsByRole.map((r) => r.role) ?? []}
+                            data={data?.personsByRole.map((r) => r.count) ?? []}
+                            yTitle="Persons"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Unique Persons by Generation"
+                            categories={data?.personsByGeneration.map((r) => r.generation) ?? []}
+                            data={data?.personsByGeneration.map((r) => r.count) ?? []}
+                            yTitle="Persons"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Cases by Current Status"
+                            categories={data?.casesByStatus.map((r) => r.status) ?? []}
+                            data={data?.casesByStatus.map((r) => r.count) ?? []}
+                            yTitle="Cases"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Most Common Codes (by Cases)"
+                            categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
+                            data={data?.codesByCaseCount.map((r) => r.count ?? 0) ?? []}
+                            yTitle="Cases"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Contact Time by Code (hours)"
+                            categories={data?.codesByDuration.map(resolveCodeLabel) ?? []}
+                            data={data?.codesByDuration.map((r) => +((r.totalMinutes ?? 0) / 60).toFixed(1)) ?? []}
+                            yTitle="Hours"
+                            decimalPlaces={1}
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Most Active Codes (by Entries)"
+                            categories={data?.codesByEntryCount.map(resolveCodeLabel) ?? []}
+                            data={data?.codesByEntryCount.map((r) => r.count ?? 0) ?? []}
+                            yTitle="Entries"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+                </Grid2>
             </Box>
-
-            <Grid2 container spacing={2}>
-                {/* Time-series column charts */}
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
-                        <HighchartsReact
-                            highcharts={Highcharts}
-                            options={colOptions(
-                                'Entries per Month',
-                                entryMonths,
-                                [{ type: 'column', name: 'Entries', data: data?.entriesByMonth.map(r => r.count) ?? [] }],
-                                'Entries',
-                            )}
-                        />
-                    </Box>
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
-                        <HighchartsReact
-                            highcharts={Highcharts}
-                            options={colOptions(
-                                'Contact Time per Month',
-                                entryMonths,
-                                [{
-                                    type: 'column',
-                                    name: 'Hours',
-                                    data: data?.durationByMonth.map(r => +(r.totalMinutes / 60).toFixed(1)) ?? [],
-                                }],
-                                'Hours',
-                            )}
-                        />
-                    </Box>
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
-                        <HighchartsReact
-                            highcharts={Highcharts}
-                            options={colOptions(
-                                'Cases Opened per Month',
-                                caseMonths,
-                                [{ type: 'column', name: 'Cases', data: data?.casesByMonth.map(r => r.count) ?? [] }],
-                                'Cases',
-                            )}
-                        />
-                    </Box>
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <Box sx={{ boxShadow: 3, borderRadius: 1, overflow: 'hidden' }}>
-                        <HighchartsReact
-                            highcharts={Highcharts}
-                            options={colOptions(
-                                'Persons per Month',
-                                personMonths,
-                                [
-                                    {
-                                        type: 'column',
-                                        name: 'Total appearances',
-                                        data: data?.personsByMonth.map(r => r.totalAppearances) ?? [],
-                                    },
-                                    {
-                                        type: 'column',
-                                        name: 'Unique persons',
-                                        data: data?.personsByMonth.map(r => r.uniquePersons) ?? [],
-                                    },
-                                ],
-                                'Persons',
-                                true,
-                            )}
-                        />
-                    </Box>
-                </Grid2>
-
-                {/* Categorical charts — bar/pie toggle + shareable suppression */}
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Unique Persons by Race / Ethnicity"
-                        categories={data?.personsByRace.map(r => r.race) ?? []}
-                        data={data?.personsByRace.map(r => r.count) ?? []}
-                        yTitle="Persons"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Entries by Contact Method"
-                        categories={data?.entriesByMedium.map(r => r.medium) ?? []}
-                        data={data?.entriesByMedium.map(r => r.count) ?? []}
-                        yTitle="Entries"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    {/* Avg duration is not a count — suppression doesn't apply */}
-                    <ToggleChart
-                        title="Avg. Contact Time by Method (min)"
-                        categories={data?.avgDurationByMedium.map(r => r.medium) ?? []}
-                        data={data?.avgDurationByMedium.map(r => r.avgMinutes) ?? []}
-                        yTitle="Minutes"
-                        decimalPlaces={1}
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Unique Persons by Role"
-                        categories={data?.personsByRole.map(r => r.role) ?? []}
-                        data={data?.personsByRole.map(r => r.count) ?? []}
-                        yTitle="Persons"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Unique Persons by Generation"
-                        categories={data?.personsByGeneration.map(r => r.generation) ?? []}
-                        data={data?.personsByGeneration.map(r => r.count) ?? []}
-                        yTitle="Persons"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Cases by Current Status"
-                        categories={data?.casesByStatus.map(r => r.status) ?? []}
-                        data={data?.casesByStatus.map(r => r.count) ?? []}
-                        yTitle="Cases"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Most Common Codes (by Cases)"
-                        categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
-                        data={data?.codesByCaseCount.map(r => r.count ?? 0) ?? []}
-                        yTitle="Cases"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Contact Time by Code (hours)"
-                        categories={data?.codesByDuration.map(resolveCodeLabel) ?? []}
-                        data={data?.codesByDuration.map(r => +((r.totalMinutes ?? 0) / 60).toFixed(1)) ?? []}
-                        yTitle="Hours"
-                        decimalPlaces={1}
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-
-                <Grid2 size={{ xs: 12, md: 6 }}>
-                    <ToggleChart
-                        title="Most Active Codes (by Entries)"
-                        categories={data?.codesByEntryCount.map(resolveCodeLabel) ?? []}
-                        data={data?.codesByEntryCount.map(r => r.count ?? 0) ?? []}
-                        yTitle="Entries"
-                        suppressable
-                        shareMode={shareMode}
-                        minCellSize={minCellSize}
-                    />
-                </Grid2>
-            </Grid2>
         </Box>
     )
 }
