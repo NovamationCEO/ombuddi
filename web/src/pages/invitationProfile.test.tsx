@@ -19,6 +19,21 @@ const mocks = vi.hoisted(() => ({
         isAuthenticated: true,
         isLoading: false,
     },
+    diagnostics: {
+        authenticated: true,
+        linked: true,
+        accountActive: true,
+        organizationActive: true,
+        organizationClaimPresent: false,
+        organizationClaimMatches: null,
+        emailClaimPresent: true,
+        emailVerified: true,
+        isOrganizationAdmin: false,
+        isSystemAdmin: false,
+        canAccessApplication: true,
+        code: 'SESSION_READY',
+        message: 'This session is accepted for normal Ombuddi access.',
+    },
 }))
 
 vi.mock('@auth0/auth0-react', () => ({
@@ -42,6 +57,15 @@ vi.mock('../tools/useCurrentOmbuds', () => ({
 
 vi.mock('../tools/useOrganization', () => ({
     useOrganization: () => ({ id: 'org-1', name: 'Example Organization' }),
+}))
+
+vi.mock('../tools/useSessionDiagnostics', () => ({
+    useSessionDiagnostics: () => ({
+        data: mocks.diagnostics,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+    }),
 }))
 
 describe('invitation onboarding', () => {
@@ -111,5 +135,20 @@ describe('invitation onboarding', () => {
         expect(container.querySelector('[aria-label="Light mode"]')).not.toBeNull()
         expect((container.querySelector('input[type="password"]') as HTMLInputElement).value).toBe('temporary phrase')
         expect(container.textContent).toContain('cleared on refresh, login, or logout')
+    })
+
+    it('shows safe authenticated-session diagnostics', async () => {
+        await act(async () => {
+            root.render(
+                <ThemeProvider theme={appTheme} defaultMode="dark">
+                    <Profile />
+                </ThemeProvider>,
+            )
+        })
+
+        expect(container.textContent).toContain('SESSION_READY')
+        expect(container.textContent).toContain('Linked and active')
+        expect(container.textContent).toContain('Not included (allowed)')
+        expect(container.textContent).not.toContain('auth0|')
     })
 })

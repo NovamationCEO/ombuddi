@@ -1,7 +1,7 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from flask import g
 
@@ -12,7 +12,11 @@ sys.path.insert(0, SERVICE_DIR)
 sys.path.insert(0, SRC_DIR)
 
 from app import app
-from src.picklist_views import add_picklist, update_picklist
+from src.picklist_views import (
+    add_picklist,
+    get_picklists_by_organization_id,
+    update_picklist,
+)
 
 
 ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -58,6 +62,35 @@ class FakeConnection:
 
 
 class UniversalPicklistOptionTests(unittest.TestCase):
+    def test_listing_picklists_repairs_missing_universal_options(self):
+        connection = FakeConnection(None)
+        sentinel_response = object()
+        with (
+            app.test_request_context(
+                f"/api/v1/get_picklists_by_organization_id/{ORGANIZATION_ID}",
+            ),
+            patch("src.picklist_views.get_db_connection", return_value=connection),
+            patch("src.picklist_views.get_many", return_value=sentinel_response) as get_many,
+        ):
+            g.organization_id = ORGANIZATION_ID
+            response = get_picklists_by_organization_id(ORGANIZATION_ID)
+
+        self.assertIs(response, sentinel_response)
+        self.assertTrue(connection.committed)
+        self.assertTrue(connection.closed)
+        sql, params = connection.fake_cursor.executions[0]
+        self.assertIn("ON CONFLICT", sql)
+        self.assertIn("Other (please specify)", params)
+        self.assertIn("Unknown", params)
+        self.assertIn("other_detail", params)
+        self.assertIn("exclusive", params)
+        get_many.assert_called_once_with(
+            "picklists",
+            ANY,
+            {"soft_delete": False},
+            owner_constraint={"organization_id": ORGANIZATION_ID},
+        )
+
     def test_client_cannot_create_a_universal_option(self):
         with app.test_request_context(
             "/api/v1/add_picklist",

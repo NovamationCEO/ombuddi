@@ -46,6 +46,7 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/007_add_deactivation.sql
 \i /Users/nova/Code/ombuddi/service/migrations/008_expand_administrative_audit.sql
 \i /Users/nova/Code/ombuddi/service/migrations/009_add_case_referral_sources.sql
+\i /Users/nova/Code/ombuddi/service/migrations/010_repair_universal_referral_sources.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys
@@ -58,6 +59,10 @@ invitations without a usable email are revoked and must be reissued.
 Migration 007 adds reversible organization and user-seat status, status/date
 consistency checks, a positive seat-limit constraint, and an append-only audit
 trail. Apply it **before** deploying API code that reads `is_active`.
+
+Migration 010 repairs the application-managed **Other (please specify)** and
+**Unknown** referral choices for organizations created before that backfill was
+installed. It is idempotent and can be run again safely.
 
 Bootstrap the existing alpha user as the first administrator:
 

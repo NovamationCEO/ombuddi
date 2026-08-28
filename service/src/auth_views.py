@@ -12,6 +12,18 @@ auth_views = Blueprint('auth_views', __name__)
 logger = logging.getLogger(__name__)
 
 
+@auth_views.route('/api/v1/auth/session-diagnostics')
+def session_diagnostics():
+    """Return safe session facts without exposing token contents or identifiers."""
+    diagnostics = getattr(g, 'session_diagnostics', None)
+    if diagnostics is None:
+        return jsonify({
+            'error': 'Unavailable',
+            'message': 'Session diagnostics are unavailable',
+        }), 503
+    return jsonify(diagnostics)
+
+
 @auth_views.route('/api/v1/auth/claim-invitation', methods=['POST'])
 def claim_invitation():
     payload = request.get_json(silent=True) or {}

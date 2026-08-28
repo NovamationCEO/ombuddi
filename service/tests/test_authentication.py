@@ -37,6 +37,7 @@ class AuthenticationTests(unittest.TestCase):
                     "is_system_admin": getattr(g, "is_system_admin", None),
                     "auth0_email": getattr(g, "auth0_email", None),
                     "auth0_email_verified": getattr(g, "auth0_email_verified", None),
+                    "session_diagnostics": getattr(g, "session_diagnostics", None),
                 }
                 return response, context
 
@@ -73,6 +74,7 @@ class AuthenticationTests(unittest.TestCase):
             None,
         )
         self.assertEqual(response[1], 403)
+        self.assertEqual(response[0].get_json()["code"], "ACCOUNT_NOT_LINKED")
 
     def test_invalid_token_details_are_logged_but_not_returned(self):
         with app.test_request_context(
@@ -106,6 +108,7 @@ class AuthenticationTests(unittest.TestCase):
             },
         )
         self.assertEqual(response[1], 403)
+        self.assertEqual(response[0].get_json()["code"], "ORGANIZATION_CLAIM_MISMATCH")
 
     def test_rejects_deactivated_user(self):
         response, _context = self.authenticate_with(
@@ -146,6 +149,69 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIsNone(response)
         self.assertEqual(context["auth0_sub"], "auth0|invited")
         self.assertIsNone(context["ombuds_id"])
+
+    def test_diagnostics_are_available_to_an_unlinked_authenticated_subject(self):
+        response, context = self.authenticate_with(
+            {
+                "sub": "auth0|unlinked",
+                "ombuddi_email": "invited@example.com",
+                "ombuddi_email_verified": True,
+            },
+            None,
+            request_path="/api/v1/auth/session-diagnostics",
+        )
+
+        self.assertIsNone(response)
+        diagnostics = context["session_diagnostics"]
+        self.assertEqual(diagnostics["code"], "ACCOUNT_NOT_LINKED")
+        self.assertFalse(diagnostics["canAccessApplication"])
+        self.assertNotIn("auth0|unlinked", str(diagnostics))
+        self.assertNotIn("invited@example.com", str(diagnostics))
+
+    def test_diagnostics_explain_a_stale_organization_claim_without_rejecting_the_request(self):
+        response, context = self.authenticate_with(
+            {
+                "sub": "auth0|linked",
+                "organization_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            },
+            {
+                "ombuds_id": OMBUDS_ID,
+                "organization_id": ORGANIZATION_ID,
+                "is_admin": False,
+                "is_system_admin": False,
+                "is_active": True,
+                "organization_is_active": True,
+            },
+            request_path="/api/v1/auth/session-diagnostics",
+        )
+
+        self.assertIsNone(response)
+        diagnostics = context["session_diagnostics"]
+        self.assertEqual(diagnostics["code"], "ORGANIZATION_CLAIM_MISMATCH")
+        self.assertFalse(diagnostics["organizationClaimMatches"])
+
+    def test_diagnostics_endpoint_returns_no_store_safe_summary(self):
+        principal = {
+            "ombuds_id": OMBUDS_ID,
+            "organization_id": ORGANIZATION_ID,
+            "is_admin": True,
+            "is_system_admin": False,
+            "is_active": True,
+            "organization_is_active": True,
+        }
+        with (
+            patch("app.validate_token", return_value={"sub": "auth0|linked"}),
+            patch("app.get_principal", return_value=principal),
+        ):
+            response = app.test_client().get(
+                "/api/v1/auth/session-diagnostics",
+                headers={"Authorization": "Bearer test-token"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["code"], "SESSION_READY")
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertNotIn("auth0|linked", response.get_data(as_text=True))
 
 
 if __name__ == "__main__":

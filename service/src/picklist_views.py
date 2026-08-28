@@ -6,6 +6,39 @@ from utils import add_one, get_many, update_one
 
 logger = logging.getLogger(__name__)
 
+
+UNIVERSAL_REFERRAL_SOURCES = (
+    ('Other (please specify)', 10000, 'other_detail'),
+    ('Unknown', 10001, 'exclusive'),
+)
+
+
+def _ensure_universal_referral_sources():
+    """Repair missing application-managed referral choices for this tenant."""
+    values = []
+    placeholders = []
+    for name, index, behavior in UNIVERSAL_REFERRAL_SOURCES:
+        placeholders.append('(%s, %s, %s, %s, %s, FALSE, %s)')
+        values.extend((g.organization_id, 'referral_source', name, '', index, behavior))
+
+    sql = f'''
+        INSERT INTO picklists (
+            organization_id, kind, name, description, index, soft_delete, behavior
+        )
+        VALUES {', '.join(placeholders)}
+        ON CONFLICT (organization_id, kind, name) WHERE soft_delete = FALSE
+        DO UPDATE SET
+            behavior = EXCLUDED.behavior,
+            index = EXCLUDED.index
+        WHERE picklists.behavior IS DISTINCT FROM EXCLUDED.behavior
+           OR picklists.index IS DISTINCT FROM EXCLUDED.index
+    '''
+
+    with managed_connection(get_db_connection) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, values)
+
+
 def _org():
     return {'organization_id': g.organization_id}
 
@@ -28,6 +61,16 @@ picklist_model = {
 
 @picklist_views.route('/api/v1/get_picklists_by_organization_id/<organization_id>')
 def get_picklists_by_organization_id(organization_id):
+    try:
+        _ensure_universal_referral_sources()
+    except Exception:
+        logger.exception('Failed to ensure universal referral sources')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to load referral sources',
+        }), 500
     return get_many('picklists', picklist_model, {'soft_delete': False}, owner_constraint=_org())
 
 

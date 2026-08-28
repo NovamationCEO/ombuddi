@@ -296,7 +296,10 @@ BEGIN
     ) VALUES
         (NEW.id, 'referral_source', 'Other (please specify)', '', 10000, FALSE, 'other_detail'),
         (NEW.id, 'referral_source', 'Unknown', '', 10001, FALSE, 'exclusive')
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (organization_id, kind, name) WHERE soft_delete = FALSE
+    DO UPDATE SET
+        behavior = EXCLUDED.behavior,
+        index = EXCLUDED.index;
     RETURN NEW;
 END;
 $$;

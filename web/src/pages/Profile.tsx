@@ -1,16 +1,42 @@
 import { DarkModeOutlined, LightModeOutlined, LockOutlined } from '@mui/icons-material'
-import { Box, Button, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import {
+    Alert,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Stack,
+    TextField,
+    ToggleButton,
+    ToggleButtonGroup,
+    Typography,
+} from '@mui/material'
 import { useColorScheme } from '@mui/material/styles'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useOrganization } from '../tools/useOrganization'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { useSessionSalt } from '../libraries/useSessionSalt'
+import { useSessionDiagnostics } from '../tools/useSessionDiagnostics'
+
+function DiagnosticRow(props: {
+    label: string
+    value: string
+    color?: 'default' | 'success' | 'warning' | 'error' | 'info'
+}) {
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Typography sx={{ color: 'text.secondary' }}>{props.label}</Typography>
+            <Chip size="small" label={props.value} color={props.color ?? 'default'} variant="outlined" />
+        </Box>
+    )
+}
 
 export function Profile() {
     const ombudsRes = useCurrentOmbuds()
     const organization = useOrganization()
     const { colorScheme, setMode } = useColorScheme()
     const { sessionSalt, setSessionSalt, clearSessionSalt } = useSessionSalt()
+    const diagnostics = useSessionDiagnostics()
 
     return (
         <Box
@@ -64,6 +90,100 @@ export function Profile() {
                             }}
                         />
                     </Stack>
+                </RoundedContainer>
+
+                <RoundedContainer title="Account diagnostics">
+                    {diagnostics.isLoading && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={18} />
+                            <Typography color="text.secondary">Checking your authenticated session…</Typography>
+                        </Box>
+                    )}
+                    {diagnostics.error && (
+                        <Stack spacing={1.5}>
+                            <Alert severity="error">
+                                The API could not return session diagnostics.{' '}
+                                {diagnostics.error instanceof Error ? diagnostics.error.message : 'Please try again.'}
+                            </Alert>
+                            <Button
+                                variant="outlined"
+                                onClick={() => void diagnostics.refetch()}
+                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                            >
+                                Retry diagnostics
+                            </Button>
+                        </Stack>
+                    )}
+                    {diagnostics.data && (
+                        <Stack spacing={1.5}>
+                            <Alert severity={diagnostics.data.canAccessApplication ? 'success' : 'error'}>
+                                {diagnostics.data.message}
+                            </Alert>
+                            <DiagnosticRow label="Diagnostic code" value={diagnostics.data.code} color="info" />
+                            <DiagnosticRow
+                                label="API authentication"
+                                value={diagnostics.data.authenticated ? 'Valid' : 'Invalid'}
+                                color={diagnostics.data.authenticated ? 'success' : 'error'}
+                            />
+                            <DiagnosticRow
+                                label="Ombuddi user seat"
+                                value={!diagnostics.data.linked
+                                    ? 'Not linked'
+                                    : diagnostics.data.accountActive ? 'Linked and active' : 'Deactivated'}
+                                color={!diagnostics.data.linked || !diagnostics.data.accountActive ? 'error' : 'success'}
+                            />
+                            <DiagnosticRow
+                                label="Organization"
+                                value={diagnostics.data.organizationActive === null
+                                    ? 'Unavailable'
+                                    : diagnostics.data.organizationActive ? 'Active' : 'Deactivated'}
+                                color={diagnostics.data.organizationActive === null
+                                    ? 'default'
+                                    : diagnostics.data.organizationActive ? 'success' : 'error'}
+                            />
+                            <DiagnosticRow
+                                label="Auth0 organization claim"
+                                value={!diagnostics.data.organizationClaimPresent
+                                    ? 'Not included (allowed)'
+                                    : diagnostics.data.organizationClaimMatches ? 'Matches seat' : 'Does not match'}
+                                color={!diagnostics.data.organizationClaimPresent || diagnostics.data.organizationClaimMatches
+                                    ? 'success'
+                                    : 'error'}
+                            />
+                            <DiagnosticRow
+                                label="Verified email claim"
+                                value={diagnostics.data.emailClaimPresent && diagnostics.data.emailVerified
+                                    ? 'Present and verified'
+                                    : 'Missing or unverified'}
+                                color={diagnostics.data.emailClaimPresent && diagnostics.data.emailVerified
+                                    ? 'success'
+                                    : 'warning'}
+                            />
+                            <DiagnosticRow
+                                label="Organization administrator"
+                                value={diagnostics.data.isOrganizationAdmin ? 'Yes' : 'No'}
+                                color={diagnostics.data.isOrganizationAdmin ? 'success' : 'default'}
+                            />
+                            <DiagnosticRow
+                                label="System administrator"
+                                value={diagnostics.data.isSystemAdmin ? 'Yes' : 'No'}
+                                color={diagnostics.data.isSystemAdmin ? 'success' : 'default'}
+                            />
+                            {diagnostics.data.canAccessApplication && !diagnostics.data.isOrganizationAdmin && (
+                                <Alert severity="info">
+                                    Normal case and profile activity is permitted. Organization and user-management
+                                    changes require an organization administrator.
+                                </Alert>
+                            )}
+                            <Button
+                                variant="outlined"
+                                onClick={() => void diagnostics.refetch()}
+                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                            >
+                                Refresh diagnostics
+                            </Button>
+                        </Stack>
+                    )}
                 </RoundedContainer>
 
                 <RoundedContainer title="Appearance">
