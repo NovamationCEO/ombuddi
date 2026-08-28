@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CssVarsTheme } from '@mui/material/styles'
+import { getContrastRatio, type CssVarsTheme } from '@mui/material/styles'
 import { appTheme, colorSchemeStorageKey } from './appTheme'
 
 const cssVarsTheme = appTheme as unknown as CssVarsTheme
@@ -25,5 +25,15 @@ describe('appTheme', () => {
 
     it('uses one stable persistence key for color-scheme selection', () => {
         expect(colorSchemeStorageKey).toBe('ombuddi-color-scheme')
+    })
+
+    it('keeps the dark scheme readable on its primary signed-in surfaces', () => {
+        const dark = cssVarsTheme.colorSchemes.dark?.palette
+
+        expect(getContrastRatio(dark!.text.primary, dark!.background.default)).toBeGreaterThanOrEqual(7)
+        expect(getContrastRatio(dark!.text.primary, dark!.background.paper)).toBeGreaterThanOrEqual(7)
+        expect(getContrastRatio(dark!.text.secondary, dark!.background.paper)).toBeGreaterThanOrEqual(4.5)
+        expect(getContrastRatio(dark!.primary.contrastText, dark!.primary.dark)).toBeGreaterThanOrEqual(4.5)
+        expect(getContrastRatio(dark!.secondary.contrastText, dark!.secondary.main)).toBeGreaterThanOrEqual(4.5)
     })
 })

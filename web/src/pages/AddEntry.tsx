@@ -257,9 +257,9 @@ export function AddEntry() {
                                 sx={{
                                     p: 1.5,
                                     borderRadius: 1,
-                                    bgcolor: 'grey.100',
+                                    bgcolor: 'app.surfaceTint',
                                     border: '1px solid',
-                                    borderColor: 'grey.200',
+                                    borderColor: 'divider',
                                     height: '100%',
                                 }}
                             >

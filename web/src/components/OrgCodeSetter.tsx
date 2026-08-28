@@ -50,7 +50,7 @@ export const OrgCodeSetter = React.memo(function CodeSetter(props: {
         (codeId: string, codeLabel: string, isMatch: boolean) => (
             <Box
                 sx={{
-                    color: isMatch ? 'forestgreen' : 'black',
+                    color: isMatch ? 'success.main' : 'text.primary',
                     userSelect: 'none',
                 }}
             >

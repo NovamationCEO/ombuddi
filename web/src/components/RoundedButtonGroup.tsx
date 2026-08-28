@@ -38,9 +38,9 @@ export function RoundedButtonGroup(props: {
                         borderBottomRightRadius: 16,
                     },
                     '& .MuiButton-outlined': {
-                        bgcolor: 'white',
+                        bgcolor: 'background.paper',
                         '&:hover': {
-                            bgcolor: 'grey.100',
+                            bgcolor: 'action.hover',
                         },
                     },
                 }}

@@ -137,7 +137,7 @@ function Title(props: { children: React.ReactNode }) {
             sx={{
                 padding: 1,
                 bgcolor: theme.palette.primary.main,
-                color: 'white',
+                color: 'primary.contrastText',
                 borderRadius: 1,
                 marginRight: 1,
                 fontWeight: 'bold',

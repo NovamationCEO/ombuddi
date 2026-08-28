@@ -52,8 +52,17 @@ export function CodeSetterBox(props: {
                 <Box
                     onClick={() => setShowModal(true)}
                     sx={{
-                        border: '1px solid black',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        bgcolor: 'background.paper',
+                        color: 'text.primary',
                         padding: 2,
+                        cursor: 'pointer',
+                        '&:hover': {
+                            borderColor: 'secondary.main',
+                            bgcolor: 'action.hover',
+                        },
                     }}
                 >
                     {activeCodes.length === 0 && <Box>None Selected. Click to Edit.</Box>}
