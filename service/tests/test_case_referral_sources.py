@@ -120,8 +120,36 @@ class CaseReferralSourceTests(unittest.TestCase):
 
         self.assertEqual(status, 400)
         self.assertIn("cannot be combined", response.get_json()["error"])
+        self.assertTrue(connection.rolled_back)
+        self.assertFalse(connection.committed)
         self.assertFalse(any(
             "INSERT INTO cases" in sql for sql, _params in connection.fake_cursor.executions
+        ))
+
+    def test_invalid_update_rolls_back_instead_of_committing_the_read_transaction(self):
+        connection = FakeConnection(
+            fetchone_rows=[(1,)],
+            fetchall_rows=[[(OTHER_ID, "other_detail")]],
+        )
+        with app.test_request_context(
+            "/api/v1/update_case_referral_sources",
+            method="PUT",
+            json={
+                "caseId": CASE_ID,
+                "referralSources": [{"id": OTHER_ID}],
+            },
+        ):
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.ombuddi_views.get_db_connection", return_value=connection):
+                response, status = update_case_referral_sources()
+
+        self.assertEqual(status, 400)
+        self.assertIn("Please specify", response.get_json()["error"])
+        self.assertTrue(connection.rolled_back)
+        self.assertFalse(connection.committed)
+        self.assertFalse(any(
+            "DELETE FROM case_referral_sources" in sql
+            for sql, _params in connection.fake_cursor.executions
         ))
 
     def test_case_referrals_are_retrieved_with_current_labels_and_detail(self):

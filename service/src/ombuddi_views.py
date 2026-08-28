@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 MAX_REFERRAL_DETAIL_LENGTH = 250
 
+
+class _ReferralTransactionAbort(Exception):
+    """Carry a client response through managed_connection so it rolls back."""
+
+    def __init__(self, response):
+        super().__init__('Referral transaction aborted')
+        self.response = response
+
 def _org():
     return {'organization_id': g.organization_id}
 
@@ -235,7 +243,7 @@ def create_case():
             with conn.cursor() as cur:
                 error = _validate_referral_sources(cur, referral_sources)
                 if error:
-                    return error
+                    raise _ReferralTransactionAbort(error)
                 cur.execute(
                     """
                     INSERT INTO cases (id, organization_id, name, description, codes, status)
@@ -247,6 +255,8 @@ def create_case():
                 new_id = cur.fetchone()[0]
                 _insert_referral_sources(cur, new_id, referral_sources)
         return jsonify({'success': True, 'status': 'success', 'id': new_id}), 200
+    except _ReferralTransactionAbort as abort:
+        return abort.response
     except Exception:
         logger.exception('Failed to create case with referral sources')
         return jsonify({
@@ -327,16 +337,20 @@ def update_case_referral_sources():
                     (case_id, g.organization_id),
                 )
                 if cur.fetchone() is None:
-                    return jsonify({'error': 'Not found', 'message': 'Case not found'}), 404
+                    raise _ReferralTransactionAbort(
+                        (jsonify({'error': 'Not found', 'message': 'Case not found'}), 404)
+                    )
                 error = _validate_referral_sources(cur, referral_sources)
                 if error:
-                    return error
+                    raise _ReferralTransactionAbort(error)
                 cur.execute(
                     'DELETE FROM case_referral_sources WHERE case_id = %s AND organization_id = %s',
                     (case_id, g.organization_id),
                 )
                 _insert_referral_sources(cur, case_id, referral_sources)
         return jsonify({'success': True, 'status': 'success'}), 200
+    except _ReferralTransactionAbort as abort:
+        return abort.response
     except Exception:
         logger.exception('Failed to update case referral sources')
         return jsonify({

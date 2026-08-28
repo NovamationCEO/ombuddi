@@ -87,12 +87,12 @@ export type PicklistType = {
 
 export type ReferralSourceSelectionType = {
     id: string
+    behavior: PicklistType['behavior']
     detail?: string
 }
 
 export type CaseReferralSourceType = ReferralSourceSelectionType & {
     name: string
-    behavior: PicklistType['behavior']
 }
 
 export type EntryType = {

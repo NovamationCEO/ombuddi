@@ -1,6 +1,7 @@
 import {
     Autocomplete,
     Box,
+    CircularProgress,
     Divider,
     Drawer,
     FormControlLabel,
@@ -26,20 +27,7 @@ import { RoundButton } from '../../trusted-components/RoundButton'
 import { useOrganization } from '../../tools/useOrganization'
 import { useSessionSalt } from '../../libraries/useSessionSalt'
 import { useGetter } from '../../tools/db_tools/useGetter'
-
-const DEFAULT_PRIMARY_ROLES = [
-    { value: 'exempt', label: 'Exempt / Professional Staff' },
-    { value: 'nonexempt', label: 'Non-Exempt / Hourly Staff' },
-    { value: 'tenure', label: 'Tenure-Track Faculty' },
-    { value: 'non-tenure', label: 'Non-Tenure Track Faculty' },
-    { value: 'undergrad', label: 'Undergraduate Student' },
-    { value: 'grad', label: 'Graduate Student' },
-    { value: 'former-student', label: 'Former Student' },
-    { value: 'alumni', label: 'Alumni' },
-    { value: 'former-employee', label: 'Former Employee' },
-    { value: 'parent', label: 'Parent / Relative' },
-    { value: 'other', label: 'Other' },
-]
+import { getPrimaryRoleOptions } from './primaryRoleOptions'
 
 /**
  * Reusable person-entry form. Owns all field state, the salt-phrase tooltip,
@@ -187,6 +175,8 @@ export function PersonForm(props: {
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const primaryRolesRes = useGetter<PrimaryRoleType[]>(['get_primary_roles_by_organization_id', orgId])
     const configuredRoles = [...(primaryRolesRes.data ?? [])].sort((a, b) => a.index - b.index)
+    const primaryRolesLoading = !orgId || primaryRolesRes.isLoading
+    const primaryRoleOptions = getPrimaryRoleOptions(configuredRoles, primaryRolesLoading)
 
     // Pre-populate from the session salt the first time it becomes available.
     React.useEffect(() => {
@@ -431,30 +421,23 @@ export function PersonForm(props: {
                         <RadioGroup
                             value={primaryRole}
                             onChange={(evt) => setPrimaryRole(evt.target.value)}
+                            aria-busy={primaryRolesLoading}
                         >
-                            <FormControlLabel
-                                value={'unknown'}
-                                control={<Radio />}
-                                label={'Unknown'}
-                            />
-                            {configuredRoles.length > 0
-                                ? configuredRoles.map((role) => (
-                                      <FormControlLabel
-                                          key={role.id}
-                                          value={role.name}
-                                          control={<Radio />}
-                                          label={role.name}
-                                      />
-                                  ))
-                                : DEFAULT_PRIMARY_ROLES.map((role) => (
-                                      <FormControlLabel
-                                          key={role.value}
-                                          value={role.value}
-                                          control={<Radio />}
-                                          label={role.label}
-                                      />
-                                  ))}
+                            {primaryRoleOptions.map((role) => (
+                                <FormControlLabel
+                                    key={role.value}
+                                    value={role.value}
+                                    control={<Radio />}
+                                    label={role.label}
+                                />
+                            ))}
                         </RadioGroup>
+                        {primaryRolesLoading && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                                <CircularProgress size={18} />
+                                <Typography variant="body2">Loading organization roles…</Typography>
+                            </Box>
+                        )}
                     </Box>
                     <Box sx={{ flex: 1 }}>
                         <Stack spacing={2}>

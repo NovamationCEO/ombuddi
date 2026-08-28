@@ -136,30 +136,37 @@ export function PicklistManager(props: {
         setLoadingDefaults(true)
         let added = 0
         const startIndex = items.reduce((highest, item) => Math.max(highest, item.index), -1) + 1
+        const existingNames = new Set(picklists.items.map((item) => item.name))
+        const defaultsToAdd = selectedSet.items.filter((item) => !existingNames.has(item.name))
+        const skipped = selectedSet.items.length - defaultsToAdd.length
         try {
-            for (let i = 0; i < selectedSet.items.length; i++) {
-                try {
-                    await creator('add_picklist', {
-                        organizationId: organization.id,
-                        kind,
-                        name: selectedSet.items[i].name,
-                        description: selectedSet.items[i].description,
-                        behavior: selectedSet.items[i].behavior ?? 'standard',
-                        index: startIndex + i,
-                        softDelete: false,
-                    })
-                    added++
-                } catch {
-                    // Unique-constraint violation = item already exists; skip it.
-                }
+            for (const item of defaultsToAdd) {
+                await creator('add_picklist', {
+                    organizationId: organization.id,
+                    kind,
+                    name: item.name,
+                    description: item.description,
+                    behavior: item.behavior ?? 'standard',
+                    index: startIndex + added,
+                    softDelete: false,
+                })
+                added++
             }
             picklists.refetch()
-            const skipped = selectedSet.items.length - added
             const msg = skipped > 0
                 ? `Loaded ${added} option${added !== 1 ? 's' : ''} (${skipped} already existed).`
                 : `Loaded ${added} option${added !== 1 ? 's' : ''}.`
             setSnack({ message: msg, severity: 'success' })
             setPickerOpen(false)
+        } catch (error) {
+            picklists.refetch()
+            const progress = added > 0
+                ? `Loaded ${added} option${added !== 1 ? 's' : ''} before the error. `
+                : ''
+            setSnack({
+                message: `${progress}${error instanceof Error ? error.message : 'Failed to load defaults.'}`,
+                severity: 'error',
+            })
         } finally {
             setLoadingDefaults(false)
         }

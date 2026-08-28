@@ -30,8 +30,8 @@ export function ReferralSourceSelector(props: {
         }
 
         const nextSelection: ReferralSourceSelectionType = option.behavior === 'other_detail'
-            ? { id: option.id, detail: '' }
-            : { id: option.id }
+            ? { id: option.id, behavior: option.behavior, detail: '' }
+            : { id: option.id, behavior: option.behavior }
         if (option.behavior === 'exclusive') {
             onChange([nextSelection])
             return

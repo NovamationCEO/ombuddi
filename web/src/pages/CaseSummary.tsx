@@ -195,6 +195,7 @@ export function CaseSummary() {
     function openReferralEditor() {
         setEditReferralSources((referralSourcesRes.data ?? []).map((source) => ({
             id: source.id,
+            behavior: source.behavior,
             ...(source.detail ? { detail: source.detail } : {}),
         })))
         setShowReferralErrors(false)

@@ -12,6 +12,8 @@ import { PicklistManager } from './PicklistManager'
 const mocks = vi.hoisted(() => ({
     creator: vi.fn(),
     refetch: vi.fn(),
+    setSnack: vi.fn(),
+    universalOnly: false,
     items: [
         {
             id: 'source-1', organizationId: 'org-1', kind: 'referral_source', name: 'Supervisor',
@@ -34,7 +36,9 @@ vi.mock('../../tools/useOrganization', () => ({
 
 vi.mock('../../tools/usePicklists', () => ({
     usePicklists: () => ({
-        items: mocks.items,
+        items: mocks.universalOnly
+            ? mocks.items.filter((item) => item.behavior !== 'standard')
+            : mocks.items,
         allItems: mocks.items,
         isLoading: false,
         refetch: mocks.refetch,
@@ -44,8 +48,8 @@ vi.mock('../../tools/usePicklists', () => ({
 vi.mock('../../tools/db_tools/creator', () => ({ creator: mocks.creator }))
 vi.mock('../../tools/db_tools/updater', () => ({ updater: vi.fn() }))
 vi.mock('../../libraries/useSnack', () => ({
-    useSnack: (selector: (state: { setSnack: ReturnType<typeof vi.fn> }) => unknown) =>
-        selector({ setSnack: vi.fn() }),
+    useSnack: (selector: (state: { setSnack: typeof mocks.setSnack }) => unknown) =>
+        selector({ setSnack: mocks.setSnack }),
 }))
 
 describe('PicklistManager universal referral options', () => {
@@ -58,6 +62,8 @@ describe('PicklistManager universal referral options', () => {
         root = createRoot(container)
         mocks.creator.mockReset().mockResolvedValue({ success: true })
         mocks.refetch.mockReset()
+        mocks.setSnack.mockReset()
+        mocks.universalOnly = false
     })
 
     afterEach(async () => {
@@ -96,5 +102,48 @@ describe('PicklistManager universal referral options', () => {
             index: 4,
             softDelete: false,
         })
+    })
+
+    it('reports a real default-loading failure instead of calling it a duplicate', async () => {
+        mocks.universalOnly = true
+        mocks.creator
+            .mockResolvedValueOnce({ success: true })
+            .mockRejectedValueOnce(new Error('Database unavailable'))
+
+        await act(async () => {
+            root.render(
+                <ThemeProvider theme={appTheme} defaultMode="dark">
+                    <PicklistManager
+                        kind="referral_source"
+                        title="Referral Sources"
+                        singularNoun="referral source"
+                        hiddenBehaviors={['other_detail', 'exclusive']}
+                        defaultSets={[{
+                            label: 'Standard',
+                            items: [
+                                { name: 'Supervisor', description: '' },
+                                { name: 'HR', description: '' },
+                            ],
+                        }]}
+                    />
+                </ThemeProvider>,
+            )
+        })
+
+        const loadDefaults = Array.from(container.querySelectorAll('button')).find((button) =>
+            button.textContent?.includes('Load defaults'),
+        )
+        await act(async () => loadDefaults?.click())
+
+        const load = Array.from(document.body.querySelectorAll('button')).find((button) =>
+            button.textContent === 'Load',
+        )
+        await act(async () => load?.click())
+
+        expect(mocks.setSnack).toHaveBeenCalledWith({
+            message: 'Loaded 1 option before the error. Database unavailable',
+            severity: 'error',
+        })
+        expect(mocks.refetch).toHaveBeenCalledOnce()
     })
 })
