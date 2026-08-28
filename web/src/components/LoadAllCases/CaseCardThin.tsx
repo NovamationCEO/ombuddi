@@ -22,7 +22,7 @@ export function CaseCardThin(props: { Icon: ReactElement; text: string; link: st
                         placeItems: 'center',
                         flexShrink: 0,
                         color: palette.purpleLight,
-                        bgcolor: 'rgba(154, 108, 174, 0.15)',
+                        bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.15)',
                         borderRadius: 2,
                     }}
                 >

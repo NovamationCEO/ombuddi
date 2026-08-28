@@ -9,8 +9,8 @@ import { useOrganization } from '../../tools/useOrganization'
 const chipStyle = {
     flexShrink: 0,
     color: palette.blueGreen,
-    bgcolor: 'rgba(140, 181, 178, 0.12)',
-    border: '1px solid rgba(140, 181, 178, 0.32)',
+    bgcolor: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.12)',
+    border: '1px solid rgba(var(--mui-palette-secondary-mainChannel) / 0.32)',
 } as const
 
 export function CaseCodeRow({ codeIds }: { codeIds: string[] }) {

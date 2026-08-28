@@ -22,8 +22,8 @@ export function Profile() {
             sx={{
                 minHeight: '100%',
                 boxSizing: 'border-box',
-                bgcolor: '#F2F6F5',
-                color: '#183337',
+                bgcolor: 'background.default',
+                color: 'text.primary',
                 p: { xs: 2, sm: 3, lg: 4 },
             }}
         >
@@ -35,11 +35,11 @@ export function Profile() {
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: '#183337', fontWeight: 700 }}
+                        sx={{ color: 'text.primary', fontWeight: 700 }}
                     >
                         Profile
                     </Typography>
-                    <Typography sx={{ mt: 0.5, color: '#647578' }}>
+                    <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
                         Your Ombuddi account and organization access.
                     </Typography>
                 </Box>
@@ -52,8 +52,8 @@ export function Profile() {
                         fullWidth
                         slotProps={{ input: { readOnly: true } }}
                         sx={{
-                            '& .MuiInputLabel-root': { color: '#536A6D' },
-                            '& .MuiOutlinedInput-root': { color: '#183337', bgcolor: '#FFFFFF' },
+                            '& .MuiInputLabel-root': { color: 'text.secondary' },
+                            '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
                         }}
                     />
                 </RoundedContainer>
@@ -66,20 +66,21 @@ export function Profile() {
                         alignItems: { xs: 'stretch', sm: 'center' },
                         justifyContent: 'space-between',
                         gap: 2,
-                        bgcolor: '#FFFFFF',
-                        border: '1px solid #D7E1DF',
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         borderRadius: 3,
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <PersonOutlined sx={{ color: '#875C9B' }} />
+                        <PersonOutlined sx={{ color: 'primary.main' }} />
                         <Box>
-                            <Typography sx={{ color: '#183337', fontWeight: 700 }}>
+                            <Typography sx={{ color: 'text.primary', fontWeight: 700 }}>
                                 {organization.name || 'Organization'}
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ color: '#647578' }}
+                                sx={{ color: 'text.secondary' }}
                             >
                                 Manage codes, roles, people, and entry options.
                             </Typography>
@@ -90,11 +91,11 @@ export function Profile() {
                         variant="outlined"
                         endIcon={<ArrowForward />}
                         sx={{
-                            color: '#2F6668',
-                            borderColor: '#9FBBB8',
+                            color: 'secondary.main',
+                            borderColor: 'secondary.light',
                             textTransform: 'none',
                             fontWeight: 700,
-                            '&:hover': { borderColor: '#2F6668', bgcolor: '#EAF3F2' },
+                            '&:hover': { borderColor: 'secondary.main', bgcolor: 'action.hover' },
                         }}
                     >
                         Organization settings

@@ -6,20 +6,7 @@ import { zIndex } from '../constants/zIndex'
 import { AccountButton } from './AccountButton'
 import { headerHeight } from '../constants/uiSizes'
 export function Header() {
-    // const { setTheme } = useThemingContext()
-    // const setThemeName = useLayoutStore((state) => state.setThemeName)
-    // const themeName = useLayoutStore((state) => state.themeName)
     const navigate = useNavigate()
-
-    // function toggleTheme() {
-    //     if (themeName === 'light') {
-    //         setThemeName('dark')
-    //         setTheme(themes.dark.theme)
-    //         return
-    //     }
-    //     setThemeName('light')
-    //     setTheme(themes.light.theme)
-    // }
 
     const style = useStyles()
 
@@ -42,11 +29,6 @@ export function Header() {
                 transition: '0.2s ease all',
                 userSelect: 'none'
             }}>
-            {/* <Box>
-                <RoundButton onClick={toggleTheme}>
-                    {themeName === 'light' ? <FlashlightOff /> : <FlashlightOn />}
-                </RoundButton>
-            </Box> */}
             <Box
                 onClick={() => navigate('/')}
                 sx={{

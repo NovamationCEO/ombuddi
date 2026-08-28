@@ -30,11 +30,11 @@ function RailLink({ icon, label, path, selected }: RailLinkProps) {
                     height: { xs: 52, md: 48 },
                     borderRadius: 2.5,
                     color: selected ? palette.text : palette.muted,
-                    bgcolor: selected ? 'rgba(154, 108, 174, 0.2)' : 'transparent',
+                    bgcolor: selected ? 'action.selected' : 'transparent',
                     transition: 'background-color 160ms ease, color 160ms ease',
                     '&:hover': {
                         color: palette.text,
-                        bgcolor: selected ? 'rgba(154, 108, 174, 0.25)' : 'rgba(202, 220, 218, 0.08)',
+                        bgcolor: selected ? 'action.selected' : 'action.hover',
                     },
                     '& .MuiSvgIcon-root': { fontSize: 24 },
                 }}
@@ -91,8 +91,8 @@ export function AppRail() {
                     placeItems: 'center',
                     overflow: 'hidden',
                     borderRadius: 2.5,
-                    bgcolor: 'rgba(154, 108, 174, 0.18)',
-                    border: '1px solid rgba(196, 167, 208, 0.24)',
+                    bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.18)',
+                    border: '1px solid rgba(var(--mui-palette-primary-mainChannel) / 0.28)',
                 }}
             >
                 <Box
@@ -119,8 +119,8 @@ export function AppRail() {
                     mt: { xs: 0, md: 'auto' },
                     ml: { xs: 0.25, md: 0 },
                     '& > div': {
-                        borderColor: 'rgba(196, 167, 208, 0.42)',
-                        bgcolor: 'rgba(154, 108, 174, 0.16)',
+                        borderColor: 'primary.light',
+                        bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',
                     },
                     '& .MuiIconButton-root': { color: palette.purpleLight },
                 }}

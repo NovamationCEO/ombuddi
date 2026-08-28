@@ -11,7 +11,7 @@ export function CodeChip(props: { code: string }) {
             color={'primary'}
             variant={'outlined'}
             size={'small'}
-            sx={{ bgcolor: '#eeeeee' }}
+            sx={{ bgcolor: 'background.paper' }}
         />
     )
 }

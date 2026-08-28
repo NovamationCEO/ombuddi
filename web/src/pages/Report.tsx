@@ -10,6 +10,8 @@ import {
     Typography,
 } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
+import { useColorScheme, useTheme } from '@mui/material/styles'
+import type { CssVarsTheme } from '@mui/material/styles'
 import React from 'react'
 import Highcharts from 'highcharts'
 import HighchartsReactOfficial from 'highcharts-react-official'
@@ -33,7 +35,6 @@ const highchartsReactModule = HighchartsReactOfficial as typeof HighchartsReactO
 const HighchartsReact = highchartsReactModule.default ?? HighchartsReactOfficial
 
 Highcharts.setOptions({
-    colors: ['#2F6668', '#875C9B', '#8CB5B2', '#D9A85E', '#5E7F83'],
     exporting: {
         fallbackToExportServer: false,
         buttons: { contextButton: { menuItems: ['downloadPNG', 'downloadPDF', 'separator', 'downloadCSV'] } },
@@ -42,12 +43,41 @@ Highcharts.setOptions({
 
 const chartPanelStyle = {
     position: 'relative',
-    bgcolor: '#FFFFFF',
-    border: '1px solid #D7E1DF',
+    bgcolor: 'background.paper',
+    border: '1px solid',
+    borderColor: 'divider',
     borderRadius: 3,
     overflow: 'hidden',
-    boxShadow: '0 5px 16px rgba(24, 51, 55, 0.07)',
+    boxShadow: '0 5px 16px var(--mui-palette-app-shadow)',
 } as const
+
+type ChartTheme = {
+    colors: string[]
+    background: string
+    text: string
+    muted: string
+    divider: string
+}
+
+function useChartTheme(): ChartTheme {
+    const theme = useTheme<CssVarsTheme>()
+    const { colorScheme } = useColorScheme()
+    const palette = theme.colorSchemes[colorScheme ?? 'dark']?.palette ?? theme.palette
+
+    return {
+        colors: [
+            palette.secondary.main,
+            palette.primary.main,
+            palette.secondary.light,
+            palette.warning.main,
+            palette.info.main,
+        ],
+        background: palette.background.paper,
+        text: palette.text.primary,
+        muted: palette.text.secondary,
+        divider: palette.divider,
+    }
+}
 
 type CodeRow = { codeId: string; codeLabel: string | null; count?: number; totalMinutes?: number }
 
@@ -83,6 +113,7 @@ function defaultRange() {
 }
 
 function colOptions(
+    chartTheme: ChartTheme,
     title: string,
     categories: string[],
     series: Highcharts.SeriesOptionsType[],
@@ -90,11 +121,22 @@ function colOptions(
     showLegend = false,
 ): Highcharts.Options {
     return {
-        chart: { type: 'column', height: 360, animation: false },
-        title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
-        xAxis: { categories, labels: { rotation: -45, style: { fontSize: '10px' } } },
-        yAxis: { title: { text: yTitle, style: { fontSize: '11px' } }, allowDecimals: false, min: 0 },
-        legend: { enabled: showLegend, itemStyle: { fontSize: '11px' } },
+        colors: chartTheme.colors,
+        chart: { type: 'column', height: 360, animation: false, backgroundColor: chartTheme.background },
+        title: { text: title, style: { color: chartTheme.text, fontSize: '13px', fontWeight: '600' } },
+        xAxis: {
+            categories,
+            lineColor: chartTheme.divider,
+            labels: { rotation: -45, style: { color: chartTheme.muted, fontSize: '10px' } },
+        },
+        yAxis: {
+            title: { text: yTitle, style: { color: chartTheme.muted, fontSize: '11px' } },
+            labels: { style: { color: chartTheme.muted } },
+            gridLineColor: chartTheme.divider,
+            allowDecimals: false,
+            min: 0,
+        },
+        legend: { enabled: showLegend, itemStyle: { color: chartTheme.text, fontSize: '11px' } },
         series,
         credits: { enabled: false },
         tooltip: { shared: true },
@@ -102,6 +144,7 @@ function colOptions(
 }
 
 function makeBarOptions(
+    chartTheme: ChartTheme,
     title: string,
     categories: string[],
     data: number[],
@@ -109,11 +152,18 @@ function makeBarOptions(
     decimalPlaces = 0,
 ): Highcharts.Options {
     return {
-        chart: { type: 'bar', height: 360, animation: false },
-        title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
-        xAxis: { categories, labels: { style: { fontSize: '10px' } } },
+        colors: chartTheme.colors,
+        chart: { type: 'bar', height: 360, animation: false, backgroundColor: chartTheme.background },
+        title: { text: title, style: { color: chartTheme.text, fontSize: '13px', fontWeight: '600' } },
+        xAxis: {
+            categories,
+            lineColor: chartTheme.divider,
+            labels: { style: { color: chartTheme.muted, fontSize: '10px' } },
+        },
         yAxis: {
-            title: { text: yTitle, style: { fontSize: '11px' } },
+            title: { text: yTitle, style: { color: chartTheme.muted, fontSize: '11px' } },
+            labels: { style: { color: chartTheme.muted } },
+            gridLineColor: chartTheme.divider,
             allowDecimals: decimalPlaces > 0,
             min: 0,
         },
@@ -124,10 +174,17 @@ function makeBarOptions(
     }
 }
 
-function makePieOptions(title: string, categories: string[], data: number[], decimalPlaces = 0): Highcharts.Options {
+function makePieOptions(
+    chartTheme: ChartTheme,
+    title: string,
+    categories: string[],
+    data: number[],
+    decimalPlaces = 0,
+): Highcharts.Options {
     return {
-        chart: { type: 'pie', height: 360, animation: false },
-        title: { text: title, style: { fontSize: '13px', fontWeight: '600' } },
+        colors: chartTheme.colors,
+        chart: { type: 'pie', height: 360, animation: false, backgroundColor: chartTheme.background },
+        title: { text: title, style: { color: chartTheme.text, fontSize: '13px', fontWeight: '600' } },
         series: [
             {
                 type: 'pie',
@@ -136,7 +193,15 @@ function makePieOptions(title: string, categories: string[], data: number[], dec
         ],
         credits: { enabled: false },
         tooltip: { pointFormat: '<b>{point.y}</b> ({point.percentage:.1f}%)', valueDecimals: decimalPlaces },
-        plotOptions: { pie: { dataLabels: { enabled: true, format: '{point.name}', style: { fontSize: '10px' } } } },
+        plotOptions: {
+            pie: {
+                dataLabels: {
+                    enabled: true,
+                    format: '{point.name}',
+                    style: { color: chartTheme.text, fontSize: '10px', textOutline: 'none' },
+                },
+            },
+        },
     }
 }
 
@@ -154,6 +219,7 @@ function ToggleChart(props: {
 }) {
     const { title, yTitle, decimalPlaces = 0, suppressable = false, shareMode, minCellSize } = props
     const [chartMode, setChartMode] = React.useState<'bar' | 'pie'>('bar')
+    const chartTheme = useChartTheme()
 
     const { categories, data } =
         suppressable && shareMode
@@ -162,8 +228,8 @@ function ToggleChart(props: {
 
     const options =
         chartMode === 'bar'
-            ? makeBarOptions(title, categories, data, yTitle, decimalPlaces)
-            : makePieOptions(title, categories, data, decimalPlaces)
+            ? makeBarOptions(chartTheme, title, categories, data, yTitle, decimalPlaces)
+            : makePieOptions(chartTheme, title, categories, data, decimalPlaces)
 
     return (
         <Box sx={chartPanelStyle}>
@@ -185,6 +251,7 @@ function ToggleChart(props: {
 }
 
 export function ReportPage() {
+    const chartTheme = useChartTheme()
     const { start: defaultStart, end: defaultEnd } = defaultRange()
     const [start, setStart] = React.useState(defaultStart)
     const [end, setEnd] = React.useState(defaultEnd)
@@ -209,8 +276,8 @@ export function ReportPage() {
             sx={{
                 minHeight: '100%',
                 boxSizing: 'border-box',
-                bgcolor: '#F2F6F5',
-                color: '#183337',
+                bgcolor: 'background.default',
+                color: 'text.primary',
                 p: { xs: 2, sm: 3, lg: 4 },
             }}
         >
@@ -219,11 +286,11 @@ export function ReportPage() {
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: '#183337', fontWeight: 700 }}
+                        sx={{ color: 'text.primary', fontWeight: 700 }}
                     >
                         Reports
                     </Typography>
-                    <Typography sx={{ mt: 0.5, color: '#647578' }}>
+                    <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
                         Explore activity and outcomes while keeping small groups protected.
                     </Typography>
                 </Box>
@@ -236,8 +303,9 @@ export function ReportPage() {
                         p: 2,
                         alignItems: 'center',
                         flexWrap: 'wrap',
-                        bgcolor: '#FFFFFF',
-                        border: '1px solid #D7E1DF',
+                        bgcolor: 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         borderRadius: 3,
                     }}
                 >
@@ -265,11 +333,11 @@ export function ReportPage() {
                         }}
                         size="small"
                         sx={{
-                            '& .MuiToggleButton-root': { color: '#40595C', borderColor: '#AEBFBD' },
+                            '& .MuiToggleButton-root': { color: 'text.secondary', borderColor: 'divider' },
                             '& .MuiToggleButton-root.Mui-selected': {
-                                color: '#FFFFFF',
-                                bgcolor: '#2F6668',
-                                '&:hover': { color: '#FFFFFF', bgcolor: '#234E51' },
+                                color: 'secondary.contrastText',
+                                bgcolor: 'secondary.main',
+                                '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
                             },
                         }}
                     >
@@ -315,10 +383,12 @@ export function ReportPage() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        bgcolor: shareMode ? '#E5F2EF' : '#FFF4DF',
-                        color: shareMode ? '#285B58' : '#805B20',
+                        bgcolor: shareMode
+                            ? 'rgba(var(--mui-palette-success-mainChannel) / 0.12)'
+                            : 'rgba(var(--mui-palette-warning-mainChannel) / 0.12)',
+                        color: shareMode ? 'success.main' : 'warning.main',
                         border: '1px solid',
-                        borderColor: shareMode ? '#B9D8D3' : '#E9CF9D',
+                        borderColor: shareMode ? 'success.main' : 'warning.main',
                         fontWeight: 650,
                     }}
                 >
@@ -344,6 +414,7 @@ export function ReportPage() {
                             <HighchartsReact
                                 highcharts={Highcharts}
                                 options={colOptions(
+                                    chartTheme,
                                     'Entries per Month',
                                     entryMonths,
                                     [
@@ -364,6 +435,7 @@ export function ReportPage() {
                             <HighchartsReact
                                 highcharts={Highcharts}
                                 options={colOptions(
+                                    chartTheme,
                                     'Contact Time per Month',
                                     entryMonths,
                                     [
@@ -386,6 +458,7 @@ export function ReportPage() {
                             <HighchartsReact
                                 highcharts={Highcharts}
                                 options={colOptions(
+                                    chartTheme,
                                     'Cases Opened per Month',
                                     caseMonths,
                                     [
@@ -406,6 +479,7 @@ export function ReportPage() {
                             <HighchartsReact
                                 highcharts={Highcharts}
                                 options={colOptions(
+                                    chartTheme,
                                     'Persons per Month',
                                     personMonths,
                                     [

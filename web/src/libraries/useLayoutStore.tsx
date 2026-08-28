@@ -1,8 +1,6 @@
 import { create } from 'zustand'
 
 interface LayoutStoreType {
-    themeName: string
-    setThemeName: (themeName: string) => void
     sidebarLeftOpen: boolean
     setSidebarLeftOpen: (b: boolean) => void
     sidebarRightOpen: boolean
@@ -15,10 +13,6 @@ interface LayoutStoreType {
 
 export const useLayoutStore = create<LayoutStoreType>((set) => {
     return {
-        themeName: 'light',
-        setThemeName: (themeName: string) => {
-            set({ themeName })
-        },
         sidebarLeftOpen: true,
         setSidebarLeftOpen: (sidebarOpen: boolean) => {
             set({ sidebarLeftOpen: sidebarOpen })

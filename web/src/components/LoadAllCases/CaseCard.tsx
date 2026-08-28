@@ -10,20 +10,20 @@ const statusStyles = {
     active: {
         label: 'Active',
         accent: palette.blueGreen,
-        color: '#D8EEEE',
-        background: 'rgba(140, 181, 178, 0.17)',
+        color: 'var(--mui-palette-secondary-main)',
+        background: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.14)',
     },
     monitoring: {
         label: 'Monitoring',
-        accent: '#D9A85E',
-        color: '#F2D49D',
-        background: 'rgba(224, 174, 92, 0.16)',
+        accent: 'var(--mui-palette-warning-main)',
+        color: 'var(--mui-palette-warning-main)',
+        background: 'rgba(var(--mui-palette-warning-mainChannel) / 0.14)',
     },
     closed: {
         label: 'Closed',
-        accent: '#7F9492',
-        color: '#CED8D6',
-        background: 'rgba(182, 197, 195, 0.12)',
+        accent: 'var(--mui-palette-text-disabled)',
+        color: 'var(--mui-palette-text-secondary)',
+        background: 'var(--mui-palette-action-hover)',
     },
 } as const
 
@@ -65,7 +65,7 @@ export function CaseCard({ caseItem }: { caseItem: CaseType }) {
                             objectFit: 'cover',
                             bgcolor: palette.surfaceRaised,
                             borderRadius: 2.25,
-                            boxShadow: '0 6px 14px rgba(3, 18, 21, 0.22)',
+                            boxShadow: '0 6px 14px var(--mui-palette-app-shadow)',
                         }}
                     />
                     <Box

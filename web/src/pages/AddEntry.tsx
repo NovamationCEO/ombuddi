@@ -31,25 +31,26 @@ import { useSessionSalt } from '../libraries/useSessionSalt'
 import { encryptNotes } from '../tools/notesCrypto'
 
 const entryWorkspace = {
-    background: '#F2F6F5',
-    paper: '#FFFFFF',
-    ink: '#183337',
-    muted: '#647578',
-    teal: '#2F6668',
-    tealDark: '#234E51',
-    tealPale: '#EAF3F2',
-    border: '#D7E1DF',
-    purple: '#875C9B',
-    purpleDark: '#70477F',
+    background: 'var(--mui-palette-background-default)',
+    paper: 'var(--mui-palette-background-paper)',
+    ink: 'var(--mui-palette-text-primary)',
+    muted: 'var(--mui-palette-text-secondary)',
+    teal: 'var(--mui-palette-secondary-main)',
+    tealDark: 'var(--mui-palette-secondary-dark)',
+    tealPale: 'var(--mui-palette-app-surfaceTint)',
+    border: 'var(--mui-palette-divider)',
+    borderStrong: 'var(--mui-palette-app-borderStrong)',
+    purple: 'var(--mui-palette-primary-main)',
+    purpleDark: 'var(--mui-palette-primary-dark)',
 } as const
 
 const fieldStyle = {
-    '& .MuiInputLabel-root': { color: '#536A6D' },
+    '& .MuiInputLabel-root': { color: entryWorkspace.muted },
     '& .MuiInputLabel-root.Mui-focused': { color: entryWorkspace.teal },
     '& .MuiOutlinedInput-root': {
         color: entryWorkspace.ink,
         bgcolor: entryWorkspace.paper,
-        '& fieldset': { borderColor: '#AEBFBD' },
+        '& fieldset': { borderColor: entryWorkspace.borderStrong },
         '&:hover fieldset': { borderColor: entryWorkspace.teal },
         '&.Mui-focused fieldset': { borderColor: entryWorkspace.teal },
     },
@@ -232,9 +233,9 @@ export function AddEntry() {
                                         key={p.id}
                                         label={personLabel(p)}
                                         sx={{
-                                            bgcolor: '#d4edda',
-                                            color: '#155724',
-                                            '& .MuiChip-deleteIcon': { color: '#155724' },
+                                            bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
+                                            color: 'success.main',
+                                            '& .MuiChip-deleteIcon': { color: 'success.main' },
                                         }}
                                         onDelete={() => removePerson(p.id)}
                                     />
@@ -343,10 +344,11 @@ export function AddEntry() {
                 <Box
                     component="header"
                     sx={{
-                        color: '#F3F2EC',
-                        background: 'linear-gradient(135deg, #102D31 0%, #1F4B4F 100%)',
-                        borderBottom: '1px solid rgba(202, 220, 218, 0.18)',
-                        boxShadow: '0 8px 22px rgba(8, 31, 34, 0.14)',
+                        color: 'var(--mui-palette-app-headerText)',
+                        background:
+                            'linear-gradient(135deg, var(--mui-palette-app-headerStart) 0%, var(--mui-palette-app-headerEnd) 100%)',
+                        borderBottom: '1px solid var(--mui-palette-app-headerBorder)',
+                        boxShadow: '0 8px 22px var(--mui-palette-app-shadow)',
                     }}
                 >
                     <Box
@@ -372,11 +374,14 @@ export function AddEntry() {
                                     px: 0.25,
                                     py: 0.2,
                                     mb: 0.3,
-                                    color: '#C4A7D0',
+                                    color: 'var(--mui-palette-primary-light)',
                                     textTransform: 'none',
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
-                                    '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.06)' },
+                                    '&:hover': {
+                                        color: 'var(--mui-palette-app-headerText)',
+                                        bgcolor: 'var(--mui-palette-app-headerHover)',
+                                    },
                                 }}
                             >
                                 {caseRes.data?.name ?? 'Back to case'}
@@ -384,7 +389,11 @@ export function AddEntry() {
                             <Typography
                                 variant="h4"
                                 component="h1"
-                                sx={{ color: '#FFFFFF', fontSize: { xs: '1.45rem', sm: '1.8rem' }, fontWeight: 700 }}
+                                sx={{
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    fontSize: { xs: '1.45rem', sm: '1.8rem' },
+                                    fontWeight: 700,
+                                }}
                             >
                                 New case note
                             </Typography>
@@ -400,14 +409,14 @@ export function AddEntry() {
                                 disabled={isSaving}
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
-                                    color: '#E5F1EF',
-                                    borderColor: '#8CB5B2',
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    borderColor: 'var(--mui-palette-secondary-main)',
                                     textTransform: 'none',
                                     fontWeight: 700,
                                     '&:hover': {
-                                        color: '#FFFFFF',
-                                        borderColor: '#C7DCDA',
-                                        bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                        color: 'var(--mui-palette-app-headerText)',
+                                        borderColor: 'var(--mui-palette-app-headerMuted)',
+                                        bgcolor: 'var(--mui-palette-app-headerHover)',
                                     },
                                 }}
                             >
@@ -420,11 +429,14 @@ export function AddEntry() {
                                 disabled={isSaving || !caseRes.data?.organizationId}
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
-                                    color: '#FFFFFF',
+                                    color: 'var(--mui-palette-primary-contrastText)',
                                     bgcolor: entryWorkspace.purple,
                                     textTransform: 'none',
                                     fontWeight: 700,
-                                    '&:hover': { color: '#FFFFFF', bgcolor: entryWorkspace.purpleDark },
+                                    '&:hover': {
+                                        color: 'var(--mui-palette-primary-contrastText)',
+                                        bgcolor: entryWorkspace.purpleDark,
+                                    },
                                 }}
                             >
                                 {isSaving ? 'Saving…' : 'Save entry'}
@@ -543,7 +555,7 @@ export function AddEntry() {
                                     onClick={() => setShowPeopleDialog(true)}
                                     sx={{
                                         color: entryWorkspace.teal,
-                                        borderColor: '#9FBBB8',
+                                        borderColor: entryWorkspace.borderStrong,
                                         textTransform: 'none',
                                         fontWeight: 700,
                                         '&:hover': {
@@ -676,7 +688,7 @@ function ChoiceTiles(props: {
                                     <Radio
                                         size="small"
                                         sx={{
-                                            color: '#829593',
+                                            color: 'text.disabled',
                                             '&.Mui-checked': { color: entryWorkspace.teal },
                                         }}
                                     />
@@ -691,7 +703,7 @@ function ChoiceTiles(props: {
                                     color: selected ? entryWorkspace.tealDark : entryWorkspace.ink,
                                     bgcolor: selected ? entryWorkspace.tealPale : entryWorkspace.paper,
                                     border: '1px solid',
-                                    borderColor: selected ? entryWorkspace.teal : '#BDCCCA',
+                                    borderColor: selected ? entryWorkspace.teal : entryWorkspace.borderStrong,
                                     borderRadius: 2,
                                     '& .MuiFormControlLabel-label': { fontWeight: selected ? 700 : 500 },
                                 }}

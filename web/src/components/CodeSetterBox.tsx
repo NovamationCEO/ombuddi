@@ -1,4 +1,4 @@
-import { Box, useTheme } from '@mui/material'
+import { Box } from '@mui/material'
 import { RoundedContainer } from './RoundedContainer'
 import { CodeCategoryType, CodeType } from '../types/majorTypes'
 import React from 'react'
@@ -13,8 +13,6 @@ export function CodeSetterBox(props: {
 }) {
     const { activeCodeIds, setActiveCodeIds, onSave, source } = props
     const [showModal, setShowModal] = React.useState(false)
-    const theme = useTheme()
-
     const { title, codes, codeCategories } = useCodeSource(source)
 
     const activeCodes = React.useMemo<CodeType[]>(() => {
@@ -63,8 +61,8 @@ export function CodeSetterBox(props: {
                         <Box key={category.id}>
                             <Box
                                 sx={{
-                                    color: 'white',
-                                    bgcolor: theme.palette.secondary.dark,
+                                    color: 'primary.contrastText',
+                                    bgcolor: 'secondary.dark',
                                     padding: 0.5,
                                     marginTop: 1,
                                 }}

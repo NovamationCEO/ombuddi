@@ -1,6 +1,7 @@
 import { Button, Checkbox, FormControlLabel, FormGroup, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { RoundButton } from '../../trusted-components/RoundButton'
 import { Lock } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
@@ -12,14 +13,14 @@ import { useOrganization } from '../../tools/useOrganization'
 import { institutionalPalette as palette } from '../../theme/institutionalPalette'
 
 const fieldStyle = {
-    '& .MuiInputLabel-root': { color: '#536A6D' },
-    '& .MuiInputLabel-root.Mui-focused': { color: '#2F6668' },
+    '& .MuiInputLabel-root': { color: 'text.secondary' },
+    '& .MuiInputLabel-root.Mui-focused': { color: 'secondary.main' },
     '& .MuiOutlinedInput-root': {
-        color: '#183337',
-        bgcolor: '#FFFFFF',
-        '& fieldset': { borderColor: '#AEBFBD' },
-        '&:hover fieldset': { borderColor: '#2F6668' },
-        '&.Mui-focused fieldset': { borderColor: '#2F6668' },
+        color: 'text.primary',
+        bgcolor: 'background.paper',
+        '& fieldset': { borderColor: 'divider' },
+        '&:hover fieldset': { borderColor: 'secondary.main' },
+        '&.Mui-focused fieldset': { borderColor: 'secondary.main' },
     },
 } as const
 
@@ -47,7 +48,9 @@ export function AddNewCase() {
     const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
     const theme = useTheme()
     const setSnack = useSnack((state) => state.setSnack)
+    const navigate = useNavigate()
     const [description, setDescription] = React.useState('')
+    const [isSaving, setIsSaving] = React.useState(false)
     const organizationId = useOrganization().id
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
@@ -84,6 +87,8 @@ export function AddNewCase() {
     }, [newId])
 
     async function save() {
+        if (isSaving) return
+
         const payload = {
             id: newId,
             name: caseName,
@@ -91,20 +96,31 @@ export function AddNewCase() {
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
             status: 'active',
         }
-        await creator<{ id: string; status: string; success: boolean }>('create_case', payload).then((response) => {
-            console.log(response)
+
+        setIsSaving(true)
+        try {
+            const response = await creator<{ id: string; status: string; success: boolean }>('create_case', payload)
             if (response.success) {
                 setSnack({
                     message: 'Case created successfully',
                     severity: 'success',
                 })
-            } else {
-                setSnack({
-                    message: 'Error creating case - ' + response.status,
-                    severity: 'error',
-                })
+                navigate(`/case/${response.id || newId}`)
+                return
             }
-        })
+
+            setSnack({
+                message: `Unable to create case: ${response.status || 'Unknown error'}`,
+                severity: 'error',
+            })
+        } catch (error) {
+            setSnack({
+                message: `Unable to create case: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                severity: 'error',
+            })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     function cancel() {}
@@ -165,8 +181,8 @@ export function AddNewCase() {
                         }
                     >
                         <Box>
-                            <RoundButton bgcolor="#FFFFFF">
-                                <Lock sx={{ color: '#234E51' }} />
+                            <RoundButton bgcolor="background.paper">
+                                <Lock sx={{ color: 'secondary.main' }} />
                             </RoundButton>
                         </Box>
                     </Tooltip>
@@ -184,8 +200,9 @@ export function AddNewCase() {
                             width: 60,
                             height: 60,
                             boxSizing: 'content-box',
-                            bgcolor: '#FFFFFF',
-                            border: '1px solid #AEBFBD',
+                            bgcolor: 'background.paper',
+                            border: '1px solid',
+                            borderColor: 'divider',
                             borderRadius: 1,
                         }}>
                         <img
@@ -271,6 +288,7 @@ export function AddNewCase() {
                 <SaveCancel
                     onSave={save}
                     onCancel={cancel}
+                    saving={isSaving}
                 />
             </Stack>
         </Box>

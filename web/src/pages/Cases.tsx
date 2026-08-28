@@ -64,10 +64,10 @@ export function Cases() {
                             onClick={() => navigate('/log_without_case')}
                             sx={{
                                 color: palette.purpleLight,
-                                borderColor: 'rgba(196, 167, 208, 0.42)',
+                                borderColor: 'primary.light',
                                 '&:hover': {
                                     borderColor: palette.purpleLight,
-                                    bgcolor: 'rgba(154, 108, 174, 0.08)',
+                                    bgcolor: 'action.hover',
                                 },
                             }}
                         >
@@ -79,7 +79,7 @@ export function Cases() {
                             onClick={() => navigate('/add_case')}
                             sx={{
                                 bgcolor: palette.purple,
-                                color: '#fff',
+                                color: 'primary.contrastText',
                                 '&:hover': { bgcolor: palette.purpleDark },
                             }}
                         >

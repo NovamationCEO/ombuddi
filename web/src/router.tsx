@@ -35,6 +35,7 @@ export const router = createBrowserRouter([
                 element={<WelcomePage />}
                 hideHeader
                 fullBleed
+                fixedColorScheme="dark"
             />
         ),
     },

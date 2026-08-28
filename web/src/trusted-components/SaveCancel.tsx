@@ -1,8 +1,8 @@
 import { Button } from '@mui/material'
 import { ButtonContainer } from './ButtonContainer'
 
-export function SaveCancel(props: { onSave: () => void; onCancel: () => void }) {
-    const { onSave, onCancel } = props
+export function SaveCancel(props: { onSave: () => void; onCancel: () => void; saving?: boolean }) {
+    const { onSave, onCancel, saving = false } = props
 
     return (
         <ButtonContainer>
@@ -15,8 +15,9 @@ export function SaveCancel(props: { onSave: () => void; onCancel: () => void }) 
             <Button
                 variant={'contained'}
                 onClick={onSave}
+                disabled={saving}
             >
-                Save
+                {saving ? 'Saving…' : 'Save'}
             </Button>
         </ButtonContainer>
     )

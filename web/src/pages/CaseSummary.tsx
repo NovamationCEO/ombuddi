@@ -34,35 +34,36 @@ import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
 import { CaseType, EntryType, PersonType } from '../types/majorTypes'
 
 const workspace = {
-    background: '#F3F6F5',
-    paper: '#FFFFFF',
-    ink: '#183337',
-    muted: '#647578',
-    teal: '#2F6668',
-    tealDark: '#234E51',
-    tealPale: '#EAF3F2',
-    border: '#D9E3E1',
-    purple: '#875C9B',
+    background: 'var(--mui-palette-background-default)',
+    paper: 'var(--mui-palette-background-paper)',
+    raised: 'var(--mui-palette-app-surfaceRaised)',
+    ink: 'var(--mui-palette-text-primary)',
+    muted: 'var(--mui-palette-text-secondary)',
+    teal: 'var(--mui-palette-secondary-main)',
+    tealDark: 'var(--mui-palette-secondary-dark)',
+    tealPale: 'var(--mui-palette-app-surfaceTint)',
+    border: 'var(--mui-palette-divider)',
+    purple: 'var(--mui-palette-primary-main)',
 } as const
 
 const statusStyles = {
     active: {
         label: 'Active',
-        color: '#D8EEEE',
-        background: 'rgba(140, 181, 178, 0.18)',
-        border: 'rgba(140, 181, 178, 0.42)',
+        color: 'var(--mui-palette-secondary-main)',
+        background: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.14)',
+        border: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.42)',
     },
     monitoring: {
         label: 'Monitoring',
-        color: '#F2D49D',
-        background: 'rgba(224, 174, 92, 0.16)',
-        border: 'rgba(224, 174, 92, 0.4)',
+        color: 'var(--mui-palette-warning-main)',
+        background: 'rgba(var(--mui-palette-warning-mainChannel) / 0.14)',
+        border: 'rgba(var(--mui-palette-warning-mainChannel) / 0.4)',
     },
     closed: {
         label: 'Closed',
-        color: '#CED8D6',
-        background: 'rgba(182, 197, 195, 0.12)',
-        border: 'rgba(182, 197, 195, 0.3)',
+        color: 'var(--mui-palette-text-secondary)',
+        background: 'var(--mui-palette-action-hover)',
+        border: 'var(--mui-palette-divider)',
     },
 } as const
 
@@ -288,12 +289,13 @@ export function CaseSummary() {
                 <Paper
                     elevation={0}
                     sx={{
-                        color: '#F3F2EC',
-                        background: 'linear-gradient(135deg, #102D31 0%, #1F4B4F 100%)',
+                        color: 'var(--mui-palette-app-headerText)',
+                        background:
+                            'linear-gradient(135deg, var(--mui-palette-app-headerStart) 0%, var(--mui-palette-app-headerEnd) 100%)',
                         border: 0,
-                        borderBottom: '1px solid rgba(202, 220, 218, 0.18)',
+                        borderBottom: '1px solid var(--mui-palette-app-headerBorder)',
                         borderRadius: 0,
-                        boxShadow: '0 10px 26px rgba(8, 31, 34, 0.16)',
+                        boxShadow: '0 10px 26px var(--mui-palette-app-shadow)',
                     }}
                 >
                     <Box
@@ -313,11 +315,14 @@ export function CaseSummary() {
                                 mb: 0.75,
                                 px: 0.5,
                                 py: 0.25,
-                                color: '#BDD1CF',
+                                color: 'var(--mui-palette-app-headerMuted)',
                                 textTransform: 'none',
                                 fontWeight: 650,
                                 fontSize: '0.8rem',
-                                '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.06)' },
+                                '&:hover': {
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    bgcolor: 'var(--mui-palette-app-headerHover)',
+                                },
                             }}
                         >
                             All cases
@@ -340,7 +345,7 @@ export function CaseSummary() {
                                     height: { xs: 54, sm: 68 },
                                     objectFit: 'cover',
                                     borderRadius: 2,
-                                    boxShadow: '0 7px 18px rgba(3, 18, 21, 0.34)',
+                                    boxShadow: '0 7px 18px var(--mui-palette-app-shadow)',
                                 }}
                             />
 
@@ -353,7 +358,7 @@ export function CaseSummary() {
                                         variant="h4"
                                         component="h1"
                                         sx={{
-                                            color: '#F3F2EC',
+                                            color: 'var(--mui-palette-app-headerText)',
                                             fontWeight: 700,
                                             fontSize: { xs: '1.3rem', sm: '1.65rem' },
                                             lineHeight: 1.2,
@@ -375,7 +380,7 @@ export function CaseSummary() {
                                 {caseItem.description ? (
                                     <Typography
                                         sx={{
-                                            color: '#BDD0CE',
+                                            color: 'var(--mui-palette-app-headerMuted)',
                                             fontSize: '0.88rem',
                                             lineHeight: 1.45,
                                             maxWidth: 920,
@@ -388,7 +393,7 @@ export function CaseSummary() {
                                         {caseItem.description}
                                     </Typography>
                                 ) : (
-                                    <Typography sx={{ color: '#BDD0CE', fontStyle: 'italic' }}>
+                                    <Typography sx={{ color: 'var(--mui-palette-app-headerMuted)', fontStyle: 'italic' }}>
                                         No case description
                                     </Typography>
                                 )}
@@ -398,13 +403,13 @@ export function CaseSummary() {
                                 >
                                     <Typography
                                         variant="body2"
-                                        sx={{ color: '#BDD0CE', fontSize: '0.72rem' }}
+                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.72rem' }}
                                     >
                                         Created {formatDate(caseItem.createdAt)}
                                     </Typography>
                                     <Typography
                                         variant="body2"
-                                        sx={{ color: '#BDD0CE', fontSize: '0.72rem' }}
+                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.72rem' }}
                                     >
                                         Updated {formatDate(caseItem.updatedAt)}
                                     </Typography>
@@ -418,17 +423,17 @@ export function CaseSummary() {
                                 sx={{
                                     gridColumn: { xs: '1 / -1', sm: 'auto' },
                                     justifySelf: { xs: 'stretch', sm: 'end' },
-                                    color: '#E5F1EF',
-                                    borderColor: '#8CB5B2',
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    borderColor: 'var(--mui-palette-secondary-main)',
                                     textTransform: 'none',
                                     fontWeight: 700,
                                     fontSize: '0.78rem',
                                     py: 0.6,
                                     whiteSpace: 'nowrap',
                                     '&:hover': {
-                                        color: '#FFFFFF',
-                                        borderColor: '#C7DCDA',
-                                        bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                        color: 'var(--mui-palette-app-headerText)',
+                                        borderColor: 'var(--mui-palette-app-headerMuted)',
+                                        bgcolor: 'var(--mui-palette-app-headerHover)',
                                     },
                                 }}
                             >
@@ -436,7 +441,7 @@ export function CaseSummary() {
                             </Button>
                         </Box>
 
-                        <Divider sx={{ my: 1.1, borderColor: 'rgba(202, 220, 218, 0.2)' }} />
+                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
 
                         <Box
                             sx={{
@@ -447,15 +452,22 @@ export function CaseSummary() {
                                 minHeight: 30,
                                 '&& .MuiChip-root': {
                                     height: 28,
-                                    color: '#F3F2EC',
-                                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    bgcolor: 'var(--mui-palette-app-headerHover)',
+                                    border: '1px solid var(--mui-palette-app-headerBorder)',
                                     fontSize: '0.72rem',
                                 },
-                                '&& .MuiChip-root:hover': { bgcolor: 'rgba(255, 255, 255, 0.16)' },
+                                '&& .MuiChip-root:hover': { bgcolor: 'var(--mui-palette-app-headerHover)' },
                             }}
                         >
-                            <Typography sx={{ color: '#F3F2EC', fontSize: '0.8rem', fontWeight: 700, mr: 0.25 }}>
+                            <Typography
+                                sx={{
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    mr: 0.25,
+                                }}
+                            >
                                 Codes
                             </Typography>
                             {caseItem.codes?.length ? (
@@ -469,7 +481,7 @@ export function CaseSummary() {
                             ) : (
                                 <Typography
                                     variant="body2"
-                                    sx={{ color: '#BDD0CE', fontSize: '0.78rem' }}
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
                                 >
                                     No codes assigned
                                 </Typography>
@@ -481,12 +493,15 @@ export function CaseSummary() {
                                     ml: { xs: 0, sm: 'auto' },
                                     px: 0.75,
                                     py: 0.35,
-                                    color: '#DCEAE8',
+                                    color: 'var(--mui-palette-app-headerText)',
                                     textTransform: 'none',
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
                                     whiteSpace: 'nowrap',
-                                    '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.08)' },
+                                    '&:hover': {
+                                        color: 'var(--mui-palette-app-headerText)',
+                                        bgcolor: 'var(--mui-palette-app-headerHover)',
+                                    },
                                 }}
                             >
                                 Manage codes
@@ -551,11 +566,11 @@ export function CaseSummary() {
                                 onClick={() => navigate(`/case/${caseId}/add_entry`)}
                                 sx={{
                                     bgcolor: workspace.purple,
-                                    color: '#FFFFFF',
+                                    color: 'primary.contrastText',
                                     textTransform: 'none',
                                     fontWeight: 700,
                                     whiteSpace: 'nowrap',
-                                    '&:hover': { bgcolor: '#70477F', color: '#FFFFFF' },
+                                    '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
                                 }}
                             >
                                 Add entry
@@ -571,7 +586,7 @@ export function CaseSummary() {
                             </Box>
                         ) : !sortedEntries.length ? (
                             <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                                <CalendarMonthOutlined sx={{ color: '#9AA9A7', fontSize: 34, mb: 1 }} />
+                                <CalendarMonthOutlined sx={{ color: 'text.disabled', fontSize: 34, mb: 1 }} />
                                 <Typography sx={{ color: workspace.ink, fontWeight: 650 }}>No activity yet</Typography>
                                 <Typography
                                     variant="body2"
@@ -603,7 +618,7 @@ export function CaseSummary() {
                                                 borderLeftColor: selected ? workspace.purple : 'transparent',
                                                 bgcolor: selected ? workspace.tealPale : workspace.paper,
                                                 transition: 'background-color 150ms ease, border-color 150ms ease',
-                                                '&:hover': { bgcolor: selected ? workspace.tealPale : '#F7FAF9' },
+                                                '&:hover': { bgcolor: selected ? workspace.tealPale : workspace.raised },
                                                 '&:focus-visible': {
                                                     outline: `3px solid ${workspace.purple}`,
                                                     outlineOffset: -3,
@@ -637,7 +652,7 @@ export function CaseSummary() {
                                                     sx={{
                                                         flexShrink: 0,
                                                         color: selected ? workspace.tealDark : workspace.muted,
-                                                        bgcolor: selected ? '#DCECE9' : '#F0F4F3',
+                                                        bgcolor: selected ? 'action.selected' : 'action.hover',
                                                         '& .MuiChip-icon': { color: 'inherit' },
                                                     }}
                                                 />
@@ -712,7 +727,7 @@ export function CaseSummary() {
                                 }}
                             >
                                 <Box>
-                                    <CalendarMonthOutlined sx={{ color: '#A6B2B0', fontSize: 38 }} />
+                                    <CalendarMonthOutlined sx={{ color: 'text.disabled', fontSize: 38 }} />
                                     <Typography sx={{ mt: 1, color: workspace.muted }}>
                                         Select an activity entry to see its details.
                                     </Typography>
@@ -746,17 +761,18 @@ export function CaseSummary() {
                                             elevation={0}
                                             sx={{
                                                 p: 2,
-                                                bgcolor: '#FFF8EB',
-                                                border: '1px solid #EDD5A5',
+                                                bgcolor: 'rgba(var(--mui-palette-warning-mainChannel) / 0.12)',
+                                                border: '1px solid',
+                                                borderColor: 'warning.main',
                                                 borderRadius: 2,
                                             }}
                                         >
-                                            <Typography sx={{ color: '#76551F', fontWeight: 650 }}>
+                                            <Typography sx={{ color: 'warning.main', fontWeight: 650 }}>
                                                 These notes use a different salt phrase.
                                             </Typography>
                                             <Typography
                                                 variant="body2"
-                                                sx={{ color: '#876B3E', mt: 0.5, mb: 1.5 }}
+                                                sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5 }}
                                             >
                                                 Enter the phrase used when this entry was saved.
                                             </Typography>

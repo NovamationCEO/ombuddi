@@ -2,7 +2,7 @@ import { DataGrid, DataGridProps, GridColDef, GridRenderCellParams, GridValidRow
 import { useStyles } from '../tools/useStyles'
 import { OverflowTip } from './OverflowTip'
 import React from 'react'
-import { Box, lighten } from '@mui/material'
+import { Box } from '@mui/material'
 
 type DataGridXProps = {
     columns: GridColDef[]
@@ -73,9 +73,9 @@ export function DataGridX(props: DataGridXProps) {
                     '& .pad4': {
                         padding: 0.5,
                     },
-                    bgcolor: 'white',
+                    bgcolor: 'background.paper',
                     display: 'grid',
-                    color: 'black',
+                    color: 'text.primary',
                     ...dataGridProps.sx,
                     padding: 1,
                     '& .MuiDataGrid-row': {
@@ -83,10 +83,10 @@ export function DataGridX(props: DataGridXProps) {
                         alignItems: 'stretch',
                     },
                     '& .alt': {
-                        bgcolor: 'lightblue',
-                        color: 'black',
+                        bgcolor: 'action.selected',
+                        color: 'text.primary',
                         '&:hover': {
-                            bgcolor: 'rgb(173, 216, 230, 0.8)',
+                            bgcolor: 'action.hover',
                         },
                     },
                     '& .MuiDataGrid-cell': {
@@ -96,7 +96,7 @@ export function DataGridX(props: DataGridXProps) {
                         bgcolor: style.header.bgcolor,
                         color: style.contrast,
                         '&:hover': {
-                            bgcolor: lighten(style.header.bgcolor, 0.3),
+                            bgcolor: 'action.hover',
                         },
                     },
                 }}

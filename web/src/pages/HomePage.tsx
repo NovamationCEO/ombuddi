@@ -80,7 +80,7 @@ function DestinationCard({ name, url, image, description, action }: Destination)
                     display: 'block',
                     objectFit: 'cover',
                     borderRadius: 2.25,
-                    boxShadow: '0 8px 20px rgba(3, 18, 21, 0.22)',
+                    boxShadow: '0 8px 20px var(--mui-palette-app-shadow)',
                 }}
             />
             <Box sx={{ minWidth: 0 }}>
@@ -198,7 +198,8 @@ export function HomePage() {
                         p: 2,
                         alignItems: 'center',
                         color: palette.muted,
-                        bgcolor: 'rgba(11, 29, 32, 0.48)',
+                        bgcolor: palette.surface,
+                        border: `1px solid ${palette.border}`,
                         borderLeft: `3px solid ${palette.purple}`,
                         borderRadius: 2,
                     }}

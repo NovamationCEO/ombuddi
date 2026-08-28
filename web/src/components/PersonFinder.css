@@ -1,19 +1,14 @@
-:root {
-    --bg: #EBEBEB;
-    --fg: #6a6969;
-    --accent: #A4B7BE;
-}
-
 .person-finder {
     width: 80%;
     max-width: 800px;
     min-width: 500px;
     margin: 2rem auto;
     padding: 2rem;
-    background: var(--bg);
-    box-shadow: 20px 20px 60px #c8c8c8, -20px -20px 60px #ffffff;
+    color: var(--mui-palette-text-primary);
+    background: var(--mui-palette-background-paper);
+    box-shadow: 0 8px 24px var(--mui-palette-app-shadow);
     border-radius: 15px;
-    border: 1px solid #dfdfdf;
+    border: 1px solid var(--mui-palette-divider);
 }
 
 .person-finder .search-panel,
@@ -27,7 +22,7 @@
 }
 
 .person-finder-embedded .MuiTextField-root {
-    background: white;
+    background: var(--mui-palette-background-paper);
     border-radius: 6px;
 }
 
@@ -38,53 +33,53 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 2px solid #37993a;
+    border: 2px solid var(--mui-palette-secondary-main);
 }
 
 .person-finder-embedded .result-item.create {
-    border: 2px dashed #A4B7BE;
-    color: #A4B7BE;
+    border: 2px dashed var(--mui-palette-app-borderStrong);
+    color: var(--mui-palette-text-secondary);
     justify-content: center;
     cursor: pointer;
 }
 
 .person-finder .search-panel .MuiTextField-root {
-    background: white;
+    background: var(--mui-palette-background-paper);
     border-radius: 6px;
-    box-shadow: inset 5px 5px 10px #a5a5a5, inset -5px -5px 10px #ffffff;
+    box-shadow: none;
 }
 
 .person-finder .search-panel .MuiButton-contained {
     height: 3.5rem;
     align-self: start;
-    background: linear-gradient(145deg, #fbfbfb, #d4d4d4);
-    box-shadow: 4px 4px 7px #cccccc, -4px -4px 7px #ffffff;
-    color: var(--fg);
+    background: var(--mui-palette-primary-main);
+    box-shadow: none;
+    color: var(--mui-palette-primary-contrastText);
     text-transform: none;
     font-weight: 500;
 }
 
 .person-finder .results-panel {
-    background: white;
+    background: var(--mui-palette-background-paper);
     padding: 1rem;
     border-radius: 10px;
-    box-shadow: inset 5px 5px 10px #a5a5a5, inset -5px -5px 10px #ffffff;
+    box-shadow: none;
 }
 
 .person-finder .result-item {
     padding: 0.75rem 1rem;
     margin-bottom: 0.5rem;
     border-radius: 8px;
-    box-shadow: 4px 4px 7px #e0e0e0, -4px -4px 7px #ffffff;
+    box-shadow: 0 2px 8px var(--mui-palette-app-shadow);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 2px solid #37993a
+    border: 2px solid var(--mui-palette-secondary-main);
 }
 
 .person-finder .result-item.create {
-    border: 2px dashed var(--accent);
-    color: var(--accent);
+    border: 2px dashed var(--mui-palette-app-borderStrong);
+    color: var(--mui-palette-text-secondary);
     justify-content: center;
 }
 

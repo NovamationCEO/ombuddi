@@ -10,7 +10,7 @@ export function RoundButton(props: {
     tooltipText?: string | React.ReactNode
     bgcolor?: string
 }) {
-    const { onClick = () => null, children, size = 41, disabled = false, bgcolor = 'transparent' } = props
+    const { onClick = () => null, children, size = 41, disabled = false, bgcolor } = props
     const style = useStyles()
     return (
         <Tooltip title={props.tooltipText ? props.tooltipText : ''}>
@@ -19,7 +19,7 @@ export function RoundButton(props: {
                     ...style.roundButton,
                     width: size + 'px',
                     height: size + 'px',
-                    bgcolor: bgcolor,
+                    bgcolor: bgcolor ?? 'background.paper',
                 }}>
                 <IconButton
                     onClick={onClick}

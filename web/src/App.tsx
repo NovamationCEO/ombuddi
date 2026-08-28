@@ -1,7 +1,6 @@
 import React from 'react'
 import { RouterProvider } from 'react-router-dom'
 import { router } from './router'
-import { ThemingProvider, useThemingContext } from './libraries/ThemingContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react'
@@ -10,9 +9,10 @@ import { initTokenGetter } from './tools/auth/tokenProvider'
 import { showDevtools } from './constants/showDevtools'
 import { Snack } from './trusted-components/Snack'
 import { Background } from './trusted-components/Background'
-import { Box, ThemeProvider, SxProps } from '@mui/material'
+import { Box, CssBaseline, ThemeProvider, SxProps } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
+import { appTheme, colorSchemeStorageKey } from './theme/appTheme'
 
 const App: React.FC = () => {
     return (
@@ -31,9 +31,7 @@ const App: React.FC = () => {
                 window.history.replaceState({}, document.title, returnTo)
             }}
         >
-            <ThemingProvider>
-                <QueryWrap />
-            </ThemingProvider>
+            <QueryWrap />
         </Auth0Provider>
     )
 }
@@ -66,7 +64,6 @@ const innerBoxStyle: SxProps<Theme> = {
 }
 
 const InnerApp: React.FC = () => {
-    const { theme } = useThemingContext()
     const snack = useSnack((state) => state.snack)
     const { getAccessTokenSilently } = useAuth0()
 
@@ -75,7 +72,13 @@ const InnerApp: React.FC = () => {
     }, [getAccessTokenSilently])
 
     return (
-        <ThemeProvider theme={theme}>
+        <ThemeProvider
+            theme={appTheme}
+            defaultMode="dark"
+            modeStorageKey={colorSchemeStorageKey}
+            disableTransitionOnChange
+        >
+            <CssBaseline />
             <Snack snack={snack} />
             <Box sx={outerBoxStyle}>
                 <Background />

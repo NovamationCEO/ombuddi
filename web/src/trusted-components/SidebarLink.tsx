@@ -1,4 +1,4 @@
-import { Box, ListItemIcon, ListItemText, MenuItem, SvgIconTypeMap, lighten } from '@mui/material'
+import { Box, ListItemIcon, ListItemText, MenuItem, SvgIconTypeMap } from '@mui/material'
 import { OverridableComponent } from '@mui/material/OverridableComponent'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useStyles } from '../tools/useStyles'
@@ -24,7 +24,7 @@ export function SidebarLink(props: {
                 bgcolor: path === address ? style.header.bgcolor : 'transparent',
                 borderRadius: 1,
                 '&:hover': {
-                    bgcolor: lighten(style.header.bgcolor, 0.4),
+                    bgcolor: 'action.hover',
                 },
             }}
         >

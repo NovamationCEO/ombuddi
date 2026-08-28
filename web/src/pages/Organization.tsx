@@ -113,8 +113,8 @@ export function Organization() {
             sx={{
                 minHeight: '100%',
                 boxSizing: 'border-box',
-                bgcolor: '#F2F6F5',
-                color: '#183337',
+                bgcolor: 'background.default',
+                color: 'text.primary',
                 p: { xs: 2, sm: 3, lg: 4 },
             }}
         >
@@ -126,11 +126,11 @@ export function Organization() {
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: '#183337', fontWeight: 700 }}
+                        sx={{ color: 'text.primary', fontWeight: 700 }}
                     >
                         Organization settings
                     </Typography>
-                    <Typography sx={{ mt: 0.5, color: '#647578' }}>
+                    <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
                         Configure the terminology and options used throughout {organization.name || 'your organization'}
                         .
                     </Typography>
@@ -147,7 +147,11 @@ export function Organization() {
                             value={'Active'}
                             label={'License Status'}
                             disabled
-                            sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#647578' } }}
+                            sx={{
+                                '& .MuiInputBase-input.Mui-disabled': {
+                                    WebkitTextFillColor: 'var(--mui-palette-text-disabled)',
+                                },
+                            }}
                         />
                         <Box>
                             <Button
@@ -155,11 +159,11 @@ export function Organization() {
                                 onClick={saveOrg}
                                 disabled={saving || !orgName.trim()}
                                 sx={{
-                                    color: '#FFFFFF',
-                                    bgcolor: '#2F6668',
+                                    color: 'secondary.contrastText',
+                                    bgcolor: 'secondary.main',
                                     textTransform: 'none',
                                     fontWeight: 700,
-                                    '&:hover': { color: '#FFFFFF', bgcolor: '#234E51' },
+                                    '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
                                 }}
                             >
                                 {saving ? 'Saving…' : 'Save organization'}

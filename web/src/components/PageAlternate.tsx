@@ -9,13 +9,20 @@ type PageAlternateProps = {
     element: ReactNode
     hideHeader?: boolean
     fullBleed?: boolean
+    fixedColorScheme?: 'light' | 'dark'
 }
 
-export function PageAlternate({ element, hideHeader = false, fullBleed = false }: PageAlternateProps) {
+export function PageAlternate({
+    element,
+    hideHeader = false,
+    fullBleed = false,
+    fixedColorScheme,
+}: PageAlternateProps) {
     const style = useStyles()
 
     return (
         <Box
+            className={fixedColorScheme ? `mode-${fixedColorScheme}` : undefined}
             sx={{
                 width: '100vw',
                 height: '100vh',
@@ -23,6 +30,7 @@ export function PageAlternate({ element, hideHeader = false, fullBleed = false }
                 display: 'flex',
                 flexDirection: 'column',
                 color: style.contrast,
+                bgcolor: 'background.default',
             }}
         >
             {!hideHeader && <Header />}
