@@ -1,5 +1,6 @@
 import { Person } from '@mui/icons-material'
 import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem } from '@mui/material'
+import type { PopperPlacementType } from '@mui/material'
 import { Box } from '@mui/system'
 import { useAuth0 } from '@auth0/auth0-react'
 import React from 'react'
@@ -8,7 +9,7 @@ import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
-export function AccountButton() {
+export function AccountButton({ placement = 'bottom-end' }: { placement?: PopperPlacementType }) {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
     const { isAuthenticated, loginWithRedirect, logout } = useAuth0()
     const location = useLocation()
@@ -34,9 +35,10 @@ export function AccountButton() {
                 open={open}
                 anchorEl={anchorEl}
                 role={undefined}
-                placement="bottom-end"
+                placement={placement}
                 transition
                 onClick={handleClose}
+                sx={{ zIndex: zIndex.popper }}
             >
                 {({ TransitionProps }) => (
                     <Grow
@@ -45,9 +47,9 @@ export function AccountButton() {
                             transformOrigin: 'right top',
                         }}
                     >
-                        <Paper>
+                        <Paper sx={{ minWidth: 176 }}>
                             <ClickAwayListener onClickAway={handleClose}>
-                                <Box sx={{ zIndex: zIndex.popper }}>
+                                <Box>
                                     <MenuList
                                         autoFocusItem={open}
                                         id="composition-menu"

@@ -1,15 +1,4 @@
-import {
-    Autocomplete,
-    Button,
-    Checkbox,
-    Chip,
-    FormControlLabel,
-    FormGroup,
-    TextField,
-    Tooltip,
-    Typography,
-    useTheme,
-} from '@mui/material'
+import { Button, Checkbox, FormControlLabel, FormGroup, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { RoundButton } from '../../trusted-components/RoundButton'
@@ -20,6 +9,19 @@ import { creator } from '../../tools/db_tools/creator'
 import { CodeSetterBox } from '../CodeSetterBox'
 import { RoundedContainer } from '../RoundedContainer'
 import { useOrganization } from '../../tools/useOrganization'
+import { institutionalPalette as palette } from '../../theme/institutionalPalette'
+
+const fieldStyle = {
+    '& .MuiInputLabel-root': { color: '#536A6D' },
+    '& .MuiInputLabel-root.Mui-focused': { color: '#2F6668' },
+    '& .MuiOutlinedInput-root': {
+        color: '#183337',
+        bgcolor: '#FFFFFF',
+        '& fieldset': { borderColor: '#AEBFBD' },
+        '&:hover fieldset': { borderColor: '#2F6668' },
+        '&.Mui-focused fieldset': { borderColor: '#2F6668' },
+    },
+} as const
 
 const referralOptionsRes = {
     data: [
@@ -51,7 +53,6 @@ export function AddNewCase() {
     // useMemo so the id is stable across re-renders while the user is filling out the form.
     const newId = React.useMemo(() => crypto.randomUUID(), [])
 
-    const [activeReferralSourceIds, setActiveReferralSourceIds] = React.useState<string[]>([])
     // const [personName, setPersonName] = React.useState('')
     // const [hash, setHash] = React.useState('')
 
@@ -109,9 +110,26 @@ export function AddNewCase() {
     function cancel() {}
 
     return (
-        <Stack spacing={2}>
+        <Box
+            sx={{
+                minHeight: '100%',
+                p: { xs: 3, sm: 4, lg: 5 },
+                boxSizing: 'border-box',
+                color: palette.text,
+                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
+            }}
+        >
+            <Stack
+                spacing={2}
+                sx={{ maxWidth: 1360, mx: 'auto' }}
+            >
             <Box>
-                <Typography variant={'h5'}>Add New Case</Typography>
+                <Typography
+                    variant={'h5'}
+                    sx={{ color: palette.text }}
+                >
+                    Add New Case
+                </Typography>
             </Box>
             <Box
                 sx={{
@@ -124,6 +142,7 @@ export function AddNewCase() {
                     onChange={(e) => setCaseName(e.target.value)}
                     label={'Case Name'}
                     fullWidth
+                    sx={fieldStyle}
                 />
                 <Box>
                     <Tooltip
@@ -146,8 +165,8 @@ export function AddNewCase() {
                         }
                     >
                         <Box>
-                            <RoundButton>
-                                <Lock />
+                            <RoundButton bgcolor="#FFFFFF">
+                                <Lock sx={{ color: '#234E51' }} />
                             </RoundButton>
                         </Box>
                     </Tooltip>
@@ -164,11 +183,15 @@ export function AddNewCase() {
                             padding: 1,
                             width: 60,
                             height: 60,
-                            border: '1px solid black'
+                            boxSizing: 'content-box',
+                            bgcolor: '#FFFFFF',
+                            border: '1px solid #AEBFBD',
+                            borderRadius: 1,
                         }}>
                         <img
                             src={imageUrl}
                             alt={caseName}
+                            style={{ display: 'block', width: 60, height: 60 }}
                         />
                     </Box>
                 </Tooltip>
@@ -181,6 +204,7 @@ export function AddNewCase() {
                     fullWidth
                     multiline
                     rows={3}
+                    sx={fieldStyle}
                 />
             </Box>
             <Stack
@@ -201,10 +225,7 @@ export function AddNewCase() {
                     source={{ kind: 'org', organizationId }}
                 />
             </Stack>
-            <Stack
-                spacing={2}
-                direction={'row'}
-            >
+            <Stack spacing={2}>
                 <RoundedContainer title={'Referral Sources'}>
                     <FormGroup>
                         {referralOptionsRes.data.map((option) => (
@@ -215,37 +236,6 @@ export function AddNewCase() {
                             />
                         ))}
                     </FormGroup>
-                </RoundedContainer>
-                <RoundedContainer title={'Referral Sources'}>
-                    <Box>
-                        <Autocomplete
-                            multiple
-                            options={referralOptionsRes.data || []}
-                            getOptionLabel={(opt) => opt.name}
-                            value={
-                                referralOptionsRes.data?.filter((opt) => activeReferralSourceIds.includes(opt.id)) || []
-                            }
-                            onChange={(_, newVals) => {
-                                setActiveReferralSourceIds(newVals.map((opt) => opt.id))
-                            }}
-                            renderValue={(selected, getItemProps) =>
-                                selected.map((opt, idx) => (
-                                    <Chip
-                                        label={opt.name}
-                                        {...getItemProps({ index: idx })}
-                                    />
-                                ))
-                            }
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    variant="outlined"
-                                    label="Select one or more"
-                                    placeholder="Referral sources"
-                                />
-                            )}
-                        />
-                    </Box>
                 </RoundedContainer>
             </Stack>
             {/* <RoundedContainer title={'Associated People'}>
@@ -278,10 +268,11 @@ export function AddNewCase() {
                     </Stack>
                 </Box>
             </RoundedContainer> */}
-            <SaveCancel
-                onSave={save}
-                onCancel={cancel}
-            />
-        </Stack>
+                <SaveCancel
+                    onSave={save}
+                    onCancel={cancel}
+                />
+            </Stack>
+        </Box>
     );
 }

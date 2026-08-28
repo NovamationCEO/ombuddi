@@ -49,7 +49,15 @@ export const router = createBrowserRouter([
             />
         ),
     },
-    { path: '/add_case', element: <Page element={<AddNewCase />} /> },
+    {
+        path: '/add_case',
+        element: (
+            <Page
+                element={<AddNewCase />}
+                fullBleed
+            />
+        ),
+    },
     {
         path: '/report',
         element: (

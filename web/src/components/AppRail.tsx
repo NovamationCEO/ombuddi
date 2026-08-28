@@ -1,5 +1,5 @@
 import { AssessmentRounded, FolderRounded, HomeRounded, PersonRounded } from '@mui/icons-material'
-import { Box, ButtonBase, Tooltip } from '@mui/material'
+import { Box, ButtonBase, Tooltip, useMediaQuery, useTheme } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import mascot from '../assets/images/mascot.png'
@@ -48,6 +48,8 @@ function RailLink({ icon, label, path, selected }: RailLinkProps) {
 export function AppRail() {
     const location = useLocation()
     const navigate = useNavigate()
+    const theme = useTheme()
+    const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
     const links = [
         { label: 'Home', path: '/', icon: <HomeRounded /> },
         { label: 'Cases', path: '/cases', icon: <FolderRounded /> },
@@ -123,7 +125,7 @@ export function AppRail() {
                     '& .MuiIconButton-root': { color: palette.purpleLight },
                 }}
             >
-                <AccountButton />
+                <AccountButton placement={isDesktop ? 'right-end' : 'top-end'} />
             </Box>
         </Box>
     )
