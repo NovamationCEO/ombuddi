@@ -64,7 +64,7 @@ export type PrimaryRoleType = {
     id: string
     organizationId: string
     name: string
-    index: string
+    index: number
     softDelete: boolean
 }
 
@@ -80,8 +80,19 @@ export type PicklistType = {
     kind: string
     name: string
     description: string
+    behavior: 'standard' | 'other_detail' | 'exclusive'
     index: number
     softDelete: boolean
+}
+
+export type ReferralSourceSelectionType = {
+    id: string
+    detail?: string
+}
+
+export type CaseReferralSourceType = ReferralSourceSelectionType & {
+    name: string
+    behavior: PicklistType['behavior']
 }
 
 export type EntryType = {

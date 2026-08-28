@@ -250,10 +250,10 @@ CREATE INDEX primary_roles_organization_id_idx ON primary_roles (organization_id
 -- entry mediums, entry priorities, ombuds-action tags, referral sources,
 -- case-related contacts, risk levels, etc.
 --
--- A single TEXT column on each entry / case / person stores the chosen
--- picklist row's `name` directly (e.g. entries.medium = 'In Person'). This
--- means renaming a row affects future selections only; historic data keeps
--- the prior label. That's a deliberate trade-off — see docs/LESSONS.md.
+-- Single-select entry/person fields store a picklist row's `name` directly
+-- (e.g. entries.medium = 'In Person'). Case referral sources are the
+-- multi-select exception: case_referral_sources stores stable picklist ids so
+-- reporting survives renames. See docs/LESSONS.md for the earlier trade-off.
 --
 -- `primary_roles` is structurally identical and could be folded into this
 -- table eventually; for now it stays separate to avoid churn during the
@@ -264,6 +264,8 @@ CREATE TABLE picklists (
     kind            TEXT NOT NULL,
     name            TEXT NOT NULL,
     description     TEXT NOT NULL DEFAULT '',
+    behavior        TEXT NOT NULL DEFAULT 'standard'
+                    CHECK (behavior IN ('standard', 'other_detail', 'exclusive')),
     index           INT NOT NULL DEFAULT 0,
     soft_delete     BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -277,6 +279,31 @@ CREATE INDEX picklists_org_kind_idx ON picklists (organization_id, kind);
 CREATE UNIQUE INDEX picklists_active_unique_idx
     ON picklists (organization_id, kind, name)
     WHERE soft_delete = FALSE;
+
+CREATE UNIQUE INDEX picklists_id_organization_id_uidx
+    ON picklists (id, organization_id);
+
+-- Every organization receives two application-defined referral choices.
+-- Organization Settings only manages `standard` rows; these stay available
+-- to every case regardless of the organization's chosen vocabulary.
+CREATE FUNCTION seed_universal_referral_sources()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO picklists (
+        organization_id, kind, name, description, index, soft_delete, behavior
+    ) VALUES
+        (NEW.id, 'referral_source', 'Other (please specify)', '', 10000, FALSE, 'other_detail'),
+        (NEW.id, 'referral_source', 'Unknown', '', 10001, FALSE, 'exclusive')
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER organizations_seed_universal_referral_sources
+AFTER INSERT ON organizations
+FOR EACH ROW EXECUTE FUNCTION seed_universal_referral_sources();
 
 
 -- =====================================================================
@@ -308,6 +335,36 @@ CREATE UNIQUE INDEX cases_id_organization_id_uidx
 CREATE TRIGGER cases_set_updated_at
     BEFORE UPDATE ON cases
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+-- =====================================================================
+-- case_referral_sources
+-- =====================================================================
+-- A case may have multiple organization-defined referral sources. The
+-- optional detail is used only by a picklist row whose behavior is
+-- `other_detail`. Stable picklist ids preserve reporting across renames.
+CREATE TABLE case_referral_sources (
+    case_id             UUID NOT NULL,
+    organization_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    referral_source_id  UUID NOT NULL,
+    detail              TEXT,
+    PRIMARY KEY (case_id, referral_source_id),
+    CONSTRAINT case_referral_sources_case_organization_fk
+        FOREIGN KEY (case_id, organization_id)
+        REFERENCES cases (id, organization_id)
+        ON DELETE CASCADE,
+    CONSTRAINT case_referral_sources_picklist_organization_fk
+        FOREIGN KEY (referral_source_id, organization_id)
+        REFERENCES picklists (id, organization_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT case_referral_sources_detail_length_check
+        CHECK (detail IS NULL OR char_length(detail) <= 250)
+);
+
+CREATE INDEX case_referral_sources_organization_idx
+    ON case_referral_sources (organization_id);
+CREATE INDEX case_referral_sources_source_idx
+    ON case_referral_sources (referral_source_id);
 
 
 -- =====================================================================

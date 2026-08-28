@@ -20,11 +20,26 @@ import { Close, Lock, LockOpen, QuestionMark } from '@mui/icons-material'
 import { SaveCancel } from '../../trusted-components/SaveCancel'
 import { creator } from '../../tools/db_tools/creator'
 import { useSnack } from '../../libraries/useSnack'
-import { PersonType } from '../../types/majorTypes'
+import { PersonType, PrimaryRoleType } from '../../types/majorTypes'
 import { useHashName } from '../../tools/useHashName'
 import { RoundButton } from '../../trusted-components/RoundButton'
 import { useOrganization } from '../../tools/useOrganization'
 import { useSessionSalt } from '../../libraries/useSessionSalt'
+import { useGetter } from '../../tools/db_tools/useGetter'
+
+const DEFAULT_PRIMARY_ROLES = [
+    { value: 'exempt', label: 'Exempt / Professional Staff' },
+    { value: 'nonexempt', label: 'Non-Exempt / Hourly Staff' },
+    { value: 'tenure', label: 'Tenure-Track Faculty' },
+    { value: 'non-tenure', label: 'Non-Tenure Track Faculty' },
+    { value: 'undergrad', label: 'Undergraduate Student' },
+    { value: 'grad', label: 'Graduate Student' },
+    { value: 'former-student', label: 'Former Student' },
+    { value: 'alumni', label: 'Alumni' },
+    { value: 'former-employee', label: 'Former Employee' },
+    { value: 'parent', label: 'Parent / Relative' },
+    { value: 'other', label: 'Other' },
+]
 
 /**
  * Reusable person-entry form. Owns all field state, the salt-phrase tooltip,
@@ -170,6 +185,8 @@ export function PersonForm(props: {
     const organization = useOrganization()
     const orgId = organization.id
     const sessionSalt = useSessionSalt((s) => s.sessionSalt)
+    const primaryRolesRes = useGetter<PrimaryRoleType[]>(['get_primary_roles_by_organization_id', orgId])
+    const configuredRoles = [...(primaryRolesRes.data ?? [])].sort((a, b) => a.index - b.index)
 
     // Pre-populate from the session salt the first time it becomes available.
     React.useEffect(() => {
@@ -420,61 +437,23 @@ export function PersonForm(props: {
                                 control={<Radio />}
                                 label={'Unknown'}
                             />
-                            <FormControlLabel
-                                value={'exempt'}
-                                control={<Radio />}
-                                label={'Exempt / Professional Staff'}
-                            />
-                            <FormControlLabel
-                                value={'nonexempt'}
-                                control={<Radio />}
-                                label={'Non-Exempt / Hourly Staff'}
-                            />
-                            <FormControlLabel
-                                value={'tenure'}
-                                control={<Radio />}
-                                label={'Tenure-Track Faculty'}
-                            />
-                            <FormControlLabel
-                                value={'non-tenure'}
-                                control={<Radio />}
-                                label={'Non-Tenure Track Faculty'}
-                            />
-                            <FormControlLabel
-                                value={'undergrad'}
-                                control={<Radio />}
-                                label={'Undergraduate Student'}
-                            />
-                            <FormControlLabel
-                                value={'grad'}
-                                control={<Radio />}
-                                label={'Graduate Student'}
-                            />
-                            <FormControlLabel
-                                value={'former-student'}
-                                control={<Radio />}
-                                label={'Former Student'}
-                            />
-                            <FormControlLabel
-                                value={'alumni'}
-                                control={<Radio />}
-                                label={'Alumni'}
-                            />
-                            <FormControlLabel
-                                value={'former-employee'}
-                                control={<Radio />}
-                                label={'Former Employee'}
-                            />
-                            <FormControlLabel
-                                value={'parent'}
-                                control={<Radio />}
-                                label={'Parent / Relative'}
-                            />
-                            <FormControlLabel
-                                value={'other'}
-                                control={<Radio />}
-                                label={'Other'}
-                            />
+                            {configuredRoles.length > 0
+                                ? configuredRoles.map((role) => (
+                                      <FormControlLabel
+                                          key={role.id}
+                                          value={role.name}
+                                          control={<Radio />}
+                                          label={role.name}
+                                      />
+                                  ))
+                                : DEFAULT_PRIMARY_ROLES.map((role) => (
+                                      <FormControlLabel
+                                          key={role.value}
+                                          value={role.value}
+                                          control={<Radio />}
+                                          label={role.label}
+                                      />
+                                  ))}
                         </RadioGroup>
                     </Box>
                     <Box sx={{ flex: 1 }}>

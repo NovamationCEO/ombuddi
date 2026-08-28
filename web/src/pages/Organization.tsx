@@ -36,6 +36,25 @@ const PRIORITY_SETS: DefaultSet[] = [
     },
 ]
 
+const REFERRAL_SOURCE_SETS: DefaultSet[] = [
+    {
+        label: 'Standard',
+        description: 'Common ways visitors learn about or are directed to the ombuds office.',
+        items: [
+            { name: 'HR', description: '' },
+            { name: 'Employee assistance program', description: '' },
+            { name: 'External resource', description: '' },
+            { name: 'General counsel', description: '' },
+            { name: 'Supervisor', description: '' },
+            { name: 'Peer or colleague', description: '' },
+            { name: 'Friend or family member', description: '' },
+            { name: 'Presentation or event', description: '' },
+            { name: 'Poster or brochure', description: '' },
+            { name: 'Internet search', description: '' },
+        ],
+    },
+]
+
 const GENDER_SETS: DefaultSet[] = [
     {
         label: 'Standard',
@@ -174,6 +193,13 @@ export function Organization() {
                 <CodeSummary />
                 <PrimaryRoles />
                 <PublicPersons />
+                <PicklistManager
+                    kind={'referral_source'}
+                    title={'Referral Sources'}
+                    singularNoun={'referral source'}
+                    defaultSets={REFERRAL_SOURCE_SETS}
+                    hiddenBehaviors={['other_detail', 'exclusive']}
+                />
                 <PicklistManager
                     kind={'medium'}
                     title={'Entry Mediums'}

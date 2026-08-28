@@ -45,6 +45,7 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/006_bind_invitations_to_email.sql
 \i /Users/nova/Code/ombuddi/service/migrations/007_add_deactivation.sql
 \i /Users/nova/Code/ombuddi/service/migrations/008_expand_administrative_audit.sql
+\i /Users/nova/Code/ombuddi/service/migrations/009_add_case_referral_sources.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys

@@ -2,45 +2,11 @@ import { ArrowForward, ShieldOutlined } from '@mui/icons-material'
 import { Box, ButtonBase, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import casesImage from '../assets/images/cases.png'
-import profileImage from '../assets/images/profile.png'
-import reportImage from '../assets/images/report.png'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { useOrganization } from '../tools/useOrganization'
+import { destinations, type Destination } from './homeDestinations'
 import { getTimeOfDayGreeting } from './homeGreeting'
-
-type Destination = {
-    name: string
-    url: string
-    image: string
-    description: string
-    action: string
-}
-
-const destinations: Destination[] = [
-    {
-        name: 'Cases',
-        url: '/cases',
-        image: casesImage,
-        description: 'View and continue your active case work.',
-        action: 'View cases',
-    },
-    {
-        name: 'Reports',
-        url: '/report',
-        image: reportImage,
-        description: 'Generate a protected annual reporting summary.',
-        action: 'Create report',
-    },
-    {
-        name: 'Profile',
-        url: '/profile',
-        image: profileImage,
-        description: 'Manage your practitioner information.',
-        action: 'Open profile',
-    },
-]
 
 function DestinationCard({ name, url, image, description, action }: Destination) {
     const navigate = useNavigate()
@@ -52,7 +18,7 @@ function DestinationCard({ name, url, image, description, action }: Destination)
                 width: '100%',
                 height: '100%',
                 minWidth: 0,
-                p: { xs: 2, lg: 2.25 },
+                p: 1.5,
                 display: 'grid',
                 gridTemplateColumns: { xs: '76px minmax(0, 1fr)', sm: '88px minmax(0, 1fr)' },
                 alignItems: 'center',
@@ -178,7 +144,10 @@ export function HomePage() {
                 <Box
                     sx={{
                         display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, minmax(0, 1fr))' },
+                        gridTemplateColumns: {
+                            xs: '1fr',
+                            md: 'repeat(2, minmax(0, 1fr))',
+                        },
                         gap: 2,
                     }}
                 >

@@ -1,7 +1,6 @@
-import { DarkModeOutlined, LightModeOutlined, Person } from '@mui/icons-material'
+import { Person } from '@mui/icons-material'
 import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem } from '@mui/material'
 import type { PopperPlacementType } from '@mui/material'
-import { useColorScheme } from '@mui/material/styles'
 import { Box } from '@mui/system'
 import { useAuth0 } from '@auth0/auth0-react'
 import React from 'react'
@@ -9,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
+import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function AccountButton({ placement = 'bottom-end' }: { placement?: PopperPlacementType }) {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
@@ -16,7 +16,7 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
     const location = useLocation()
     const currentOmbuds = useCurrentOmbuds(location.pathname !== '/accept-invite')
     const navigate = useNavigate()
-    const { colorScheme, setMode } = useColorScheme()
+    const clearSessionSalt = useSessionSalt((state) => state.clearSessionSalt)
 
     const open = Boolean(anchorEl)
 
@@ -26,6 +26,16 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
 
     const handleClose = () => {
         setAnchorEl(null)
+    }
+
+    const handleLogin = () => {
+        clearSessionSalt()
+        void loginWithRedirect()
+    }
+
+    const handleLogout = () => {
+        clearSessionSalt()
+        void logout({ logoutParams: { returnTo: window.location.origin } })
     }
 
     return (
@@ -70,17 +80,9 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
                                             {currentOmbuds.data?.isSystemAdmin && (
                                                 <MenuItem onClick={() => navigate('/system/orgs')}>System Admin</MenuItem>
                                             )}
-                                            <MenuItem onClick={() => setMode(colorScheme === 'light' ? 'dark' : 'light')}>
-                                                {colorScheme === 'light' ? (
-                                                    <DarkModeOutlined sx={{ mr: 1.25, fontSize: 20 }} />
-                                                ) : (
-                                                    <LightModeOutlined sx={{ mr: 1.25, fontSize: 20 }} />
-                                                )}
-                                                {colorScheme === 'light' ? 'Dark mode' : 'Light mode'}
-                                            </MenuItem>
-                                            <MenuItem onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>Log Out</MenuItem>
+                                            <MenuItem onClick={handleLogout}>Log Out</MenuItem>
                                         </> : <>
-                                            <MenuItem onClick={() => loginWithRedirect()}>Log In</MenuItem>
+                                            <MenuItem onClick={handleLogin}>Log In</MenuItem>
                                         </>}
                                     </MenuList>
                                 </Box>

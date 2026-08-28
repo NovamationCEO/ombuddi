@@ -27,7 +27,11 @@ import { creator } from '../../tools/db_tools/creator'
 import { updater } from '../../tools/db_tools/updater'
 import { useSnack } from '../../libraries/useSnack'
 
-export type DefaultSetItem = { name: string; description: string }
+export type DefaultSetItem = {
+    name: string
+    description: string
+    behavior?: PicklistType['behavior']
+}
 
 export type DefaultSet = {
     /** Short label shown in the picker radio list. */
@@ -57,21 +61,24 @@ export function PicklistManager(props: {
      * list are skipped (idempotent).
      */
     defaultSets?: DefaultSet[]
+    /** Behaviors supplied by the application rather than managed by the organization. */
+    hiddenBehaviors?: PicklistType['behavior'][]
 }) {
-    const { kind, title, singularNoun, defaultSets } = props
+    const { kind, title, singularNoun, defaultSets, hiddenBehaviors = [] } = props
     const organization = useOrganization()
     const picklists = usePicklists(kind)
     const setSnack = useSnack((s) => s.setSnack)
+    const items = picklists.items.filter((item) => !hiddenBehaviors.includes(item.behavior))
 
     // Edit dialog state.
     const [editingId, setEditingId] = React.useState<string | null>(null)
     const [editingName, setEditingName] = React.useState('')
     const [editingDescription, setEditingDescription] = React.useState('')
-    const editingItem = picklists.items.find((p) => p.id === editingId) ?? null
+    const editingItem = items.find((p) => p.id === editingId) ?? null
 
     // Delete-confirm dialog state.
     const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null)
-    const pendingDeleteItem = picklists.items.find((p) => p.id === pendingDeleteId) ?? null
+    const pendingDeleteItem = items.find((p) => p.id === pendingDeleteId) ?? null
 
     // Load-defaults picker dialog state.
     const [pickerOpen, setPickerOpen] = React.useState(false)
@@ -108,7 +115,7 @@ export function PicklistManager(props: {
 
     async function addNew() {
         if (!organization?.id) return
-        const nextIndex = picklists.items.length
+        const nextIndex = items.reduce((highest, item) => Math.max(highest, item.index), -1) + 1
         try {
             await creator('add_picklist', {
                 organizationId: organization.id,
@@ -128,7 +135,7 @@ export function PicklistManager(props: {
         if (!organization?.id || !selectedSet) return
         setLoadingDefaults(true)
         let added = 0
-        const startIndex = picklists.items.length
+        const startIndex = items.reduce((highest, item) => Math.max(highest, item.index), -1) + 1
         try {
             for (let i = 0; i < selectedSet.items.length; i++) {
                 try {
@@ -137,6 +144,7 @@ export function PicklistManager(props: {
                         kind,
                         name: selectedSet.items[i].name,
                         description: selectedSet.items[i].description,
+                        behavior: selectedSet.items[i].behavior ?? 'standard',
                         index: startIndex + i,
                         softDelete: false,
                     })
@@ -168,10 +176,10 @@ export function PicklistManager(props: {
     }
 
     async function move(item: PicklistType, direction: -1 | 1) {
-        const i = picklists.items.findIndex((p) => p.id === item.id)
+        const i = items.findIndex((p) => p.id === item.id)
         const j = i + direction
-        if (j < 0 || j >= picklists.items.length) return
-        const other = picklists.items[j]
+        if (j < 0 || j >= items.length) return
+        const other = items[j]
         try {
             await Promise.all([
                 updater<PicklistType>('update_picklist', { id: item.id, index: other.index }),
@@ -308,12 +316,12 @@ export function PicklistManager(props: {
             {/* ── Main list ─────────────────────────────────────────── */}
             <RoundedContainer title={title}>
                 <Stack spacing={1}>
-                    {picklists.items.length === 0 && (
+                    {items.length === 0 && (
                         <Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                             No {singularNoun} options yet.
                         </Box>
                     )}
-                    {picklists.items.map((item, idx) => (
+                    {items.map((item, idx) => (
                         <Box
                             key={item.id}
                             sx={{
@@ -337,7 +345,7 @@ export function PicklistManager(props: {
                             <IconButton size="small" onClick={() => move(item, -1)} disabled={idx === 0}>
                                 <ArrowUpward fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" onClick={() => move(item, 1)} disabled={idx === picklists.items.length - 1}>
+                            <IconButton size="small" onClick={() => move(item, 1)} disabled={idx === items.length - 1}>
                                 <ArrowDownward fontSize="small" />
                             </IconButton>
                             <IconButton size="small" onClick={() => startEdit(item)}>
@@ -352,7 +360,7 @@ export function PicklistManager(props: {
                         <Button size="small" startIcon={<Add />} onClick={addNew}>
                             Add {singularNoun}
                         </Button>
-                        {defaultSets && !picklists.isLoading && picklists.items.length === 0 && (
+                        {defaultSets && !picklists.isLoading && items.length === 0 && (
                             <Button size="small" startIcon={<Restore />} onClick={openPicker}>
                                 Load defaults
                             </Button>

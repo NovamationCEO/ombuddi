@@ -3,6 +3,7 @@ import { Alert, Button, CircularProgress, Stack, Typography } from '@mui/materia
 import { useAuth0 } from '@auth0/auth0-react'
 import { creator } from '../tools/db_tools/creator'
 import { RoundedContainer } from '../components/RoundedContainer'
+import { useNavigate } from 'react-router-dom'
 
 
 export function AcceptInvitation() {
@@ -10,6 +11,8 @@ export function AcceptInvitation() {
     const [claiming, setClaiming] = React.useState(false)
     const [error, setError] = React.useState('')
     const [token] = React.useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
+    const claimAttempted = React.useRef(false)
+    const navigate = useNavigate()
     const returnTo = `/accept-invite?token=${encodeURIComponent(token)}`
 
     React.useEffect(() => {
@@ -22,17 +25,27 @@ export function AcceptInvitation() {
         await loginWithRedirect({ appState: { returnTo } })
     }
 
-    async function accept() {
+    const accept = React.useCallback(async () => {
+        if (!token || claimAttempted.current) return
+
+        claimAttempted.current = true
         setClaiming(true)
         setError('')
         try {
             await creator('auth/claim-invitation', { token })
-            window.location.assign('/')
+            navigate('/profile', { replace: true })
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : 'Unable to accept invitation')
             setClaiming(false)
+            claimAttempted.current = false
         }
-    }
+    }, [navigate, token])
+
+    React.useEffect(() => {
+        if (!isLoading && isAuthenticated && token) {
+            void accept()
+        }
+    }, [accept, isAuthenticated, isLoading, token])
 
     if (isLoading) {
         return <CircularProgress />
@@ -46,16 +59,22 @@ export function AcceptInvitation() {
                     {!token && <Alert severity="error">This invitation link is incomplete.</Alert>}
                     {error && <Alert severity="error">{error}</Alert>}
                     <Typography>
-                        Sign in with the Auth0 account whose verified email matches this invitation.
+                        Sign in with the Auth0 account whose verified email matches this invitation. Your name and
+                        organization will come from the invitation.
                     </Typography>
-                    {!isAuthenticated ? (
+                    {!token ? null : !isAuthenticated ? (
                         <Button variant="contained" onClick={signIn} disabled={!token}>
                             Sign in to continue
                         </Button>
-                    ) : (
+                    ) : error ? (
                         <Button variant="contained" onClick={accept} disabled={!token || claiming}>
-                            Accept invitation
+                            Try again
                         </Button>
+                    ) : (
+                        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                            <CircularProgress size={20} />
+                            <Typography>Linking your Ombuddi account…</Typography>
+                        </Stack>
                     )}
                 </Stack>
             </RoundedContainer>

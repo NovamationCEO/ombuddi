@@ -1,11 +1,14 @@
 import logging
+from uuid import UUID
 
 from flask import Blueprint, request, g, jsonify
-from connection import get_db_connection
+from connection import get_db_connection, managed_connection
 from utils import add_one, get_many, get_one, update_one
 
 ombuddi_views = Blueprint('ombuddi_views', __name__)
 logger = logging.getLogger(__name__)
+
+MAX_REFERRAL_DETAIL_LENGTH = 250
 
 def _org():
     return {'organization_id': g.organization_id}
@@ -108,6 +111,97 @@ case_model = {
     'updatedAt': 'updated_at',
 }
 
+
+def _referral_input_error(message):
+    return jsonify({
+        'success': False,
+        'status': 'input error',
+        'error': message,
+    }), 400
+
+
+def _normalize_referral_sources(value):
+    if value is None:
+        return [], None
+    if not isinstance(value, list):
+        return None, _referral_input_error('referralSources must be a list')
+
+    normalized = []
+    seen = set()
+    for item in value:
+        if not isinstance(item, dict) or not isinstance(item.get('id'), str):
+            return None, _referral_input_error('Each referral source must include an id')
+        source_id = item['id'].strip()
+        try:
+            source_id = str(UUID(source_id))
+        except (ValueError, TypeError):
+            return None, _referral_input_error('Invalid referral source id')
+        if source_id in seen:
+            return None, _referral_input_error('Referral sources cannot be selected twice')
+        seen.add(source_id)
+
+        detail = item.get('detail')
+        if detail is not None and not isinstance(detail, str):
+            return None, _referral_input_error('Referral source detail must be text')
+        detail = detail.strip() if isinstance(detail, str) else None
+        detail = detail or None
+        if detail and len(detail) > MAX_REFERRAL_DETAIL_LENGTH:
+            return None, _referral_input_error(
+                f'Referral source detail cannot exceed {MAX_REFERRAL_DETAIL_LENGTH} characters'
+            )
+        normalized.append({'id': source_id, 'detail': detail})
+
+    return normalized, None
+
+
+def _validate_referral_sources(cur, referral_sources):
+    if not referral_sources:
+        return None
+
+    source_ids = [item['id'] for item in referral_sources]
+    cur.execute(
+        """
+        SELECT id, behavior
+        FROM picklists
+        WHERE id = ANY(%s::uuid[])
+          AND organization_id = %s
+          AND kind = 'referral_source'
+          AND soft_delete = FALSE
+        """,
+        (source_ids, g.organization_id),
+    )
+    available = {str(row[0]): row[1] for row in cur.fetchall()}
+    if len(available) != len(source_ids):
+        return jsonify({
+            'success': False,
+            'status': '404 error',
+            'error': 'Referral source not found',
+        }), 404
+
+    if len(referral_sources) > 1 and any(available[item['id']] == 'exclusive' for item in referral_sources):
+        return _referral_input_error('The exclusive referral source cannot be combined with other sources')
+
+    for item in referral_sources:
+        behavior = available[item['id']]
+        if behavior == 'other_detail' and not item['detail']:
+            return _referral_input_error('Please specify the Other referral source')
+        if behavior != 'other_detail' and item['detail']:
+            return _referral_input_error('Only the Other referral source accepts detail')
+
+    return None
+
+
+def _insert_referral_sources(cur, case_id, referral_sources):
+    for item in referral_sources:
+        cur.execute(
+            """
+            INSERT INTO case_referral_sources (
+                case_id, organization_id, referral_source_id, detail
+            ) VALUES (%s, %s, %s, %s)
+            """,
+            (case_id, g.organization_id, item['id'], item['detail']),
+        )
+
 @ombuddi_views.route('/api/v1/create_case', methods=['POST'])
 def create_case():
     payload = request.get_json(silent=True) or {}
@@ -115,7 +209,142 @@ def create_case():
         error = _reject_foreign_code_references(payload.get('codes'))
         if error:
             return error
-    return add_one('cases', case_model, request, owner_constraint=_org())
+
+    referral_sources, error = _normalize_referral_sources(payload.get('referralSources'))
+    if error:
+        return error
+
+    name = payload.get('name')
+    if not isinstance(name, str) or not name.strip():
+        return _referral_input_error('Case name is required')
+    description = payload.get('description', '')
+    status = payload.get('status', 'active')
+    codes = payload.get('codes', [])
+    if not isinstance(description, str) or not isinstance(status, str):
+        return _referral_input_error('Invalid case details')
+
+    case_id = payload.get('id')
+    if case_id is not None:
+        try:
+            case_id = str(UUID(str(case_id)))
+        except (ValueError, TypeError):
+            return _referral_input_error('Invalid case id')
+
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                error = _validate_referral_sources(cur, referral_sources)
+                if error:
+                    return error
+                cur.execute(
+                    """
+                    INSERT INTO cases (id, organization_id, name, description, codes, status)
+                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s::uuid[], %s)
+                    RETURNING id
+                    """,
+                    (case_id, g.organization_id, name.strip(), description, codes, status),
+                )
+                new_id = cur.fetchone()[0]
+                _insert_referral_sources(cur, new_id, referral_sources)
+        return jsonify({'success': True, 'status': 'success', 'id': new_id}), 200
+    except Exception:
+        logger.exception('Failed to create case with referral sources')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to save the case',
+        }), 500
+
+
+@ombuddi_views.route('/api/v1/get_case_referral_sources/<case_id>')
+def get_case_referral_sources(case_id):
+    try:
+        UUID(case_id)
+    except (ValueError, TypeError):
+        return _referral_input_error('Invalid case id')
+
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT 1 FROM cases WHERE id = %s AND organization_id = %s',
+                    (case_id, g.organization_id),
+                )
+                if cur.fetchone() is None:
+                    return jsonify({'error': 'Not found', 'message': 'Case not found'}), 404
+                cur.execute(
+                    """
+                    SELECT picklists.id, picklists.name, picklists.behavior, case_referral_sources.detail
+                    FROM case_referral_sources
+                    JOIN picklists
+                      ON picklists.id = case_referral_sources.referral_source_id
+                     AND picklists.organization_id = case_referral_sources.organization_id
+                    WHERE case_referral_sources.case_id = %s
+                      AND case_referral_sources.organization_id = %s
+                    ORDER BY picklists.index, picklists.name
+                    """,
+                    (case_id, g.organization_id),
+                )
+                rows = cur.fetchall()
+        return jsonify([
+            {
+                'id': str(row[0]),
+                'name': row[1],
+                'behavior': row[2],
+                'detail': row[3],
+            }
+            for row in rows
+        ])
+    except Exception:
+        logger.exception('Failed to load case referral sources')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to load referral sources',
+        }), 500
+
+
+@ombuddi_views.route('/api/v1/update_case_referral_sources', methods=['PUT'])
+def update_case_referral_sources():
+    payload = request.get_json(silent=True) or {}
+    case_id = payload.get('caseId')
+    try:
+        case_id = str(UUID(str(case_id)))
+    except (ValueError, TypeError):
+        return _referral_input_error('Invalid case id')
+
+    referral_sources, error = _normalize_referral_sources(payload.get('referralSources'))
+    if error:
+        return error
+
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT 1 FROM cases WHERE id = %s AND organization_id = %s FOR UPDATE',
+                    (case_id, g.organization_id),
+                )
+                if cur.fetchone() is None:
+                    return jsonify({'error': 'Not found', 'message': 'Case not found'}), 404
+                error = _validate_referral_sources(cur, referral_sources)
+                if error:
+                    return error
+                cur.execute(
+                    'DELETE FROM case_referral_sources WHERE case_id = %s AND organization_id = %s',
+                    (case_id, g.organization_id),
+                )
+                _insert_referral_sources(cur, case_id, referral_sources)
+        return jsonify({'success': True, 'status': 'success'}), 200
+    except Exception:
+        logger.exception('Failed to update case referral sources')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to save referral sources',
+        }), 500
 
 @ombuddi_views.route('/api/v1/get_case_by_id/<id>')
 def get_case_by_id(id):

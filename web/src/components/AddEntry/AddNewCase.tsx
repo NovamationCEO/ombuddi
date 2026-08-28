@@ -1,4 +1,4 @@
-import { Button, Checkbox, FormControlLabel, FormGroup, TextField, Tooltip, Typography, useTheme } from '@mui/material'
+import { Button, TextField, Tooltip, Typography, useTheme } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +11,9 @@ import { CodeSetterBox } from '../CodeSetterBox'
 import { RoundedContainer } from '../RoundedContainer'
 import { useOrganization } from '../../tools/useOrganization'
 import { institutionalPalette as palette } from '../../theme/institutionalPalette'
+import { ReferralSourceSelector } from '../ReferralSourceSelector'
+import { ReferralSourceSelectionType } from '../../types/majorTypes'
+import { referralSelectionsAreValid } from '../../tools/referralSources'
 
 const fieldStyle = {
     '& .MuiInputLabel-root': { color: 'text.secondary' },
@@ -24,28 +27,13 @@ const fieldStyle = {
     },
 } as const
 
-const referralOptionsRes = {
-    data: [
-        { id: '1', name: 'HR' },
-        { id: '2', name: 'Employee assistance program' },
-        { id: '3', name: 'External resource' },
-        { id: '4', name: 'General counsel' },
-        { id: '5', name: 'Supervisor' },
-        { id: '6', name: 'Peer or colleague' },
-        { id: '7', name: 'Friend or family member' },
-        { id: '8', name: 'Presentation or event' },
-        { id: '9', name: 'Poster or brochure' },
-        { id: '10', name: 'Internet search' },
-        { id: '11', name: 'Other (please specify)' },
-        { id: '12', name: 'Unknown' },
-    ],
-}
-
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
     const [imageUrl, setImageUrl] = React.useState('')
     const [activeIoaCodes, setActiveIoaCodes] = React.useState<string[]>([])
     const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
+    const [referralSources, setReferralSources] = React.useState<ReferralSourceSelectionType[]>([])
+    const [showReferralErrors, setShowReferralErrors] = React.useState(false)
     const theme = useTheme()
     const setSnack = useSnack((state) => state.setSnack)
     const navigate = useNavigate()
@@ -88,6 +76,15 @@ export function AddNewCase() {
 
     async function save() {
         if (isSaving) return
+        if (!caseName.trim()) {
+            setSnack({ message: 'Enter a case name before saving.', severity: 'error' })
+            return
+        }
+        if (!referralSelectionsAreValid(referralSources)) {
+            setShowReferralErrors(true)
+            setSnack({ message: 'Specify the Other referral source before saving.', severity: 'error' })
+            return
+        }
 
         const payload = {
             id: newId,
@@ -95,6 +92,10 @@ export function AddNewCase() {
             description: description,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
             status: 'active',
+            referralSources: referralSources.map((selection) => ({
+                id: selection.id,
+                ...(selection.detail !== undefined ? { detail: selection.detail.trim() } : {}),
+            })),
         }
 
         setIsSaving(true)
@@ -244,15 +245,15 @@ export function AddNewCase() {
             </Stack>
             <Stack spacing={2}>
                 <RoundedContainer title={'Referral Sources'}>
-                    <FormGroup>
-                        {referralOptionsRes.data.map((option) => (
-                            <FormControlLabel
-                                key={option.id}
-                                control={<Checkbox defaultChecked />}
-                                label={option.name}
-                            />
-                        ))}
-                    </FormGroup>
+                    <ReferralSourceSelector
+                        value={referralSources}
+                        onChange={(value) => {
+                            setReferralSources(value)
+                            setShowReferralErrors(false)
+                        }}
+                        showErrors={showReferralErrors}
+                        disabled={isSaving}
+                    />
                 </RoundedContainer>
             </Stack>
             {/* <RoundedContainer title={'Associated People'}>

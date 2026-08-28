@@ -27,11 +27,14 @@ import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CodeChip } from '../components/CodeChip'
 import { EditCodeDialog } from '../components/EditCodeDialog'
+import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
+import { useSnack } from '../libraries/useSnack'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { updater } from '../tools/db_tools/updater'
 import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
-import { CaseType, EntryType, PersonType } from '../types/majorTypes'
+import { referralSelectionsAreValid } from '../tools/referralSources'
+import { CaseReferralSourceType, CaseType, EntryType, PersonType, ReferralSourceSelectionType } from '../types/majorTypes'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -94,7 +97,9 @@ export function CaseSummary() {
     const navigate = useNavigate()
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
+    const referralSourcesRes = useGetter<CaseReferralSourceType[]>(['get_case_referral_sources', caseId])
     const sessionSalt = useSessionSalt((state) => state.sessionSalt)
+    const setSnack = useSnack((state) => state.setSnack)
 
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
     const [showEditCodes, setShowEditCodes] = React.useState(false)
@@ -106,6 +111,10 @@ export function CaseSummary() {
     const [decryptedNotes, setDecryptedNotes] = React.useState<string | null>(null)
     const [decryptFailed, setDecryptFailed] = React.useState(false)
     const [overrideSalt, setOverrideSalt] = React.useState('')
+    const [editingReferrals, setEditingReferrals] = React.useState(false)
+    const [savingReferrals, setSavingReferrals] = React.useState(false)
+    const [showReferralErrors, setShowReferralErrors] = React.useState(false)
+    const [editReferralSources, setEditReferralSources] = React.useState<ReferralSourceSelectionType[]>([])
 
     const sortedEntries = React.useMemo(
         () =>
@@ -183,6 +192,43 @@ export function CaseSummary() {
         }
     }
 
+    function openReferralEditor() {
+        setEditReferralSources((referralSourcesRes.data ?? []).map((source) => ({
+            id: source.id,
+            ...(source.detail ? { detail: source.detail } : {}),
+        })))
+        setShowReferralErrors(false)
+        setEditingReferrals(true)
+    }
+
+    async function saveReferralSources() {
+        if (!referralSelectionsAreValid(editReferralSources)) {
+            setShowReferralErrors(true)
+            return
+        }
+
+        setSavingReferrals(true)
+        try {
+            await updater('update_case_referral_sources', {
+                caseId,
+                referralSources: editReferralSources.map((selection) => ({
+                    id: selection.id,
+                    ...(selection.detail !== undefined ? { detail: selection.detail.trim() } : {}),
+                })),
+            })
+            await referralSourcesRes.refetch()
+            setEditingReferrals(false)
+            setSnack({ message: 'Referral sources saved.', severity: 'success' })
+        } catch (error) {
+            setSnack({
+                message: error instanceof Error ? error.message : 'Unable to save referral sources.',
+                severity: 'error',
+            })
+        } finally {
+            setSavingReferrals(false)
+        }
+    }
+
     if (caseRes.isLoading) {
         return (
             <Box sx={{ minHeight: '100%', display: 'grid', placeItems: 'center', bgcolor: workspace.background }}>
@@ -226,6 +272,35 @@ export function CaseSummary() {
                     caseRes.refetch()
                 }}
             />
+
+            <Dialog
+                open={editingReferrals}
+                onClose={() => !savingReferrals && setEditingReferrals(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Edit referral sources</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ pt: 0.5 }}>
+                        <ReferralSourceSelector
+                            value={editReferralSources}
+                            onChange={(value) => {
+                                setEditReferralSources(value)
+                                setShowReferralErrors(false)
+                            }}
+                            retainedSources={referralSourcesRes.data ?? []}
+                            disabled={savingReferrals}
+                            showErrors={showReferralErrors}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setEditingReferrals(false)} disabled={savingReferrals}>Cancel</Button>
+                    <Button variant="contained" onClick={() => void saveReferralSources()} disabled={savingReferrals}>
+                        {savingReferrals ? 'Saving…' : 'Save referral sources'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog
                 open={editing}
@@ -505,6 +580,74 @@ export function CaseSummary() {
                                 }}
                             >
                                 Manage codes
+                            </Button>
+                        </Box>
+
+                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
+
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 0.75,
+                                minHeight: 30,
+                                '&& .MuiChip-root': {
+                                    height: 28,
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    bgcolor: 'var(--mui-palette-app-headerHover)',
+                                    border: '1px solid var(--mui-palette-app-headerBorder)',
+                                    fontSize: '0.72rem',
+                                },
+                            }}
+                        >
+                            <Typography
+                                sx={{
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    mr: 0.25,
+                                }}
+                            >
+                                Referral sources
+                            </Typography>
+                            {referralSourcesRes.isLoading ? (
+                                <CircularProgress size={18} sx={{ color: 'var(--mui-palette-app-headerMuted)' }} />
+                            ) : referralSourcesRes.data?.length ? (
+                                referralSourcesRes.data.map((source) => (
+                                    <Chip
+                                        key={source.id}
+                                        label={source.detail ? `${source.name} — ${source.detail}` : source.name}
+                                        size="small"
+                                    />
+                                ))
+                            ) : (
+                                <Typography
+                                    variant="body2"
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
+                                >
+                                    None recorded
+                                </Typography>
+                            )}
+                            <Button
+                                startIcon={<EditOutlined />}
+                                onClick={openReferralEditor}
+                                sx={{
+                                    ml: { xs: 0, sm: 'auto' },
+                                    px: 0.75,
+                                    py: 0.35,
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    textTransform: 'none',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    '&:hover': {
+                                        color: 'var(--mui-palette-app-headerText)',
+                                        bgcolor: 'var(--mui-palette-app-headerHover)',
+                                    },
+                                }}
+                            >
+                                Manage referral sources
                             </Button>
                         </Box>
                     </Box>

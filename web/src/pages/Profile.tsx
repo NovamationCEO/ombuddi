@@ -1,21 +1,16 @@
-import { ArrowForward, PersonOutlined } from '@mui/icons-material'
-import { Box, Button, Stack, TextField, Typography } from '@mui/material'
-import React from 'react'
+import { DarkModeOutlined, LightModeOutlined, LockOutlined } from '@mui/icons-material'
+import { Box, Button, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { useColorScheme } from '@mui/material/styles'
 import { RoundedContainer } from '../components/RoundedContainer'
-import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../tools/useOrganization'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
+import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function Profile() {
     const ombudsRes = useCurrentOmbuds()
     const organization = useOrganization()
-    const [ombudsName, setOmbudsName] = React.useState<string>('')
-    const navigate = useNavigate()
-
-    React.useEffect(() => {
-        if (!ombudsRes.data) return
-        setOmbudsName(ombudsRes.data.name)
-    }, [ombudsRes.data])
+    const { colorScheme, setMode } = useColorScheme()
+    const { sessionSalt, setSessionSalt, clearSessionSalt } = useSessionSalt()
 
     return (
         <Box
@@ -45,62 +40,90 @@ export function Profile() {
                 </Box>
 
                 <RoundedContainer title="Personal information">
-                    <TextField
-                        value={ombudsName}
-                        label="Name"
-                        helperText="This name comes from your Ombuddi account."
-                        fullWidth
-                        slotProps={{ input: { readOnly: true } }}
-                        sx={{
-                            '& .MuiInputLabel-root': { color: 'text.secondary' },
-                            '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
-                        }}
-                    />
+                    <Stack spacing={2}>
+                        <TextField
+                            value={ombudsRes.data?.name ?? ''}
+                            label="Name"
+                            helperText="Set by the administrator who created your invitation."
+                            fullWidth
+                            slotProps={{ input: { readOnly: true } }}
+                            sx={{
+                                '& .MuiInputLabel-root': { color: 'text.secondary' },
+                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
+                            }}
+                        />
+                        <TextField
+                            value={organization.name ?? ''}
+                            label="Organization"
+                            helperText="Your invitation determines which organization you can access."
+                            fullWidth
+                            slotProps={{ input: { readOnly: true } }}
+                            sx={{
+                                '& .MuiInputLabel-root': { color: 'text.secondary' },
+                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
+                            }}
+                        />
+                    </Stack>
                 </RoundedContainer>
 
-                <Box
-                    sx={{
-                        p: 2.5,
-                        display: 'flex',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        alignItems: { xs: 'stretch', sm: 'center' },
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        bgcolor: 'background.paper',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 3,
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <PersonOutlined sx={{ color: 'primary.main' }} />
-                        <Box>
-                            <Typography sx={{ color: 'text.primary', fontWeight: 700 }}>
-                                {organization.name || 'Organization'}
-                            </Typography>
-                            <Typography
-                                variant="body2"
-                                sx={{ color: 'text.secondary' }}
-                            >
-                                Manage codes, roles, people, and entry options.
+                <RoundedContainer title="Appearance">
+                    <Stack spacing={1.5}>
+                        <Typography sx={{ color: 'text.secondary' }}>
+                            Choose the color theme used on signed-in pages.
+                        </Typography>
+                        <ToggleButtonGroup
+                            exclusive
+                            value={colorScheme ?? 'dark'}
+                            onChange={(_event, mode: 'light' | 'dark' | null) => {
+                                if (mode) setMode(mode)
+                            }}
+                            aria-label="Color theme"
+                            sx={{ alignSelf: 'flex-start' }}
+                        >
+                            <ToggleButton value="dark" aria-label="Dark mode">
+                                <DarkModeOutlined sx={{ mr: 1 }} />
+                                Dark
+                            </ToggleButton>
+                            <ToggleButton value="light" aria-label="Light mode">
+                                <LightModeOutlined sx={{ mr: 1 }} />
+                                Light
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                    </Stack>
+                </RoundedContainer>
+
+                <RoundedContainer title="Session security">
+                    <Stack spacing={1.5}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+                            <LockOutlined sx={{ mt: 0.25, color: 'primary.main' }} />
+                            <Typography sx={{ color: 'text.secondary' }}>
+                                This optional phrase pre-fills salt fields and is used to encrypt and decrypt entry
+                                notes. It exists only in this browser session and is cleared on refresh, login, or
+                                logout.
                             </Typography>
                         </Box>
-                    </Box>
-                    <Button
-                        onClick={() => navigate('/organization')}
-                        variant="outlined"
-                        endIcon={<ArrowForward />}
-                        sx={{
-                            color: 'secondary.main',
-                            borderColor: 'secondary.light',
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            '&:hover': { borderColor: 'secondary.main', bgcolor: 'action.hover' },
-                        }}
-                    >
-                        Organization settings
-                    </Button>
-                </Box>
+                        <TextField
+                            type="password"
+                            label="Session Salt Phrase"
+                            value={sessionSalt ?? ''}
+                            onChange={(event) => setSessionSalt(event.target.value)}
+                            autoComplete="off"
+                            fullWidth
+                            sx={{
+                                '& .MuiInputLabel-root': { color: 'text.secondary' },
+                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
+                            }}
+                        />
+                        <Button
+                            variant="outlined"
+                            onClick={clearSessionSalt}
+                            disabled={!sessionSalt}
+                            sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                        >
+                            Clear phrase
+                        </Button>
+                    </Stack>
+                </RoundedContainer>
             </Stack>
         </Box>
     )

@@ -13,6 +13,7 @@ import { Box, CssBaseline, ThemeProvider, SxProps } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
 import { appTheme, colorSchemeStorageKey } from './theme/appTheme'
+import { useSessionSalt } from './libraries/useSessionSalt'
 
 const App: React.FC = () => {
     return (
@@ -65,11 +66,21 @@ const innerBoxStyle: SxProps<Theme> = {
 
 const InnerApp: React.FC = () => {
     const snack = useSnack((state) => state.snack)
-    const { getAccessTokenSilently } = useAuth0()
+    const { getAccessTokenSilently, isAuthenticated, user } = useAuth0()
+    const clearSessionSalt = useSessionSalt((state) => state.clearSessionSalt)
+    const authIdentity = isAuthenticated ? user?.sub ?? 'authenticated' : null
+    const previousAuthIdentity = React.useRef(authIdentity)
 
     React.useEffect(() => {
         initTokenGetter(getAccessTokenSilently)
     }, [getAccessTokenSilently])
+
+    React.useEffect(() => {
+        if (previousAuthIdentity.current !== authIdentity) {
+            clearSessionSalt()
+            previousAuthIdentity.current = authIdentity
+        }
+    }, [authIdentity, clearSessionSalt])
 
     return (
         <ThemeProvider

@@ -59,3 +59,18 @@ INSERT INTO picklists (organization_id, kind, name, description, index, soft_del
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'race',       'White',                                  '',                  6, FALSE),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'race',       'Multiracial',                            '',                  7, FALSE)
 ON CONFLICT (organization_id, kind, name) WHERE soft_delete = FALSE DO NOTHING;
+
+-- Referral sources are multi-select case metadata. `behavior` makes Other
+-- reveal a required detail field and makes Unknown mutually exclusive.
+INSERT INTO picklists (organization_id, kind, name, description, index, soft_delete, behavior) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'HR',                          '',  0, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Employee assistance program', '',  1, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'External resource',            '',  2, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'General counsel',               '',  3, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Supervisor',                    '',  4, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Peer or colleague',             '',  5, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Friend or family member',       '',  6, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Presentation or event',         '',  7, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Poster or brochure',            '',  8, FALSE, 'standard'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'referral_source', 'Internet search',               '',  9, FALSE, 'standard')
+ON CONFLICT (organization_id, kind, name) WHERE soft_delete = FALSE DO NOTHING;
