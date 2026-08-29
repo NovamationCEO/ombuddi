@@ -9,8 +9,14 @@ import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate } from 'react-router-dom'
 import { AppRail } from './AppRail'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
+import { PageMetadata } from './PageMetadata'
 
-export function Page(props: { element: ReactNode; fullBleed?: boolean }) {
+export function Page(props: {
+    element: ReactNode
+    title: string
+    description?: string
+    fullBleed?: boolean
+}) {
     const style = useStyles()
     const { isLoading, isAuthenticated } = useAuth0()
 
@@ -43,6 +49,7 @@ export function Page(props: { element: ReactNode; fullBleed?: boolean }) {
                 bgcolor: palette.backgroundDeep,
             }}
         >
+            <PageMetadata title={props.title} description={props.description} />
             <AppRail />
             <Box
                 sx={{

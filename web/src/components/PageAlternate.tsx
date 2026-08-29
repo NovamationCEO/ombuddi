@@ -4,9 +4,14 @@ import { Header } from './Header'
 import type { ReactNode } from 'react'
 
 import { headerHeight } from '../constants/uiSizes'
+import { PageMetadata } from './PageMetadata'
 
 type PageAlternateProps = {
     element: ReactNode
+    title: string
+    description?: string
+    indexable?: boolean
+    canonicalPath?: string
     hideHeader?: boolean
     fullBleed?: boolean
     fixedColorScheme?: 'light' | 'dark'
@@ -14,6 +19,10 @@ type PageAlternateProps = {
 
 export function PageAlternate({
     element,
+    title,
+    description,
+    indexable = false,
+    canonicalPath,
     hideHeader = false,
     fullBleed = false,
     fixedColorScheme,
@@ -33,6 +42,12 @@ export function PageAlternate({
                 bgcolor: 'background.default',
             }}
         >
+            <PageMetadata
+                title={title}
+                description={description}
+                indexable={indexable}
+                canonicalPath={canonicalPath}
+            />
             {!hideHeader && <Header />}
             <Box
                 sx={{
