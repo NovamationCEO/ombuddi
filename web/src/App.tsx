@@ -29,7 +29,7 @@ const App: React.FC = () => {
                 const returnTo = typeof requestedPath === 'string' && requestedPath.startsWith('/')
                     ? requestedPath
                     : '/'
-                window.history.replaceState({}, document.title, returnTo)
+                void router.navigate(returnTo, { replace: true })
             }}
         >
             <QueryWrap />
@@ -71,9 +71,9 @@ const InnerApp: React.FC = () => {
     const authIdentity = isAuthenticated ? user?.sub ?? 'authenticated' : null
     const previousAuthIdentity = React.useRef(authIdentity)
 
-    React.useEffect(() => {
-        initTokenGetter(getAccessTokenSilently)
-    }, [getAccessTokenSilently])
+    // Descendant effects can run before parent effects. Bind this during render
+    // so callback pages can make their first authenticated request immediately.
+    initTokenGetter(getAccessTokenSilently)
 
     React.useEffect(() => {
         if (previousAuthIdentity.current !== authIdentity) {

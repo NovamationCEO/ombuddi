@@ -196,6 +196,7 @@ class AdminInvitationTests(unittest.TestCase):
 
         self.assertEqual(status, 403)
         self.assertEqual(response.get_json()["error"], "Forbidden")
+        self.assertEqual(response.get_json()["code"], "INVITATION_EMAIL_MISMATCH")
         self.assertFalse(any(
             execution[0].startswith("UPDATE ombuds SET auth0_sub")
             for execution in connection.fake_cursor.executions
@@ -216,6 +217,7 @@ class AdminInvitationTests(unittest.TestCase):
 
         self.assertEqual(status, 403)
         self.assertEqual(response.get_json()["error"], "Forbidden")
+        self.assertEqual(response.get_json()["code"], "VERIFIED_EMAIL_REQUIRED")
         get_connection.assert_not_called()
 
     def test_changing_unlinked_email_revokes_the_old_invitation(self):

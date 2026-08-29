@@ -12,6 +12,15 @@ auth_views = Blueprint('auth_views', __name__)
 logger = logging.getLogger(__name__)
 
 
+def _claim_error(code, error, message, status):
+    logger.warning('Invitation claim rejected code=%s status=%s', code, status)
+    return jsonify({
+        'error': error,
+        'code': code,
+        'message': message,
+    }), status
+
+
 @auth_views.route('/api/v1/auth/session-diagnostics')
 def session_diagnostics():
     """Return safe session facts without exposing token contents or identifiers."""
@@ -29,20 +38,29 @@ def claim_invitation():
     payload = request.get_json(silent=True) or {}
     raw_token = str(payload.get('token', '')).strip()
     if not raw_token:
-        return jsonify({'error': 'Input error', 'message': 'Invitation token is required'}), 400
+        return _claim_error(
+            'INVITATION_TOKEN_REQUIRED',
+            'Input error',
+            'Invitation token is required',
+            400,
+        )
 
     if getattr(g, 'ombuds_id', None):
-        return jsonify({
-            'error': 'Conflict',
-            'message': 'This Auth0 account is already linked to an Ombuddi user',
-        }), 409
+        return _claim_error(
+            'ACCOUNT_ALREADY_LINKED',
+            'Conflict',
+            'This Auth0 account is already linked to an Ombuddi user',
+            409,
+        )
 
     authenticated_email = normalize_email(getattr(g, 'auth0_email', None))
     if not getattr(g, 'auth0_email_verified', False) or not authenticated_email:
-        return jsonify({
-            'error': 'Forbidden',
-            'message': 'A verified Auth0 email is required to accept an invitation',
-        }), 403
+        return _claim_error(
+            'VERIFIED_EMAIL_REQUIRED',
+            'Forbidden',
+            'A verified Auth0 email is required to accept an invitation',
+            403,
+        )
 
     token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     conn = None
@@ -69,23 +87,29 @@ def claim_invitation():
             invitation = cur.fetchone()
             if invitation is None:
                 conn.rollback()
-                return jsonify({
-                    'error': 'Invalid invitation',
-                    'message': 'This invitation is invalid, expired, or has already been used',
-                }), 400
+                return _claim_error(
+                    'INVITATION_INVALID',
+                    'Invalid invitation',
+                    'This invitation is invalid, expired, or has already been used',
+                    400,
+                )
             if invitation[3] is not None:
                 conn.rollback()
-                return jsonify({
-                    'error': 'Conflict',
-                    'message': 'This user seat is already linked to an Auth0 account',
-                }), 409
+                return _claim_error(
+                    'SEAT_ALREADY_LINKED',
+                    'Conflict',
+                    'This user seat is already linked to an Auth0 account',
+                    409,
+                )
             invited_email = normalize_email(invitation[4])
             if not invited_email or authenticated_email != invited_email:
                 conn.rollback()
-                return jsonify({
-                    'error': 'Forbidden',
-                    'message': 'The signed-in Auth0 account does not match this invitation',
-                }), 403
+                return _claim_error(
+                    'INVITATION_EMAIL_MISMATCH',
+                    'Forbidden',
+                    'The signed-in Auth0 account does not match this invitation',
+                    403,
+                )
 
             cur.execute(
                 """
@@ -97,7 +121,12 @@ def claim_invitation():
             )
             if cur.rowcount != 1:
                 conn.rollback()
-                return jsonify({'error': 'Conflict', 'message': 'Unable to link this user seat'}), 409
+                return _claim_error(
+                    'INVITATION_LINK_CONFLICT',
+                    'Conflict',
+                    'Unable to link this user seat',
+                    409,
+                )
 
             cur.execute(
                 """
@@ -120,6 +149,7 @@ def claim_invitation():
                 },
             )
         conn.commit()
+        logger.info('Invitation claim completed')
         return jsonify({
             'success': True,
             'ombudsId': str(invitation[1]),
@@ -129,12 +159,18 @@ def claim_invitation():
         if conn:
             conn.rollback()
         if getattr(exc, 'pgcode', None) == '23505':
-            return jsonify({
-                'error': 'Conflict',
-                'message': 'This Auth0 account is already linked to another Ombuddi user',
-            }), 409
-        logger.exception('Failed to claim invitation')
-        return jsonify({'error': 'Database error', 'message': 'Unable to claim invitation'}), 500
+            return _claim_error(
+                'SUBJECT_ALREADY_LINKED',
+                'Conflict',
+                'This Auth0 account is already linked to another Ombuddi user',
+                409,
+            )
+        logger.exception('Invitation claim failed code=INVITATION_CLAIM_FAILED')
+        return jsonify({
+            'error': 'Database error',
+            'code': 'INVITATION_CLAIM_FAILED',
+            'message': 'Unable to claim invitation',
+        }), 500
     finally:
         if conn:
             conn.close()

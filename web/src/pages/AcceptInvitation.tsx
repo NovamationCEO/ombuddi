@@ -6,11 +6,40 @@ import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate } from 'react-router-dom'
 
 
+const pendingInvitationTokenKey = 'ombuddi.pendingInvitationToken'
+
+function loadInvitationToken() {
+    const urlToken = new URLSearchParams(window.location.search).get('token')?.trim() ?? ''
+    if (urlToken) {
+        try {
+            window.sessionStorage.setItem(pendingInvitationTokenKey, urlToken)
+        } catch {
+            // Auth0 appState still carries the URL token if storage is unavailable.
+        }
+        return urlToken
+    }
+
+    try {
+        return window.sessionStorage.getItem(pendingInvitationTokenKey)?.trim() ?? ''
+    } catch {
+        return ''
+    }
+}
+
+function clearInvitationToken() {
+    try {
+        window.sessionStorage.removeItem(pendingInvitationTokenKey)
+    } catch {
+        // The token also disappears with this component when storage is unavailable.
+    }
+}
+
+
 export function AcceptInvitation() {
     const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0()
     const [claiming, setClaiming] = React.useState(false)
     const [error, setError] = React.useState('')
-    const [token] = React.useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
+    const [token] = React.useState(loadInvitationToken)
     const claimAttempted = React.useRef(false)
     const navigate = useNavigate()
     const returnTo = `/accept-invite?token=${encodeURIComponent(token)}`
@@ -33,6 +62,7 @@ export function AcceptInvitation() {
         setError('')
         try {
             await creator('auth/claim-invitation', { token })
+            clearInvitationToken()
             navigate('/profile', { replace: true })
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : 'Unable to accept invitation')

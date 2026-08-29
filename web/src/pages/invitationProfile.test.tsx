@@ -82,6 +82,7 @@ describe('invitation onboarding', () => {
         mocks.auth.isAuthenticated = true
         mocks.auth.isLoading = false
         useSessionSalt.getState().clearSessionSalt()
+        window.sessionStorage.clear()
         window.history.replaceState({}, '', '/accept-invite?token=invite-token')
     })
 
@@ -104,6 +105,42 @@ describe('invitation onboarding', () => {
         expect(mocks.creator).toHaveBeenCalledTimes(1)
         expect(mocks.creator).toHaveBeenCalledWith('auth/claim-invitation', { token: 'invite-token' })
         expect(mocks.navigate).toHaveBeenCalledWith('/profile', { replace: true })
+        expect(window.sessionStorage.getItem('ombuddi.pendingInvitationToken')).toBeNull()
+    })
+
+    it('recovers the pending token after the Auth0 redirect removes it from the URL', async () => {
+        window.sessionStorage.setItem('ombuddi.pendingInvitationToken', 'stored-invite-token')
+        window.history.replaceState({}, '', '/accept-invite')
+
+        await act(async () => {
+            root.render(
+                <ThemeProvider theme={appTheme} defaultMode="dark">
+                    <AcceptInvitation />
+                </ThemeProvider>,
+            )
+        })
+
+        expect(mocks.creator).toHaveBeenCalledWith('auth/claim-invitation', { token: 'stored-invite-token' })
+        expect(mocks.navigate).toHaveBeenCalledWith('/profile', { replace: true })
+    })
+
+    it('keeps the token and shows a claim failure so the user can retry', async () => {
+        mocks.creator.mockRejectedValueOnce(
+            new Error('The signed-in Auth0 account does not match this invitation (INVITATION_EMAIL_MISMATCH)'),
+        )
+
+        await act(async () => {
+            root.render(
+                <ThemeProvider theme={appTheme} defaultMode="dark">
+                    <AcceptInvitation />
+                </ThemeProvider>,
+            )
+        })
+
+        expect(container.textContent).toContain('INVITATION_EMAIL_MISMATCH')
+        expect(container.textContent).toContain('Try again')
+        expect(window.sessionStorage.getItem('ombuddi.pendingInvitationToken')).toBe('invite-token')
+        expect(mocks.navigate).not.toHaveBeenCalled()
     })
 
     it('shows the name and organization already recorded by the invitation administrator', async () => {

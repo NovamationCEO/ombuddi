@@ -18,7 +18,11 @@ export async function creator<TReturn = unknown, TPayload = unknown>(address: st
         const data = isJson && (await response.json())
 
         if (!response.ok) {
-            const error = (data && data.message) || response.status
+            const message = data && data.message
+            const code = data && data.code
+            const error = message
+                ? `${message}${code ? ` (${code})` : ''}`
+                : `Request failed (${response.status})`
             throw new Error(error)
         }
 
