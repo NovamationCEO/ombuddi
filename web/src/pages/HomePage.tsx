@@ -5,7 +5,12 @@ import { useNavigate } from 'react-router-dom'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { useOrganization } from '../tools/useOrganization'
-import { destinations, type Destination } from './homeDestinations'
+import {
+    getVisibleAdminDestinations,
+    primaryDestinations,
+    secondaryDestinations,
+    type Destination,
+} from './homeDestinations'
 import { getTimeOfDayGreeting } from './homeGreeting'
 
 function DestinationCard({ name, url, image, description, action }: Destination) {
@@ -66,11 +71,60 @@ function DestinationCard({ name, url, image, description, action }: Destination)
     )
 }
 
+function DestinationSection({
+    title,
+    items,
+    separated = false,
+}: {
+    title: string
+    items: Destination[]
+    separated?: boolean
+}) {
+    if (items.length === 0) return null
+
+    return (
+        <Box sx={{ mt: separated ? 4 : 0 }}>
+            <Typography
+                component="h2"
+                sx={{
+                    color: palette.muted,
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    mb: 1.5,
+                }}
+            >
+                {title}
+            </Typography>
+
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '1fr',
+                        md: 'repeat(2, minmax(0, 1fr))',
+                    },
+                    gap: 2,
+                }}
+            >
+                {items.map((destination) => (
+                    <DestinationCard
+                        key={destination.url}
+                        {...destination}
+                    />
+                ))}
+            </Box>
+        </Box>
+    )
+}
+
 export function HomePage() {
     const currentOmbuds = useCurrentOmbuds()
     const organization = useOrganization()
     const firstName = currentOmbuds.data?.name?.trim().split(/\s+/)[0]
     const [greeting, setGreeting] = useState(() => getTimeOfDayGreeting())
+    const visibleAdminDestinations = getVisibleAdminDestinations(currentOmbuds.data)
 
     useEffect(() => {
         const timer = window.setInterval(() => setGreeting(getTimeOfDayGreeting()), 60_000)
@@ -127,37 +181,20 @@ export function HomePage() {
                     </Box>
                 </Box>
 
-                <Typography
-                    component="h2"
-                    sx={{
-                        color: palette.muted,
-                        fontSize: '0.76rem',
-                        fontWeight: 600,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        mb: 1.5,
-                    }}
-                >
-                    Your workspace
-                </Typography>
-
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            md: 'repeat(2, minmax(0, 1fr))',
-                        },
-                        gap: 2,
-                    }}
-                >
-                    {destinations.map((destination) => (
-                        <DestinationCard
-                            key={destination.url}
-                            {...destination}
-                        />
-                    ))}
-                </Box>
+                <DestinationSection
+                    title="Your workspace"
+                    items={primaryDestinations}
+                />
+                <DestinationSection
+                    title="Account & settings"
+                    items={secondaryDestinations}
+                    separated
+                />
+                <DestinationSection
+                    title="Administration"
+                    items={visibleAdminDestinations}
+                    separated
+                />
 
                 <Stack
                     direction="row"

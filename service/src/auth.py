@@ -35,8 +35,26 @@ def validate_token(token: str) -> dict:
 
     claims = jwt.decode(token, signing_key.key, **decode_kwargs)
 
-    # Remap the namespaced custom claim to the simple key app.py expects.
+    # Prefer Ombuddi's namespaced access-token claims. Auth0 can also issue
+    # signed standard OIDC email claims when the email scope is requested;
+    # accepting those provides a safe fallback without trusting browser data.
+    namespaced_email = claims.get(CLAIM_EMAIL)
+    standard_email = claims.get('email')
+    if isinstance(namespaced_email, str) and namespaced_email.strip():
+        email = namespaced_email
+        email_verified = claims.get(CLAIM_EMAIL_VERIFIED) is True
+        email_claim_source = 'namespaced'
+    elif isinstance(standard_email, str) and standard_email.strip():
+        email = standard_email
+        email_verified = claims.get('email_verified') is True
+        email_claim_source = 'standard'
+    else:
+        email = None
+        email_verified = False
+        email_claim_source = 'missing'
+
     claims['organization_id'] = claims.get(CLAIM_ORG_ID)
-    claims['ombuddi_email'] = claims.get(CLAIM_EMAIL)
-    claims['ombuddi_email_verified'] = claims.get(CLAIM_EMAIL_VERIFIED) is True
+    claims['ombuddi_email'] = email
+    claims['ombuddi_email_verified'] = email_verified
+    claims['ombuddi_email_claim_source'] = email_claim_source
     return claims

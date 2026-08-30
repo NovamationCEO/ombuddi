@@ -1,9 +1,18 @@
-import { AssessmentRounded, FolderRounded, HomeRounded, PersonRounded } from '@mui/icons-material'
+import {
+    AdminPanelSettingsRounded,
+    AssessmentRounded,
+    BusinessRounded,
+    FolderRounded,
+    HomeRounded,
+    ManageAccountsRounded,
+    PersonRounded,
+} from '@mui/icons-material'
 import { Box, ButtonBase, Tooltip, useMediaQuery, useTheme } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import mascot from '../assets/images/mascot.png'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
+import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { AccountButton } from './AccountButton'
 
 type RailLinkProps = {
@@ -50,12 +59,36 @@ export function AppRail() {
     const navigate = useNavigate()
     const theme = useTheme()
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'))
-    const links = [
+    const currentOmbuds = useCurrentOmbuds()
+    const primaryLinks = [
         { label: 'Home', path: '/', icon: <HomeRounded /> },
         { label: 'Cases', path: '/cases', icon: <FolderRounded /> },
         { label: 'Reports', path: '/report', icon: <AssessmentRounded /> },
-        { label: 'Profile', path: '/profile', icon: <PersonRounded /> },
     ]
+    const secondaryLinks = [
+        { label: 'Profile', path: '/profile', icon: <PersonRounded /> },
+        { label: 'Organization Settings', path: '/organization', icon: <BusinessRounded /> },
+    ]
+    const adminLinks = [
+        ...(currentOmbuds.data?.isAdmin
+            ? [{ label: 'Manage Users', path: '/admin/users', icon: <ManageAccountsRounded /> }]
+            : []),
+        ...(currentOmbuds.data?.isSystemAdmin
+            ? [{ label: 'System Administration', path: '/system/orgs', icon: <AdminPanelSettingsRounded /> }]
+            : []),
+    ]
+
+    const renderLinks = (links: typeof primaryLinks) =>
+        links.map((link) => {
+            const selected = link.path === '/' ? location.pathname === '/' : location.pathname.startsWith(link.path)
+            return (
+                <RailLink
+                    key={link.path}
+                    {...link}
+                    selected={selected}
+                />
+            )
+        })
 
     return (
         <Box
@@ -103,21 +136,63 @@ export function AppRail() {
                 />
             </ButtonBase>
 
-            {links.map((link) => {
-                const selected = link.path === '/' ? location.pathname === '/' : location.pathname.startsWith(link.path)
-                return (
-                    <RailLink
-                        key={link.path}
-                        {...link}
-                        selected={selected}
-                    />
-                )
-            })}
+            <Box
+                sx={{
+                    flex: { xs: 1, md: '0 1 auto' },
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: { xs: 'row', md: 'column' },
+                    alignItems: 'center',
+                    gap: { xs: 0.5, md: 1 },
+                    overflowX: { xs: 'auto', md: 'visible' },
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                }}
+            >
+                {renderLinks(primaryLinks)}
+
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'row', md: 'column' },
+                        alignItems: 'center',
+                        gap: { xs: 0.5, md: 1 },
+                        ml: { xs: 0.75, md: 0 },
+                        mt: { xs: 0, md: 0.75 },
+                        pl: { xs: 0.75, md: 0 },
+                        pt: { xs: 0, md: 0.75 },
+                        borderLeft: { xs: `1px solid ${palette.border}`, md: 0 },
+                        borderTop: { xs: 0, md: `1px solid ${palette.border}` },
+                    }}
+                >
+                    {renderLinks(secondaryLinks)}
+                </Box>
+
+                {adminLinks.length > 0 && (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: { xs: 'row', md: 'column' },
+                            alignItems: 'center',
+                            gap: { xs: 0.5, md: 1 },
+                            ml: { xs: 0.75, md: 0 },
+                            mt: { xs: 0, md: 0.75 },
+                            pl: { xs: 0.75, md: 0 },
+                            pt: { xs: 0, md: 0.75 },
+                            borderLeft: { xs: `1px solid ${palette.border}`, md: 0 },
+                            borderTop: { xs: 0, md: `1px solid ${palette.border}` },
+                        }}
+                    >
+                        {renderLinks(adminLinks)}
+                    </Box>
+                )}
+            </Box>
 
             <Box
                 sx={{
+                    flexShrink: 0,
                     mt: { xs: 0, md: 'auto' },
-                    ml: { xs: 0.25, md: 0 },
+                    ml: { xs: 0.75, md: 0 },
                     '& > div': {
                         borderColor: 'primary.light',
                         bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',

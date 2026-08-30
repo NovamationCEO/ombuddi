@@ -5,6 +5,7 @@ import { institutionalPalette as palette } from '../../theme/institutionalPalett
 import { CaseType } from '../../types/majorTypes'
 import { CaseCodeRow } from './CaseCodeRow'
 import { CaseCardWrapper } from './CaseCardWrapper'
+import { useProtectedText } from '../../tools/useProtectedText'
 
 const statusStyles = {
     active: {
@@ -29,6 +30,29 @@ const statusStyles = {
 
 function formatCaseDate(value: Date) {
     return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function CaseDescriptionPreview({ caseItem }: { caseItem: CaseType }) {
+    const description = useProtectedText(caseItem.description, caseItem.organizationId, 'default', '')
+    const text = description.plaintext
+        ?? (description.status === 'decrypting' ? 'Decrypting description…' : 'Encrypted description — open case to unlock')
+
+    return (
+        <Typography
+            variant="body2"
+            sx={{
+                color: palette.muted,
+                mb: caseItem.codes?.length ? 1.25 : 0,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                fontStyle: description.plaintext === null ? 'italic' : 'normal',
+            }}
+        >
+            {text}
+        </Typography>
+    )
 }
 
 export function CaseCard({ caseItem }: { caseItem: CaseType }) {
@@ -98,19 +122,7 @@ export function CaseCard({ caseItem }: { caseItem: CaseType }) {
                         {caseItem.name}
                     </Typography>
                     {caseItem.description && (
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: palette.muted,
-                                mb: caseItem.codes?.length ? 1.25 : 0,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            {caseItem.description}
-                        </Typography>
+                        <CaseDescriptionPreview caseItem={caseItem} />
                     )}
 
                     {!!caseItem.codes?.length && <CaseCodeRow codeIds={caseItem.codes} />}

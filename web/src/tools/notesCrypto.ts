@@ -1,10 +1,10 @@
 /**
- * Client-side AES-256-GCM encryption for entries.notes.
+ * Client-side AES-256-GCM encryption for protected text fields.
  *
  * Key derivation: PBKDF2(password=saltPhrase, salt=orgId, iterations=100_000, hash=SHA-256)
  * Storage format: "ombuddi_enc_v1:" + base64(iv[12 bytes] || ciphertext+tag)
  *
- * The orgId bakes the key to the organization, so a note from org A can't be
+ * The orgId bakes the key to the organization, so protected text from org A can't be
  * decrypted even with the correct salt phrase inside org B.
  *
  * Detection: strings starting with ENC_PREFIX are encrypted; everything else
@@ -41,7 +41,7 @@ async function deriveKey(saltPhrase: string, orgId: string): Promise<CryptoKey> 
     )
 }
 
-export async function encryptNotes(plaintext: string, saltPhrase: string, orgId: string): Promise<string> {
+export async function encryptProtectedText(plaintext: string, saltPhrase: string, orgId: string): Promise<string> {
     const key = await deriveKey(saltPhrase, orgId)
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
     const ciphertext = await crypto.subtle.encrypt(
@@ -60,7 +60,7 @@ export async function encryptNotes(plaintext: string, saltPhrase: string, orgId:
  * encrypted with this salt/org combination (wrong key or corrupt data).
  * Throws only on unexpected errors.
  */
-export async function decryptNotes(stored: string, saltPhrase: string, orgId: string): Promise<string | null> {
+export async function decryptProtectedText(stored: string, saltPhrase: string, orgId: string): Promise<string | null> {
     if (!stored.startsWith(ENC_PREFIX)) return stored  // legacy plaintext
     try {
         const raw = Uint8Array.from(atob(stored.slice(ENC_PREFIX.length)), (c) => c.charCodeAt(0))
@@ -73,6 +73,10 @@ export async function decryptNotes(stored: string, saltPhrase: string, orgId: st
         return null  // wrong key — caller shows override prompt
     }
 }
+
+// Keep the original entry-note API names while existing callers and stored data migrate.
+export const encryptNotes = encryptProtectedText
+export const decryptNotes = decryptProtectedText
 
 export function isEncrypted(stored: string): boolean {
     return stored.startsWith(ENC_PREFIX)

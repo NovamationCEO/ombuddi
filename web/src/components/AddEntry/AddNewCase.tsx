@@ -14,6 +14,9 @@ import { institutionalPalette as palette } from '../../theme/institutionalPalett
 import { ReferralSourceSelector } from '../ReferralSourceSelector'
 import { ReferralSourceSelectionType } from '../../types/majorTypes'
 import { referralSelectionsAreValid } from '../../tools/referralSources'
+import { usePhraseSelection } from '../../tools/phraseSource'
+import { PhraseSourceControl } from '../PhraseSourceControl'
+import { encryptProtectedText } from '../../tools/notesCrypto'
 
 const fieldStyle = {
     '& .MuiInputLabel-root': { color: 'text.secondary' },
@@ -39,6 +42,7 @@ export function AddNewCase() {
     const navigate = useNavigate()
     const [description, setDescription] = React.useState('')
     const [isSaving, setIsSaving] = React.useState(false)
+    const descriptionPhrase = usePhraseSelection()
     const organizationId = useOrganization().id
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
@@ -85,11 +89,22 @@ export function AddNewCase() {
             setSnack({ message: 'Specify the Other referral source before saving.', severity: 'error' })
             return
         }
+        if (description && descriptionPhrase.phrase === null) {
+            setSnack({
+                message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
+                severity: 'error',
+            })
+            return
+        }
+
+        const storedDescription = description
+            ? await encryptProtectedText(description, descriptionPhrase.phrase ?? '', organizationId)
+            : ''
 
         const payload = {
             id: newId,
             name: caseName,
-            description: description,
+            description: storedDescription,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
             status: 'active',
             referralSources: referralSources.map((selection) => ({
@@ -124,7 +139,9 @@ export function AddNewCase() {
         }
     }
 
-    function cancel() {}
+    function cancel() {
+        navigate('/cases')
+    }
 
     return (
         <Box
@@ -224,6 +241,15 @@ export function AddNewCase() {
                     rows={3}
                     sx={fieldStyle}
                 />
+                <Box sx={{ mt: 1.5 }}>
+                    <PhraseSourceControl
+                        source={descriptionPhrase.source}
+                        onSourceChange={descriptionPhrase.setSource}
+                        customPhrase={descriptionPhrase.customPhrase}
+                        onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
+                        purpose="encrypt"
+                    />
+                </Box>
             </Box>
             <Stack
                 spacing={2}

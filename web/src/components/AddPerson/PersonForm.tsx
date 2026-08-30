@@ -25,9 +25,10 @@ import { PersonType, PrimaryRoleType } from '../../types/majorTypes'
 import { useHashName } from '../../tools/useHashName'
 import { RoundButton } from '../../trusted-components/RoundButton'
 import { useOrganization } from '../../tools/useOrganization'
-import { useSessionSalt } from '../../libraries/useSessionSalt'
 import { useGetter } from '../../tools/db_tools/useGetter'
 import { getPrimaryRoleOptions } from './primaryRoleOptions'
+import { usePhraseSelection } from '../../tools/phraseSource'
+import { PhraseSourceControl } from '../PhraseSourceControl'
 
 /**
  * Reusable person-entry form. Owns all field state, the salt-phrase tooltip,
@@ -158,7 +159,7 @@ export function PersonForm(props: {
 }) {
     const { initialName = '', onSaved, onCancel } = props
     const [name, setName] = React.useState(initialName)
-    const [salt, setSalt] = React.useState('')
+    const phraseChoice = usePhraseSelection()
     const [isSecure, setIsSecure] = React.useState(true)
     const [saltGuideOpen, setSaltGuideOpen] = React.useState(false)
     const [generation, setGeneration] = React.useState('unknown')
@@ -172,23 +173,22 @@ export function PersonForm(props: {
     const setSnack = useSnack((state) => state.setSnack)
     const organization = useOrganization()
     const orgId = organization.id
-    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
     const primaryRolesRes = useGetter<PrimaryRoleType[]>(['get_primary_roles_by_organization_id', orgId])
     const configuredRoles = [...(primaryRolesRes.data ?? [])].sort((a, b) => a.index - b.index)
     const primaryRolesLoading = !orgId || primaryRolesRes.isLoading
     const primaryRoleOptions = getPrimaryRoleOptions(configuredRoles, primaryRolesLoading)
 
-    // Pre-populate from the session salt the first time it becomes available.
-    React.useEffect(() => {
-        if (sessionSalt !== null && salt === '') {
-            setSalt(sessionSalt)
-        }
-    }, [sessionSalt])
-
-    const hashedName = useHashName(name, salt)
+    const hashedName = useHashName(name, phraseChoice.phrase ?? undefined)
 
     async function save() {
         if (!orgId) return
+        if (isSecure && phraseChoice.phrase === null) {
+            setSnack({
+                message: 'Choose Blank, set the Default Salt, or provide free text before saving this person.',
+                severity: 'error',
+            })
+            return
+        }
         const payload = isSecure
             ? {
                   hashedName,
@@ -267,11 +267,12 @@ export function PersonForm(props: {
                     {isSecure && (
                         <Box sx={{ display: 'flex' }}>
                             <Box sx={{ flex: 1 }}>
-                                <TextField
-                                    value={salt}
-                                    onChange={(e) => setSalt(e.target.value)}
-                                    label="Salt Phrase"
-                                    fullWidth
+                                <PhraseSourceControl
+                                    source={phraseChoice.source}
+                                    onSourceChange={phraseChoice.setSource}
+                                    customPhrase={phraseChoice.customPhrase}
+                                    onCustomPhraseChange={phraseChoice.setCustomPhrase}
+                                    purpose="lookup"
                                 />
                             </Box>
                             <Box

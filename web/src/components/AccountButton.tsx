@@ -4,18 +4,13 @@ import type { PopperPlacementType } from '@mui/material'
 import { Box } from '@mui/system'
 import { useAuth0 } from '@auth0/auth0-react'
 import React from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
-import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function AccountButton({ placement = 'bottom-end' }: { placement?: PopperPlacementType }) {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
     const { isAuthenticated, loginWithRedirect, logout } = useAuth0()
-    const location = useLocation()
-    const currentOmbuds = useCurrentOmbuds(location.pathname !== '/accept-invite')
-    const navigate = useNavigate()
     const clearSessionSalt = useSessionSalt((state) => state.clearSessionSalt)
 
     const open = Boolean(anchorEl)
@@ -67,23 +62,13 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
                                         id="composition-menu"
                                         aria-labelledby="composition-button"
                                     >
-                                        {isAuthenticated ? <>
-                                            <MenuItem onClick={() => navigate('/welcome')}>Welcome</MenuItem>
-                                            <MenuItem onClick={() => navigate('/')}>Home</MenuItem>
-                                            <MenuItem onClick={() => navigate('/cases')}>Cases</MenuItem>
-                                            <MenuItem onClick={() => navigate('/report')}>Reports</MenuItem>
-                                            <MenuItem onClick={() => navigate('/profile')}>Profile</MenuItem>
-                                            <MenuItem onClick={() => navigate('/add_person')}>Add Person</MenuItem>
-                                            {currentOmbuds.data?.isAdmin && (
-                                                <MenuItem onClick={() => navigate('/admin/users')}>Manage Users</MenuItem>
-                                            )}
-                                            {currentOmbuds.data?.isSystemAdmin && (
-                                                <MenuItem onClick={() => navigate('/system/orgs')}>System Admin</MenuItem>
-                                            )}
+                                        {isAuthenticated ? (
                                             <MenuItem onClick={handleLogout}>Log Out</MenuItem>
-                                        </> : <>
-                                            <MenuItem onClick={handleLogin}>Log In</MenuItem>
-                                        </>}
+                                        ) : (
+                                            <>
+                                                <MenuItem onClick={handleLogin}>Log In</MenuItem>
+                                            </>
+                                        )}
                                     </MenuList>
                                 </Box>
                             </ClickAwayListener>
@@ -92,5 +77,5 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
                 )}
             </Popper>
         </>
-    );
+    )
 }

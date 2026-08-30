@@ -145,6 +145,8 @@ class AdminInvitationTests(unittest.TestCase):
             if execution[0].startswith("UPDATE ombuds SET auth0_sub")
         )
         self.assertEqual(link_update[1], ("auth0|invited-user", OMBUDS_ID))
+        self.assertNotIn("name =", link_update[0])
+        self.assertNotIn("organization_id =", link_update[0].split("WHERE")[0])
         claim_update = next(
             execution for execution in connection.fake_cursor.executions
             if execution[0].startswith("UPDATE ombuds_invitations SET claimed_at")

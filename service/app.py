@@ -30,6 +30,11 @@ CORS(app)
 def _session_diagnostics(claims, principal):
     token_organization_id = claims.get('organization_id')
     linked = principal is not None
+    email_claim_present = bool(claims.get('ombuddi_email'))
+    email_verified = claims.get('ombuddi_email_verified') is True
+    email_claim_source = claims.get('ombuddi_email_claim_source')
+    if email_claim_source not in ('namespaced', 'standard'):
+        email_claim_source = 'namespaced' if email_claim_present else 'missing'
     account_active = principal['is_active'] if linked else None
     organization_active = principal['organization_is_active'] if linked else None
     organization_claim_matches = (
@@ -38,11 +43,24 @@ def _session_diagnostics(claims, principal):
         else token_organization_id == principal['organization_id']
     )
 
-    if not linked:
+    if not linked and not email_claim_present:
+        code = 'EMAIL_CLAIM_MISSING'
+        message = (
+            'Your Auth0 sign-in is valid, but its access token does not include an email identity. '
+            'Ombuddi cannot safely accept an invitation until the verified-email claim reaches '
+            'the API access token.'
+        )
+    elif not linked and not email_verified:
+        code = 'EMAIL_NOT_VERIFIED'
+        message = (
+            'Your Auth0 sign-in is valid, but Auth0 has not verified its email address. '
+            'Verify the address, then sign out and reopen the invitation link.'
+        )
+    elif not linked:
         code = 'ACCOUNT_NOT_LINKED'
         message = (
-            'Your Auth0 sign-in is valid, but it is not linked to an Ombuddi user seat. '
-            'Ask an organization administrator to send or reissue an invitation for this account.'
+            'Your Auth0 sign-in is ready, but it is not linked to an Ombuddi user seat. '
+            'Return to your invitation link to finish linking the account.'
         )
     elif not account_active:
         code = 'ACCOUNT_DEACTIVATED'
@@ -67,8 +85,9 @@ def _session_diagnostics(claims, principal):
         'organizationActive': organization_active,
         'organizationClaimPresent': bool(token_organization_id),
         'organizationClaimMatches': organization_claim_matches,
-        'emailClaimPresent': bool(claims.get('ombuddi_email')),
-        'emailVerified': claims.get('ombuddi_email_verified') is True,
+        'emailClaimPresent': email_claim_present,
+        'emailVerified': email_verified,
+        'emailClaimSource': email_claim_source,
         'isOrganizationAdmin': bool(principal and principal['is_admin']),
         'isSystemAdmin': bool(principal and principal['is_system_admin']),
         'canAccessApplication': code == 'SESSION_READY',

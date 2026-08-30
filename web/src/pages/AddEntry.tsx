@@ -27,8 +27,9 @@ import { Add, ArrowBack, LockOutlined, PersonAddOutlined, SaveOutlined } from '@
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
-import { useSessionSalt } from '../libraries/useSessionSalt'
 import { encryptNotes } from '../tools/notesCrypto'
+import { usePhraseSelection } from '../tools/phraseSource'
+import { PhraseSourceControl } from '../components/PhraseSourceControl'
 
 const entryWorkspace = {
     background: 'var(--mui-palette-background-default)',
@@ -72,7 +73,7 @@ export function AddEntry() {
     const queryClient = useQueryClient()
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
-    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
+    const notePhrase = usePhraseSelection()
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
 
@@ -119,10 +120,10 @@ export function AddEntry() {
 
     async function save() {
         const organizationId = caseRes.data?.organizationId
-        if (!organizationId || isSaving) return
+        if (!organizationId || isSaving || (notes && notePhrase.phrase === null)) return
         setIsSaving(true)
         try {
-            const storedNotes = notes ? await encryptNotes(notes, sessionSalt ?? '', organizationId) : ''
+            const storedNotes = notes ? await encryptNotes(notes, notePhrase.phrase ?? '', organizationId) : ''
             const payload = {
                 caseId,
                 date: eventDate,
@@ -426,7 +427,9 @@ export function AddEntry() {
                                 variant="contained"
                                 startIcon={<SaveOutlined />}
                                 onClick={save}
-                                disabled={isSaving || !caseRes.data?.organizationId}
+                                disabled={isSaving
+                                    || !caseRes.data?.organizationId
+                                    || Boolean(notes && notePhrase.phrase === null)}
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
                                     color: 'var(--mui-palette-primary-contrastText)',
@@ -518,6 +521,15 @@ export function AddEntry() {
                                 placeholder="Record the interaction, options discussed, and any planned follow-up…"
                                 sx={fieldStyle}
                             />
+                            <Box sx={{ mt: 1.5 }}>
+                                <PhraseSourceControl
+                                    source={notePhrase.source}
+                                    onSourceChange={notePhrase.setSource}
+                                    customPhrase={notePhrase.customPhrase}
+                                    onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                    purpose="encrypt"
+                                />
+                            </Box>
                         </Box>
 
                         <Divider sx={{ borderColor: entryWorkspace.border }} />

@@ -3,7 +3,6 @@ import {
     Alert,
     Box,
     Button,
-    Chip,
     CircularProgress,
     Stack,
     TextField,
@@ -12,31 +11,46 @@ import {
     Typography,
 } from '@mui/material'
 import { useColorScheme } from '@mui/material/styles'
+import { useEffect, useState } from 'react'
 import { RoundedContainer } from '../components/RoundedContainer'
-import { useOrganization } from '../tools/useOrganization'
+import { useOrganizationResult } from '../tools/useOrganization'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { useSessionSalt } from '../libraries/useSessionSalt'
-import { useSessionDiagnostics } from '../tools/useSessionDiagnostics'
-
-function DiagnosticRow(props: {
-    label: string
-    value: string
-    color?: 'default' | 'success' | 'warning' | 'error' | 'info'
-}) {
-    return (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-            <Typography sx={{ color: 'text.secondary' }}>{props.label}</Typography>
-            <Chip size="small" label={props.value} color={props.color ?? 'default'} variant="outlined" />
-        </Box>
-    )
-}
+import { AccountDiagnostics } from '../components/profile/AccountDiagnostics'
+import { updater } from '../tools/db_tools/updater'
+import { useSnack } from '../libraries/useSnack'
 
 export function Profile() {
     const ombudsRes = useCurrentOmbuds()
-    const organization = useOrganization()
+    const organizationRes = useOrganizationResult()
     const { colorScheme, setMode } = useColorScheme()
     const { sessionSalt, setSessionSalt, clearSessionSalt } = useSessionSalt()
-    const diagnostics = useSessionDiagnostics()
+    const setSnack = useSnack((state) => state.setSnack)
+    const [name, setName] = useState('')
+    const [savingName, setSavingName] = useState(false)
+
+    useEffect(() => {
+        if (ombudsRes.data?.name !== undefined) setName(ombudsRes.data.name)
+    }, [ombudsRes.data?.name])
+
+    async function saveName() {
+        const trimmedName = name.trim()
+        if (!trimmedName) return
+
+        setSavingName(true)
+        try {
+            await updater<{ name: string }>('update_current_ombuds', { name: trimmedName })
+            setName(trimmedName)
+            await ombudsRes.refetch()
+            setSnack({ message: 'Name updated.', severity: 'success' })
+        } catch {
+            setSnack({ message: 'Failed to update your name.', severity: 'error' })
+        } finally {
+            setSavingName(false)
+        }
+    }
+
+    const profileLoadError = ombudsRes.error || organizationRes.error
 
     return (
         <Box
@@ -67,123 +81,80 @@ export function Profile() {
 
                 <RoundedContainer title="Personal information">
                     <Stack spacing={2}>
+                        {profileLoadError && (
+                            <Alert
+                                severity="error"
+                                action={
+                                    <Button
+                                        color="inherit"
+                                        size="small"
+                                        onClick={() => {
+                                            void ombudsRes.refetch()
+                                            void organizationRes.refetch()
+                                        }}
+                                    >
+                                        Retry
+                                    </Button>
+                                }
+                            >
+                                Ombuddi could not load your linked user or organization. Check Account Diagnostics for
+                                the specific account status.
+                            </Alert>
+                        )}
                         <TextField
-                            value={ombudsRes.data?.name ?? ''}
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
                             label="Name"
-                            helperText="Set by the administrator who created your invitation."
+                            helperText="Initially set by your administrator; you can update it here."
                             fullWidth
-                            slotProps={{ input: { readOnly: true } }}
+                            disabled={ombudsRes.isLoading || !ombudsRes.data}
+                            slotProps={{ htmlInput: { maxLength: 200 } }}
                             sx={{
                                 '& .MuiInputLabel-root': { color: 'text.secondary' },
                                 '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
                             }}
                         />
-                        <TextField
-                            value={organization.name ?? ''}
-                            label="Organization"
-                            helperText="Your invitation determines which organization you can access."
-                            fullWidth
-                            slotProps={{ input: { readOnly: true } }}
-                            sx={{
-                                '& .MuiInputLabel-root': { color: 'text.secondary' },
-                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
-                            }}
-                        />
-                    </Stack>
-                </RoundedContainer>
+                        <Button
+                            variant="contained"
+                            onClick={() => void saveName()}
+                            disabled={
+                                savingName || !ombudsRes.data || !name.trim() || name.trim() === ombudsRes.data.name
+                            }
+                            sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                        >
+                            {savingName ? 'Saving…' : 'Save name'}
+                        </Button>
 
-                <RoundedContainer title="Account diagnostics">
-                    {diagnostics.isLoading && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">Checking your authenticated session…</Typography>
-                        </Box>
-                    )}
-                    {diagnostics.error && (
-                        <Stack spacing={1.5}>
-                            <Alert severity="error">
-                                The API could not return session diagnostics.{' '}
-                                {diagnostics.error instanceof Error ? diagnostics.error.message : 'Please try again.'}
-                            </Alert>
-                            <Button
-                                variant="outlined"
-                                onClick={() => void diagnostics.refetch()}
-                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
+                        <Box
+                            sx={{
+                                p: 1.75,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 2,
+                                bgcolor: 'background.default',
+                            }}
+                        >
+                            <Typography
+                                component="h3"
+                                sx={{ color: 'text.secondary', fontSize: '0.78rem', fontWeight: 600, mb: 0.5 }}
                             >
-                                Retry diagnostics
-                            </Button>
-                        </Stack>
-                    )}
-                    {diagnostics.data && (
-                        <Stack spacing={1.5}>
-                            <Alert severity={diagnostics.data.canAccessApplication ? 'success' : 'error'}>
-                                {diagnostics.data.message}
-                            </Alert>
-                            <DiagnosticRow label="Diagnostic code" value={diagnostics.data.code} color="info" />
-                            <DiagnosticRow
-                                label="API authentication"
-                                value={diagnostics.data.authenticated ? 'Valid' : 'Invalid'}
-                                color={diagnostics.data.authenticated ? 'success' : 'error'}
-                            />
-                            <DiagnosticRow
-                                label="Ombuddi user seat"
-                                value={!diagnostics.data.linked
-                                    ? 'Not linked'
-                                    : diagnostics.data.accountActive ? 'Linked and active' : 'Deactivated'}
-                                color={!diagnostics.data.linked || !diagnostics.data.accountActive ? 'error' : 'success'}
-                            />
-                            <DiagnosticRow
-                                label="Organization"
-                                value={diagnostics.data.organizationActive === null
-                                    ? 'Unavailable'
-                                    : diagnostics.data.organizationActive ? 'Active' : 'Deactivated'}
-                                color={diagnostics.data.organizationActive === null
-                                    ? 'default'
-                                    : diagnostics.data.organizationActive ? 'success' : 'error'}
-                            />
-                            <DiagnosticRow
-                                label="Auth0 organization claim"
-                                value={!diagnostics.data.organizationClaimPresent
-                                    ? 'Not included (allowed)'
-                                    : diagnostics.data.organizationClaimMatches ? 'Matches seat' : 'Does not match'}
-                                color={!diagnostics.data.organizationClaimPresent || diagnostics.data.organizationClaimMatches
-                                    ? 'success'
-                                    : 'error'}
-                            />
-                            <DiagnosticRow
-                                label="Verified email claim"
-                                value={diagnostics.data.emailClaimPresent && diagnostics.data.emailVerified
-                                    ? 'Present and verified'
-                                    : 'Missing or unverified'}
-                                color={diagnostics.data.emailClaimPresent && diagnostics.data.emailVerified
-                                    ? 'success'
-                                    : 'warning'}
-                            />
-                            <DiagnosticRow
-                                label="Organization administrator"
-                                value={diagnostics.data.isOrganizationAdmin ? 'Yes' : 'No'}
-                                color={diagnostics.data.isOrganizationAdmin ? 'success' : 'default'}
-                            />
-                            <DiagnosticRow
-                                label="System administrator"
-                                value={diagnostics.data.isSystemAdmin ? 'Yes' : 'No'}
-                                color={diagnostics.data.isSystemAdmin ? 'success' : 'default'}
-                            />
-                            {diagnostics.data.canAccessApplication && !diagnostics.data.isOrganizationAdmin && (
-                                <Alert severity="info">
-                                    Normal case and profile activity is permitted. Organization and user-management
-                                    changes require an organization administrator.
-                                </Alert>
+                                Organization
+                            </Typography>
+                            {organizationRes.isLoading ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CircularProgress size={16} />
+                                    <Typography sx={{ color: 'text.secondary' }}>Loading organization…</Typography>
+                                </Box>
+                            ) : (
+                                <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
+                                    {organizationRes.data?.name || 'Organization unavailable'}
+                                </Typography>
                             )}
-                            <Button
-                                variant="outlined"
-                                onClick={() => void diagnostics.refetch()}
-                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
-                            >
-                                Refresh diagnostics
-                            </Button>
-                        </Stack>
-                    )}
+                            <Typography sx={{ mt: 0.5, color: 'text.secondary', fontSize: '0.78rem' }}>
+                                Your invitation determines which organization you can access.
+                            </Typography>
+                        </Box>
+                    </Stack>
                 </RoundedContainer>
 
                 <RoundedContainer title="Appearance">
@@ -200,11 +171,17 @@ export function Profile() {
                             aria-label="Color theme"
                             sx={{ alignSelf: 'flex-start' }}
                         >
-                            <ToggleButton value="dark" aria-label="Dark mode">
+                            <ToggleButton
+                                value="dark"
+                                aria-label="Dark mode"
+                            >
                                 <DarkModeOutlined sx={{ mr: 1 }} />
                                 Dark
                             </ToggleButton>
-                            <ToggleButton value="light" aria-label="Light mode">
+                            <ToggleButton
+                                value="light"
+                                aria-label="Light mode"
+                            >
                                 <LightModeOutlined sx={{ mr: 1 }} />
                                 Light
                             </ToggleButton>
@@ -217,9 +194,10 @@ export function Profile() {
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
                             <LockOutlined sx={{ mt: 0.25, color: 'primary.main' }} />
                             <Typography sx={{ color: 'text.secondary' }}>
-                                This optional phrase pre-fills salt fields and is used to encrypt and decrypt entry
-                                notes. It exists only in this browser session and is cleared on refresh, login, or
-                                logout.
+                                This optional phrase is the session default for protected case descriptions and notes,
+                                and for private-person lookup. Each protection control can instead use a blank phrase or
+                                a one-time phrase. The session default exists only in this browser session and is
+                                cleared on refresh, login, or logout.
                             </Typography>
                         </Box>
                         <TextField
@@ -244,6 +222,8 @@ export function Profile() {
                         </Button>
                     </Stack>
                 </RoundedContainer>
+
+                <AccountDiagnostics />
             </Stack>
         </Box>
     )

@@ -8,6 +8,7 @@ import {
 } from '@mui/icons-material'
 import {
     Box,
+    Alert,
     Button,
     ButtonBase,
     Chip,
@@ -28,13 +29,15 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CodeChip } from '../components/CodeChip'
 import { EditCodeDialog } from '../components/EditCodeDialog'
 import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
+import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
-import { useSessionSalt } from '../libraries/useSessionSalt'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { updater } from '../tools/db_tools/updater'
-import { decryptNotes, isEncrypted } from '../tools/notesCrypto'
+import { encryptProtectedText, isEncrypted } from '../tools/notesCrypto'
 import { referralSelectionsAreValid } from '../tools/referralSources'
 import { CaseReferralSourceType, CaseType, EntryType, PersonType, ReferralSourceSelectionType } from '../types/majorTypes'
+import { usePhraseSelection } from '../tools/phraseSource'
+import { PhraseSourceControl } from '../components/PhraseSourceControl'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -98,7 +101,6 @@ export function CaseSummary() {
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
     const referralSourcesRes = useGetter<CaseReferralSourceType[]>(['get_case_referral_sources', caseId])
-    const sessionSalt = useSessionSalt((state) => state.sessionSalt)
     const setSnack = useSnack((state) => state.setSnack)
 
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
@@ -107,10 +109,9 @@ export function CaseSummary() {
     const [saving, setSaving] = React.useState(false)
     const [editName, setEditName] = React.useState('')
     const [editDescription, setEditDescription] = React.useState('')
+    const [decryptedDescription, setDecryptedDescription] = React.useState<string | null>(null)
+    const editDescriptionPhrase = usePhraseSelection()
     const [editStatus, setEditStatus] = React.useState('')
-    const [decryptedNotes, setDecryptedNotes] = React.useState<string | null>(null)
-    const [decryptFailed, setDecryptFailed] = React.useState(false)
-    const [overrideSalt, setOverrideSalt] = React.useState('')
     const [editingReferrals, setEditingReferrals] = React.useState(false)
     const [savingReferrals, setSavingReferrals] = React.useState(false)
     const [showReferralErrors, setShowReferralErrors] = React.useState(false)
@@ -140,55 +141,49 @@ export function CaseSummary() {
     )
     const highlightedPeopleRes = useGetter<PersonType[]>(['get_persons_by_entry_id', highlightedId ?? undefined])
     const organizationId = caseRes.data?.organizationId ?? ''
+    const rawDescription = caseRes.data?.description ?? ''
+    const descriptionLocked = isEncrypted(rawDescription) && decryptedDescription === null
 
     React.useEffect(() => {
-        setDecryptedNotes(null)
-        setDecryptFailed(false)
-        setOverrideSalt(sessionSalt ?? '')
+        setDecryptedDescription(isEncrypted(rawDescription) ? null : rawDescription)
+    }, [rawDescription])
 
-        const rawNotes = highlightedEntry?.notes
-        if (!rawNotes || !isEncrypted(rawNotes)) {
-            setDecryptedNotes(rawNotes ?? '')
-            return
-        }
-        decryptNotes(rawNotes, sessionSalt ?? '', organizationId).then((result) => {
-            if (result !== null) setDecryptedNotes(result)
-            else setDecryptFailed(true)
-        })
-    }, [highlightedEntry, organizationId, sessionSalt])
+    const rememberDescription = React.useCallback((plaintext: string) => {
+        setDecryptedDescription(plaintext)
+    }, [])
 
     function openEdit() {
         setEditName(caseRes.data?.name ?? '')
-        setEditDescription(caseRes.data?.description ?? '')
+        setEditDescription(decryptedDescription ?? '')
         setEditStatus(caseRes.data?.status ?? 'active')
         setEditing(true)
     }
 
     async function saveEdit() {
+        if (!descriptionLocked && editDescription && editDescriptionPhrase.phrase === null) {
+            setSnack({
+                message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
+                severity: 'error',
+            })
+            return
+        }
         setSaving(true)
         try {
+            const storedDescription = descriptionLocked
+                ? rawDescription
+                : editDescription
+                    ? await encryptProtectedText(editDescription, editDescriptionPhrase.phrase ?? '', organizationId)
+                    : ''
             await updater('update_case', {
                 id: caseId,
                 name: editName,
-                description: editDescription,
+                description: storedDescription,
                 status: editStatus,
             })
             await caseRes.refetch()
             setEditing(false)
         } finally {
             setSaving(false)
-        }
-    }
-
-    async function tryOverrideSalt() {
-        const rawNotes = highlightedEntry?.notes
-        if (!rawNotes) return
-        const result = await decryptNotes(rawNotes, overrideSalt, organizationId)
-        if (result !== null) {
-            setDecryptedNotes(result)
-            setDecryptFailed(false)
-        } else {
-            setDecryptFailed(true)
         }
     }
 
@@ -328,7 +323,22 @@ export function CaseSummary() {
                             fullWidth
                             multiline
                             minRows={4}
+                            disabled={descriptionLocked}
                         />
+                        {descriptionLocked ? (
+                            <Alert severity="warning">
+                                Unlock the case description on the case page before editing it. Saving other case
+                                details will preserve the encrypted description unchanged.
+                            </Alert>
+                        ) : (
+                            <PhraseSourceControl
+                                source={editDescriptionPhrase.source}
+                                onSourceChange={editDescriptionPhrase.setSource}
+                                customPhrase={editDescriptionPhrase.customPhrase}
+                                onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                purpose="encrypt"
+                            />
+                        )}
                         <TextField
                             select
                             label="Status"
@@ -353,7 +363,11 @@ export function CaseSummary() {
                     <Button
                         variant="contained"
                         onClick={saveEdit}
-                        disabled={saving || !editName.trim()}
+                        disabled={saving
+                            || !editName.trim()
+                            || (!descriptionLocked
+                                && Boolean(editDescription)
+                                && editDescriptionPhrase.phrase === null)}
                         sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
                     >
                         {saving ? 'Saving…' : 'Save changes'}
@@ -454,20 +468,22 @@ export function CaseSummary() {
                                     />
                                 </Stack>
                                 {caseItem.description ? (
-                                    <Typography
+                                    <Box
                                         sx={{
                                             color: 'var(--mui-palette-app-headerMuted)',
                                             fontSize: '0.88rem',
                                             lineHeight: 1.45,
                                             maxWidth: 920,
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: { xs: 2, sm: 1 },
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden',
                                         }}
                                     >
-                                        {caseItem.description}
-                                    </Typography>
+                                        <ProtectedText
+                                            stored={caseItem.description}
+                                            organizationId={organizationId}
+                                            emptyText="No case description"
+                                            compact
+                                            onDecrypted={rememberDescription}
+                                        />
+                                    </Box>
                                 ) : (
                                     <Typography sx={{ color: 'var(--mui-palette-app-headerMuted)', fontStyle: 'italic' }}>
                                         No case description
@@ -900,67 +916,12 @@ export function CaseSummary() {
 
                                 <Box sx={{ py: 3 }}>
                                     <Typography sx={{ color: workspace.ink, fontWeight: 700, mb: 1 }}>Notes</Typography>
-                                    {decryptFailed ? (
-                                        <Paper
-                                            elevation={0}
-                                            sx={{
-                                                p: 2,
-                                                bgcolor: 'rgba(var(--mui-palette-warning-mainChannel) / 0.12)',
-                                                border: '1px solid',
-                                                borderColor: 'warning.main',
-                                                borderRadius: 2,
-                                            }}
-                                        >
-                                            <Typography sx={{ color: 'warning.main', fontWeight: 650 }}>
-                                                These notes use a different salt phrase.
-                                            </Typography>
-                                            <Typography
-                                                variant="body2"
-                                                sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5 }}
-                                            >
-                                                Enter the phrase used when this entry was saved.
-                                            </Typography>
-                                            <Stack
-                                                direction={{ xs: 'column', sm: 'row' }}
-                                                spacing={1}
-                                            >
-                                                <TextField
-                                                    size="small"
-                                                    label="Salt phrase"
-                                                    value={overrideSalt}
-                                                    onChange={(event) => setOverrideSalt(event.target.value)}
-                                                    onKeyDown={(event) => {
-                                                        if (event.key === 'Enter') tryOverrideSalt()
-                                                    }}
-                                                    sx={{ flex: 1, bgcolor: workspace.paper }}
-                                                />
-                                                <Button
-                                                    variant="contained"
-                                                    onClick={tryOverrideSalt}
-                                                    sx={{
-                                                        bgcolor: workspace.teal,
-                                                        '&:hover': { bgcolor: workspace.tealDark },
-                                                    }}
-                                                >
-                                                    Decrypt notes
-                                                </Button>
-                                            </Stack>
-                                        </Paper>
-                                    ) : (
-                                        <Typography
-                                            sx={{
-                                                minHeight: 80,
-                                                color: decryptedNotes ? workspace.ink : workspace.muted,
-                                                fontStyle: decryptedNotes ? 'normal' : 'italic',
-                                                lineHeight: 1.7,
-                                                whiteSpace: 'pre-wrap',
-                                            }}
-                                        >
-                                            {decryptedNotes === null
-                                                ? 'Decrypting…'
-                                                : decryptedNotes || 'No notes recorded.'}
-                                        </Typography>
-                                    )}
+                                    <ProtectedText
+                                        key={highlightedEntry.id}
+                                        stored={highlightedEntry.notes ?? ''}
+                                        organizationId={organizationId}
+                                        emptyText="No notes recorded."
+                                    />
                                 </Box>
 
                                 <Divider sx={{ borderColor: workspace.border }} />

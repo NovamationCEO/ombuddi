@@ -168,6 +168,37 @@ class AuthenticationTests(unittest.TestCase):
         self.assertNotIn("auth0|unlinked", str(diagnostics))
         self.assertNotIn("invited@example.com", str(diagnostics))
 
+    def test_diagnostics_identify_a_missing_email_claim_as_the_invitation_blocker(self):
+        response, context = self.authenticate_with(
+            {"sub": "auth0|unlinked"},
+            None,
+            request_path="/api/v1/auth/session-diagnostics",
+        )
+
+        self.assertIsNone(response)
+        diagnostics = context["session_diagnostics"]
+        self.assertEqual(diagnostics["code"], "EMAIL_CLAIM_MISSING")
+        self.assertEqual(diagnostics["emailClaimSource"], "missing")
+        self.assertFalse(diagnostics["emailClaimPresent"])
+
+    def test_diagnostics_distinguish_an_unverified_email(self):
+        response, context = self.authenticate_with(
+            {
+                "sub": "auth0|unlinked",
+                "ombuddi_email": "invited@example.com",
+                "ombuddi_email_verified": False,
+                "ombuddi_email_claim_source": "namespaced",
+            },
+            None,
+            request_path="/api/v1/auth/session-diagnostics",
+        )
+
+        self.assertIsNone(response)
+        diagnostics = context["session_diagnostics"]
+        self.assertEqual(diagnostics["code"], "EMAIL_NOT_VERIFIED")
+        self.assertTrue(diagnostics["emailClaimPresent"])
+        self.assertFalse(diagnostics["emailVerified"])
+
     def test_diagnostics_explain_a_stale_organization_claim_without_rejecting_the_request(self):
         response, context = self.authenticate_with(
             {

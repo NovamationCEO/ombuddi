@@ -18,6 +18,26 @@ they do not expose cases, visitors, entries, or notes.
 Email delivery is not implemented yet. The administrator copies the generated
 link and sends it through an appropriate channel.
 
+That invitation message and Auth0's email-verification message are separate:
+
+1. The Ombuddi administrator delivers the invitation link.
+2. A new invitee creates an Auth0 account from that link.
+3. Auth0 verifies that the invitee controls the account email.
+4. The invitee returns to the preserved invitation and Ombuddi links the Auth0
+   subject to the local seat.
+
+Auth0's built-in email provider is suitable only for testing and does not
+provide dependable delivery. For alpha troubleshooting, check **Monitoring →
+Logs** for **Failed Sending Notification** events. A known test user can be
+marked verified manually when appropriate, but this is an administrator-only
+workaround, not an onboarding design.
+
+For dependable verification mail, configure an external provider under
+**Branding → Email Provider**, send a provider test message, and configure the
+verification template and authenticated sender domain. Production setup must
+include SPF, DKIM, DMARC, provider delivery/suppression monitoring, and a
+documented resend/support path.
+
 Invitation claiming requires these signed, namespaced claims in the Auth0
 access token:
 
@@ -26,6 +46,56 @@ access token:
 
 They are populated by the **Add Verified Email Claims** Post-Login Action. The
 Action must run for unlinked invitees as well as existing Ombuddi users.
+
+Use this Action code. The email claims must be set **before** any conditional
+organization-metadata logic: a newly invited user does not have Ombuddi
+organization metadata in Auth0 yet.
+
+```javascript
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://ombuddi.com';
+  const email = typeof event.user.email === 'string'
+    ? event.user.email.trim().toLowerCase()
+    : null;
+
+  if (email) {
+    api.accessToken.setCustomClaim(`${namespace}/email`, email);
+    api.accessToken.setCustomClaim(
+      `${namespace}/email_verified`,
+      event.user.email_verified === true,
+    );
+  }
+
+  const organizationId = event.user.app_metadata?.organization_id;
+  if (organizationId) {
+    api.accessToken.setCustomClaim(
+      `${namespace}/organization_id`,
+      organizationId,
+    );
+  }
+};
+```
+
+In the current Auth0 Dashboard, select the Ombuddi tenant, then open **Actions
+→ Triggers → Post Login**. Select **Add Verified Email Claims** from the
+Custom actions list, add it to the trigger, and select **Apply**. In the Action
+editor, **Action is up to date** confirms that its current version is deployed;
+in the Post Login trigger, **All changes are live** confirms that the trigger
+binding is active. Signing out and back in is required because existing access
+tokens do not gain newly configured claims.
+
+The Action being live does not make an unverified address verified. It copies
+Auth0's `event.user.email_verified` value into the access token. For a database
+user, check **User Management → Users → the invited user**. If the address is
+Pending, use the user Actions menu to send a verification email (or use Auth0's
+manual verification control when appropriate for alpha testing), then have the
+user sign out and reopen the invitation link.
+
+If the user is already Verified but Ombuddi reports a missing signed email
+claim after a fresh login, inspect **Monitoring → Logs**, open the successful
+login event, and review **Action Executions**. **Monitoring → Actions Logs** can
+also confirm in real time that the Action ran. Do not log the email address or
+the access token while troubleshooting.
 
 ## Production rollout
 

@@ -9,6 +9,7 @@ export type SessionDiagnostics = {
     organizationClaimMatches: boolean | null
     emailClaimPresent: boolean
     emailVerified: boolean
+    emailClaimSource: 'namespaced' | 'standard' | 'missing'
     isOrganizationAdmin: boolean
     isSystemAdmin: boolean
     canAccessApplication: boolean

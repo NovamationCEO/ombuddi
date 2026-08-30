@@ -7,7 +7,8 @@ import { useHashName } from '../tools/useHashName'
 import { useOrganization } from '../tools/useOrganization'
 import './PersonFinder.css'
 import { useNavigate } from 'react-router-dom'
-import { useSessionSalt } from '../libraries/useSessionSalt'
+import { usePhraseSelection } from '../tools/phraseSource'
+import { PhraseSourceControl } from './PhraseSourceControl'
 
 export function PersonFinder(props: {
     onSelect?: (person: PersonType) => void
@@ -19,22 +20,18 @@ export function PersonFinder(props: {
 }) {
     const { onSelect, onCreateRequest, embedded, clearTrigger } = props
     const [name, setName] = React.useState<string>('')
-    const sessionSalt = useSessionSalt((s) => s.sessionSalt)
-    const [salt, setSalt] = React.useState<string>('')
+    const phraseChoice = usePhraseSelection()
     const [searched, setSearched] = React.useState(false)
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const organization = useOrganization()
     const orgId = organization?.id
 
-    React.useEffect(() => {
-        if (sessionSalt !== null && salt === '') setSalt(sessionSalt)
-    }, [sessionSalt])
-
-    const hashedName = useHashName(name, salt)
+    const hashedName = useHashName(name, phraseChoice.phrase ?? undefined)
+    const privateLookupHash = phraseChoice.phrase === null ? undefined : hashedName
 
     // Private persons: exact hash match
-    const privateRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
+    const privateRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', privateLookupHash])
 
     // Public persons: partial name match via backend ILIKE — only fires when orgId + name ready
     const trimmedName = name.trim()
@@ -45,16 +42,18 @@ export function PersonFinder(props: {
 
     React.useEffect(() => {
         setSearched(false)
-    }, [name, salt])
+    }, [name, phraseChoice.customPhrase, phraseChoice.defaultPhrase, phraseChoice.source])
 
     React.useEffect(() => {
         if (clearTrigger === undefined) return
         setName('')
-        setSalt(sessionSalt ?? '')
+        phraseChoice.setSource('default')
+        phraseChoice.setCustomPhrase('')
         setSearched(false)
     }, [clearTrigger])
 
     async function revealSearch() {
+        if (phraseChoice.phrase === null) return
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] }),
             queryClient.invalidateQueries({ queryKey: ['search_public_persons', orgId, trimmedName] }),
@@ -65,7 +64,8 @@ export function PersonFinder(props: {
     function handleSelect(person: PersonType) {
         onSelect?.(person)
         setName('')
-        setSalt('')
+        phraseChoice.setSource('default')
+        phraseChoice.setCustomPhrase('')
         setSearched(false)
     }
 
@@ -87,16 +87,18 @@ export function PersonFinder(props: {
                     slotProps={{ inputLabel: { shrink: true } }}
                     placeholder="Enter full name"
                 />
-                <TextField
-                    value={salt}
-                    onChange={(e) => setSalt(e.target.value)}
-                    label="Salt Phrase"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    placeholder="Enter salt phrase"
+                <PhraseSourceControl
+                    source={phraseChoice.source}
+                    onSourceChange={phraseChoice.setSource}
+                    customPhrase={phraseChoice.customPhrase}
+                    onCustomPhraseChange={phraseChoice.setCustomPhrase}
+                    purpose="lookup"
+                    compact
                 />
                 <Button
                     variant="contained"
                     onClick={revealSearch}
+                    disabled={phraseChoice.phrase === null}
                 >
                     Search
                 </Button>

@@ -115,6 +115,23 @@ describe('AddNewCase', () => {
         expect(referralCheckboxes.every((checkbox) => !checkbox.checked)).toBe(true)
     })
 
+    it('returns to the Cases page when Cancel is selected', async () => {
+        await act(async () => {
+            root.render(
+                <ThemeProvider theme={appTheme} defaultMode="dark">
+                    <AddNewCase />
+                </ThemeProvider>,
+            )
+        })
+
+        const cancelButton = Array.from(container.querySelectorAll('button'))
+            .find((button) => button.textContent === 'Cancel')
+        await act(async () => cancelButton?.click())
+
+        expect(mocks.navigate).toHaveBeenCalledWith('/cases')
+        expect(mocks.creator).not.toHaveBeenCalled()
+    })
+
     it('requires detail for Other and treats Unknown as mutually exclusive', async () => {
         await act(async () => {
             root.render(

@@ -23,6 +23,7 @@ const App: React.FC = () => {
             authorizationParams={{
                 redirect_uri: window.location.origin + '/',
                 audience: auth0Audience,
+                scope: 'openid profile email',
             }}
             onRedirectCallback={(appState) => {
                 const requestedPath = appState?.returnTo
