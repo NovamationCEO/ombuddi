@@ -12,7 +12,15 @@ logger = logging.getLogger(__name__)
 # CREATE
 ###
 
-def add_one(table, model, request, db_name="default", key='id', owner_constraint=None):
+def add_one(
+    table,
+    model,
+    request,
+    db_name="default",
+    key='id',
+    owner_constraint=None,
+    returning_model=None,
+):
     """Insert a row.
 
     `owner_constraint` is a dict of DB column name -> value (e.g. {'organization_id': '...'})
@@ -31,15 +39,21 @@ def add_one(table, model, request, db_name="default", key='id', owner_constraint
     column_values.update(owner_constraint)
     set_clause = ', '.join(column_values.keys())
     values_clause = ', '.join(['%s::uuid[]' if isinstance(v, list) else '%s' for v in column_values.values()])
-    sql_command = "INSERT INTO " + table + f" ({set_clause}) VALUES ({values_clause}) RETURNING {model[key]};"
+    returning_model = returning_model or {key: model[key]}
+    returning_clause = ', '.join(returning_model.values())
+    sql_command = "INSERT INTO " + table + f" ({set_clause}) VALUES ({values_clause}) RETURNING {returning_clause};"
 
     values = list(column_values.values())
     try:
         with managed_connection(get_db_connection, db_name) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql_command, values)
-                new_id = cur.fetchone()[0]
-        return jsonify({'success': True, 'status': 'success', key: new_id}), 200
+                returned_row = cur.fetchone()
+        returned = {
+            response_key: _coerce(value)
+            for response_key, value in zip(returning_model.keys(), returned_row)
+        }
+        return jsonify({'success': True, 'status': 'success', **returned}), 200
     except Exception:
         logger.exception('Failed to insert row into %s', table)
         return jsonify({

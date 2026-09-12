@@ -217,12 +217,19 @@ export function PersonForm(props: {
                   organizationId: orgId,
               }
         try {
-            const res = await creator<{ id: string; success: boolean }>('add_person', payload)
+            const res = await creator<{
+                id: string
+                monsterSeed: string
+                monsterVersion: number
+                success: boolean
+            }>('add_person', payload)
             if (!res?.id) {
                 throw new Error('Server did not return an id for the new person.')
             }
             const newPerson: PersonType = {
                 id: res.id,
+                monsterSeed: res.monsterSeed,
+                monsterVersion: res.monsterVersion,
                 hashedName: isSecure ? (hashedName ?? '') : undefined,
                 publicName: isSecure ? undefined : name,
                 isPublic: !isSecure,

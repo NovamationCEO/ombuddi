@@ -117,6 +117,7 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/008_expand_administrative_audit.sql
 \i /Users/nova/Code/ombuddi/service/migrations/009_add_case_referral_sources.sql
 \i /Users/nova/Code/ombuddi/service/migrations/010_repair_universal_referral_sources.sql
+\i /Users/nova/Code/ombuddi/service/migrations/011_add_person_monsters.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys

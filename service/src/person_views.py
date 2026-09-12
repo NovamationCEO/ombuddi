@@ -10,6 +10,8 @@ person_views = Blueprint('person_views', __name__)
 
 person_model = {
     'id': 'id',
+    'monsterSeed': 'monster_seed',
+    'monsterVersion': 'monster_version',
     'hashedName': 'hashed_name',
     'publicName': 'public_name',
     'isPublic': 'is_public',
@@ -22,6 +24,16 @@ person_model = {
     'category2': 'category_2',
     'category3': 'category_3',
     'organizationId': 'organization_id',
+}
+
+# The portrait fields are database-generated and never accepted from clients.
+# They remain in the read model above so every person response can render the
+# same portrait, while the write model prevents choosing another person's
+# seed or changing an established appearance.
+person_write_model = {
+    key: column
+    for key, column in person_model.items()
+    if key not in {'monsterSeed', 'monsterVersion'}
 }
 
 @person_views.before_request
@@ -49,11 +61,27 @@ def get_persons_by_hashed_name(raw_hash):
 
 @person_views.route('/api/v1/add_person', methods=['POST'])
 def add_person():
-    return add_one('persons', person_model, request, owner_constraint=_org())
+    return add_one(
+        'persons',
+        person_write_model,
+        request,
+        owner_constraint=_org(),
+        returning_model={
+            'id': 'id',
+            'monsterSeed': 'monster_seed',
+            'monsterVersion': 'monster_version',
+        },
+    )
 
 @person_views.route('/api/v1/update_person', methods=['PUT'])
 def update_person():
-    return update_one('persons', person_model, request, owner_constraint=_org())
+    return update_one(
+        'persons',
+        person_model,
+        request,
+        owner_constraint=_org(),
+        immutable_columns={'monster_seed', 'monster_version'},
+    )
 
 @person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
 def get_persons_by_organization_id(organization_id):

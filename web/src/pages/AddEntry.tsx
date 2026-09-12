@@ -23,13 +23,14 @@ import { CaseType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { PersonFinder } from '../components/PersonFinder'
 import { PersonForm } from '../components/AddPerson/PersonForm'
-import { Add, ArrowBack, LockOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
+import { ArrowBack, LockOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
 import { encryptNotes } from '../tools/notesCrypto'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
+import { PersonMonsterAvatar } from '../components/PersonMonsterPortrait'
 
 const entryWorkspace = {
     background: 'var(--mui-palette-background-default)',
@@ -232,6 +233,12 @@ export function AddEntry() {
                                 {entryPeople.map((p) => (
                                     <Chip
                                         key={p.id}
+                                        avatar={
+                                            <PersonMonsterAvatar
+                                                seed={p.monsterSeed || p.id}
+                                                version={p.monsterVersion}
+                                            />
+                                        }
                                         label={personLabel(p)}
                                         sx={{
                                             bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
@@ -295,10 +302,15 @@ export function AddEntry() {
                                         {casePeopleNotStaged.map((p) => (
                                             <Chip
                                                 key={p.id}
+                                                avatar={
+                                                    <PersonMonsterAvatar
+                                                        seed={p.monsterSeed || p.id}
+                                                        version={p.monsterVersion}
+                                                    />
+                                                }
                                                 label={personLabel(p)}
                                                 variant={'outlined'}
                                                 onClick={() => addPerson(p)}
-                                                icon={<Add fontSize={'small'} />}
                                             />
                                         ))}
                                     </Stack>
@@ -587,6 +599,12 @@ export function AddEntry() {
                                     {entryPeople.map((person) => (
                                         <Chip
                                             key={person.id}
+                                            avatar={
+                                                <PersonMonsterAvatar
+                                                    seed={person.monsterSeed || person.id}
+                                                    version={person.monsterVersion}
+                                                />
+                                            }
                                             label={personLabel(person)}
                                             onDelete={() => removePerson(person.id)}
                                             sx={{

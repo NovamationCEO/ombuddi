@@ -417,6 +417,11 @@ CREATE INDEX entries_organization_id_idx ON entries (organization_id);
 -- and salt phrase under the right org.
 CREATE TABLE persons (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- Random, non-identifying input for the local procedural portrait. Keep
+    -- the version beside it so a future renderer cannot silently change an
+    -- existing person's appearance.
+    monster_seed     UUID NOT NULL DEFAULT gen_random_uuid(),
+    monster_version  SMALLINT NOT NULL DEFAULT 1,
     hashed_name      TEXT,           -- NULL for public persons; NOT NULL for private visitors
     public_name      TEXT,           -- plaintext name, populated only when is_public = TRUE
     is_public        BOOLEAN NOT NULL DEFAULT FALSE,
@@ -431,6 +436,7 @@ CREATE TABLE persons (
     organization_id  UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX persons_monster_seed_uidx    ON persons (monster_seed);
 CREATE INDEX persons_hashed_name_idx     ON persons (hashed_name);
 CREATE INDEX persons_organization_id_idx ON persons (organization_id);
 

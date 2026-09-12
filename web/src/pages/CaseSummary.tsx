@@ -45,6 +45,7 @@ import {
 } from '../types/majorTypes'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
+import { PersonMonsterAvatar } from '../components/PersonMonsterPortrait'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -970,6 +971,12 @@ export function CaseSummary() {
                                             {(highlightedPeopleRes.data ?? []).map((person) => (
                                                 <Chip
                                                     key={person.id}
+                                                    avatar={
+                                                        <PersonMonsterAvatar
+                                                            seed={person.monsterSeed || person.id}
+                                                            version={person.monsterVersion}
+                                                        />
+                                                    }
                                                     label={personLabel(person)}
                                                     sx={{ color: workspace.tealDark, bgcolor: workspace.tealPale }}
                                                 />

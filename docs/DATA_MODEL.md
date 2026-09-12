@@ -111,6 +111,8 @@ The `organization_id` column exists; the API does not yet *enforce* that the cal
 ### `persons`
 - `id` UUID, PK
 - `hashed_name` TEXT (sha256 hex, see hashing pipeline below)
+- `monster_seed` UUID (random, non-identifying seed for the person's stable procedural portrait)
+- `monster_version` SMALLINT (freezes the portrait renderer version; currently `1`)
 - `gender` TEXT
 - `generation` TEXT
 - `race` TEXT

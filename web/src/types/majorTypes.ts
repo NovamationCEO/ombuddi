@@ -46,7 +46,9 @@ export type CodeType = {
 
 export type PersonType = {
     id: string
-    hashedName: string
+    monsterSeed: string
+    monsterVersion: number
+    hashedName?: string
     publicName?: string
     isPublic?: boolean
     gender: string
