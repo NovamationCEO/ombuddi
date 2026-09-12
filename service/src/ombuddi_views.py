@@ -407,6 +407,7 @@ ombuds_model = {
     'email': 'email',
     'isAdmin': 'is_admin',
     'isSystemAdmin': 'is_system_admin',
+    'personAvatarStyle': 'person_avatar_style',
     'organizationId': 'organization_id',
 }
 
@@ -418,35 +419,61 @@ def get_current_ombuds():
 @ombuddi_views.route('/api/v1/update_current_ombuds', methods=['PUT'])
 def update_current_ombuds():
     payload = request.get_json(silent=True) or {}
-    raw_name = payload.get('name')
-    name = raw_name.strip() if isinstance(raw_name, str) else ''
-    if not name:
+    updates = []
+    values = []
+
+    if 'name' in payload:
+        raw_name = payload.get('name')
+        name = raw_name.strip() if isinstance(raw_name, str) else ''
+        if not name:
+            return jsonify({
+                'error': 'Input error',
+                'message': 'Name is required',
+            }), 400
+        if len(name) > 200:
+            return jsonify({
+                'error': 'Input error',
+                'message': 'Name must be 200 characters or fewer',
+            }), 400
+        updates.append('name = %s')
+        values.append(name)
+
+    if 'personAvatarStyle' in payload:
+        avatar_style = payload.get('personAvatarStyle')
+        if avatar_style not in {'monster', 'geometric'}:
+            return jsonify({
+                'error': 'Input error',
+                'message': 'Person avatar style must be monster or geometric',
+            }), 400
+        updates.append('person_avatar_style = %s')
+        values.append(avatar_style)
+
+    if not updates:
         return jsonify({
             'error': 'Input error',
-            'message': 'Name is required',
-        }), 400
-    if len(name) > 200:
-        return jsonify({
-            'error': 'Input error',
-            'message': 'Name must be 200 characters or fewer',
+            'message': 'No profile fields supplied',
         }), 400
 
     try:
         with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     UPDATE ombuds
-                    SET name = %s
+                    SET {', '.join(updates)}
                     WHERE id = %s AND organization_id = %s
-                    RETURNING name
+                    RETURNING name, person_avatar_style
                     """,
-                    (name, g.ombuds_id, g.organization_id),
+                    (*values, g.ombuds_id, g.organization_id),
                 )
                 updated = cur.fetchone()
         if updated is None:
             return jsonify({'error': 'Not found', 'message': 'Ombuddi profile not found'}), 404
-        return jsonify({'success': True, 'name': updated[0]}), 200
+        return jsonify({
+            'success': True,
+            'name': updated[0],
+            'personAvatarStyle': updated[1],
+        }), 200
     except Exception:
         logger.exception('Failed to update current Ombuddi profile')
         return jsonify({

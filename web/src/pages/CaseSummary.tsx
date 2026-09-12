@@ -45,7 +45,7 @@ import {
 } from '../types/majorTypes'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
-import { PersonMonsterAvatar } from '../components/PersonMonsterPortrait'
+import { PersonAvatar } from '../components/PersonAvatar'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -972,7 +972,7 @@ export function CaseSummary() {
                                                 <Chip
                                                     key={person.id}
                                                     avatar={
-                                                        <PersonMonsterAvatar
+                                                        <PersonAvatar
                                                             seed={person.monsterSeed || person.id}
                                                             version={person.monsterVersion}
                                                         />

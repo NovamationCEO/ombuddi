@@ -72,7 +72,11 @@ CREATE TABLE ombuds (
     is_active         BOOLEAN NOT NULL DEFAULT TRUE,
     deactivated_at    TIMESTAMPTZ,
     name              TEXT NOT NULL,
+    person_avatar_style TEXT NOT NULL DEFAULT 'monster',
     organization_id   UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+    CONSTRAINT ombuds_person_avatar_style_check CHECK (
+        person_avatar_style IN ('monster', 'geometric')
+    ),
     CONSTRAINT ombuds_active_timestamp_check CHECK (
         (is_active AND deactivated_at IS NULL)
         OR (NOT is_active AND deactivated_at IS NOT NULL)

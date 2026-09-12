@@ -1,5 +1,4 @@
-// SVG portrait renderer and its compact MUI avatar wrapper.
-import { Avatar } from '@mui/material'
+// SVG portrait renderer for the friendly person-marker style.
 import type { CSSProperties } from 'react'
 import {
     getPersonMonsterDescriptor,
@@ -755,6 +754,7 @@ export function PersonMonster({
             height={size}
             aria-hidden="true"
             focusable="false"
+            data-avatar-renderer="monster"
             style={{ display: 'block', ...style }}
         >
             <Backdrop
@@ -795,19 +795,5 @@ export function PersonMonster({
                 palette={palette}
             />
         </svg>
-    )
-}
-
-export function PersonMonsterAvatar({ seed, version, size = 32 }: { seed: string; version?: number; size?: number }) {
-    return (
-        <Avatar
-            aria-hidden="true"
-            sx={{ width: size, height: size, bgcolor: 'transparent' }}
-        >
-            <PersonMonster
-                seed={seed}
-                version={version}
-            />
-        </Avatar>
     )
 }

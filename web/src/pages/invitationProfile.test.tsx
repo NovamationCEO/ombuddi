@@ -61,7 +61,7 @@ vi.mock('../tools/db_tools/updater', () => ({
 
 vi.mock('../tools/useCurrentOmbuds', () => ({
     useCurrentOmbuds: () => ({
-        data: { id: 'ombuds-1', name: 'Invited User' },
+        data: { id: 'ombuds-1', name: 'Invited User', personAvatarStyle: 'monster' },
         isLoading: false,
         error: null,
         refetch: mocks.refetchOmbuds,
@@ -314,8 +314,37 @@ describe('invitation onboarding', () => {
 
         expect(container.querySelector('[aria-label="Dark mode"]')).not.toBeNull()
         expect(container.querySelector('[aria-label="Light mode"]')).not.toBeNull()
+        expect(container.querySelector('[aria-label="Monster person markers"]')).not.toBeNull()
+        expect(container.querySelector('[aria-label="Neutral geometric person markers"]')).not.toBeNull()
         expect((container.querySelector('input[type="password"]') as HTMLInputElement).value).toBe('temporary phrase')
         expect(container.textContent).toContain('cleared on refresh, login, or logout')
+    })
+
+    it('stores the neutral person marker preference on the user profile', async () => {
+        await act(async () => {
+            root.render(
+                <ThemeProvider
+                    theme={appTheme}
+                    defaultMode="dark"
+                >
+                    <Profile />
+                </ThemeProvider>,
+            )
+        })
+
+        const neutralButton = container.querySelector(
+            '[aria-label="Neutral geometric person markers"]',
+        ) as HTMLButtonElement
+        await act(async () => neutralButton.click())
+
+        expect(mocks.updater).toHaveBeenCalledWith('update_current_ombuds', {
+            personAvatarStyle: 'geometric',
+        })
+        expect(mocks.refetchOmbuds).toHaveBeenCalled()
+        expect(mocks.setSnack).toHaveBeenCalledWith({
+            message: 'Person avatar preference updated.',
+            severity: 'success',
+        })
     })
 
     it('shows safe authenticated-session diagnostics', async () => {

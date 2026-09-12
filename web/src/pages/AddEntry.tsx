@@ -30,7 +30,7 @@ import { usePicklists } from '../tools/usePicklists'
 import { encryptNotes } from '../tools/notesCrypto'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
-import { PersonMonsterAvatar } from '../components/PersonMonsterPortrait'
+import { PersonAvatar } from '../components/PersonAvatar'
 
 const entryWorkspace = {
     background: 'var(--mui-palette-background-default)',
@@ -234,7 +234,7 @@ export function AddEntry() {
                                     <Chip
                                         key={p.id}
                                         avatar={
-                                            <PersonMonsterAvatar
+                                            <PersonAvatar
                                                 seed={p.monsterSeed || p.id}
                                                 version={p.monsterVersion}
                                             />
@@ -303,7 +303,7 @@ export function AddEntry() {
                                             <Chip
                                                 key={p.id}
                                                 avatar={
-                                                    <PersonMonsterAvatar
+                                                    <PersonAvatar
                                                         seed={p.monsterSeed || p.id}
                                                         version={p.monsterVersion}
                                                     />
@@ -600,7 +600,7 @@ export function AddEntry() {
                                         <Chip
                                             key={person.id}
                                             avatar={
-                                                <PersonMonsterAvatar
+                                                <PersonAvatar
                                                     seed={person.monsterSeed || person.id}
                                                     version={person.monsterVersion}
                                                 />

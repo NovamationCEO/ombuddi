@@ -18,6 +18,7 @@ No "well-known" organization rows. The IOA reporting categories and codes are ap
 - `is_system_admin` BOOL, Ombuddi system-administration permission
 - `is_active`, `deactivated_at`, reversible seat status
 - `name` TEXT
+- `person_avatar_style` TEXT (`monster` by default, or the user's neutral `geometric` preference)
 - `organization_id` UUID, FK -> organizations.id
 
 Auth0's textual `sub` claim is an external identity only. Authentication

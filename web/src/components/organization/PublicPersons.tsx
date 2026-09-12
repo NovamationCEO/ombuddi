@@ -20,7 +20,7 @@ import { updater } from '../../tools/db_tools/updater'
 import { deleter } from '../../tools/db_tools/deleter'
 import { useSnack } from '../../libraries/useSnack'
 import { PersonType } from '../../types/majorTypes'
-import { PersonMonsterAvatar } from '../PersonMonsterPortrait'
+import { PersonAvatar } from '../PersonAvatar'
 
 type DialogMode = 'add' | 'edit' | null
 
@@ -115,7 +115,7 @@ export function PublicPersons() {
                             key={p.id}
                             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                         >
-                            <PersonMonsterAvatar
+                            <PersonAvatar
                                 seed={p.monsterSeed || p.id}
                                 version={p.monsterVersion}
                                 size={44}

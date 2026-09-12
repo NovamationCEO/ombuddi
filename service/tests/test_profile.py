@@ -59,7 +59,9 @@ class FakeConnection:
 
 class ProfileTests(unittest.TestCase):
     def test_current_profile_endpoints_return_the_provisioned_defaults(self):
-        ombuds_connection = FakeConnection((OMBUDS_ID, "Invited User", "invited@example.com", False, False, ORGANIZATION_ID))
+        ombuds_connection = FakeConnection(
+            (OMBUDS_ID, "Invited User", "invited@example.com", False, False, "monster", ORGANIZATION_ID)
+        )
         with app.test_request_context("/api/v1/get_current_ombuds"):
             g.ombuds_id = OMBUDS_ID
             g.organization_id = ORGANIZATION_ID
@@ -67,6 +69,7 @@ class ProfileTests(unittest.TestCase):
                 response = get_current_ombuds()
 
         self.assertEqual(response.get_json()["name"], "Invited User")
+        self.assertEqual(response.get_json()["personAvatarStyle"], "monster")
         self.assertEqual(response.get_json()["organizationId"], ORGANIZATION_ID)
 
         organization_connection = FakeConnection((ORGANIZATION_ID, "Example Organization"))
@@ -78,7 +81,7 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(response.get_json(), {"id": ORGANIZATION_ID, "name": "Example Organization"})
 
     def test_user_can_update_only_their_own_name(self):
-        connection = FakeConnection(("Updated User",))
+        connection = FakeConnection(("Updated User", "monster"))
         with app.test_request_context(
             "/api/v1/update_current_ombuds",
             method="PUT",
@@ -99,10 +102,49 @@ class ProfileTests(unittest.TestCase):
         sql, params = connection.fake_cursor.executions[0]
         self.assertEqual(
             sql,
-            "UPDATE ombuds SET name = %s WHERE id = %s AND organization_id = %s RETURNING name",
+            "UPDATE ombuds SET name = %s WHERE id = %s AND organization_id = %s RETURNING name, person_avatar_style",
         )
         self.assertEqual(params, ("Updated User", OMBUDS_ID, ORGANIZATION_ID))
         self.assertTrue(connection.committed)
+
+    def test_user_can_update_their_person_avatar_preference(self):
+        connection = FakeConnection(("Invited User", "geometric"))
+        with app.test_request_context(
+            "/api/v1/update_current_ombuds",
+            method="PUT",
+            json={"personAvatarStyle": "geometric", "isAdmin": True},
+        ):
+            g.ombuds_id = OMBUDS_ID
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.ombuddi_views.get_db_connection", return_value=connection):
+                response, status = update_current_ombuds()
+
+        self.assertEqual(status, 200)
+        self.assertEqual(response.get_json()["personAvatarStyle"], "geometric")
+        sql, params = connection.fake_cursor.executions[0]
+        self.assertEqual(
+            sql,
+            "UPDATE ombuds SET person_avatar_style = %s WHERE id = %s AND organization_id = %s RETURNING name, person_avatar_style",
+        )
+        self.assertEqual(params, ("geometric", OMBUDS_ID, ORGANIZATION_ID))
+
+    def test_unknown_person_avatar_preference_is_rejected(self):
+        with app.test_request_context(
+            "/api/v1/update_current_ombuds",
+            method="PUT",
+            json={"personAvatarStyle": "photograph"},
+        ):
+            g.ombuds_id = OMBUDS_ID
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.ombuddi_views.get_db_connection") as get_connection:
+                response, status = update_current_ombuds()
+
+        self.assertEqual(status, 400)
+        self.assertEqual(
+            response.get_json()["message"],
+            "Person avatar style must be monster or geometric",
+        )
+        get_connection.assert_not_called()
 
     def test_blank_name_is_rejected_before_accessing_the_database(self):
         with app.test_request_context(

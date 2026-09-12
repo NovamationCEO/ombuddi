@@ -24,6 +24,7 @@ export type OmbudsType = {
     email?: string | null
     isAdmin: boolean
     isSystemAdmin: boolean
+    personAvatarStyle: 'monster' | 'geometric'
     organizationId: string
 }
 

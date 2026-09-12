@@ -9,7 +9,7 @@ import './PersonFinder.css'
 import { useNavigate } from 'react-router-dom'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from './PhraseSourceControl'
-import { PersonMonsterAvatar } from './PersonMonsterPortrait'
+import { PersonAvatar } from './PersonAvatar'
 
 export function PersonFinder(props: {
     onSelect?: (person: PersonType) => void
@@ -130,7 +130,7 @@ export function PersonFinder(props: {
                                     gap: 1,
                                 }}
                             >
-                                <PersonMonsterAvatar
+                                <PersonAvatar
                                     seed={person.monsterSeed || person.id}
                                     version={person.monsterVersion}
                                     size={42}

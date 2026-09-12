@@ -19,6 +19,11 @@ import { useSessionSalt } from '../libraries/useSessionSalt'
 import { AccountDiagnostics } from '../components/profile/AccountDiagnostics'
 import { updater } from '../tools/db_tools/updater'
 import { useSnack } from '../libraries/useSnack'
+import { PersonMonster } from '../components/PersonMonsterPortrait'
+import { PersonGeometricPortrait } from '../components/PersonGeometricPortrait'
+import type { PersonAvatarStyle } from '../components/PersonAvatar'
+
+const avatarPreviewSeed = '64fa364f-d184-4b4d-a8fd-89339f1cb5d8'
 
 export function Profile() {
     const ombudsRes = useCurrentOmbuds()
@@ -28,10 +33,16 @@ export function Profile() {
     const setSnack = useSnack((state) => state.setSnack)
     const [name, setName] = useState('')
     const [savingName, setSavingName] = useState(false)
+    const [avatarStyle, setAvatarStyle] = useState<PersonAvatarStyle>('monster')
+    const [savingAvatarStyle, setSavingAvatarStyle] = useState(false)
 
     useEffect(() => {
         if (ombudsRes.data?.name !== undefined) setName(ombudsRes.data.name)
     }, [ombudsRes.data?.name])
+
+    useEffect(() => {
+        if (ombudsRes.data?.personAvatarStyle) setAvatarStyle(ombudsRes.data.personAvatarStyle)
+    }, [ombudsRes.data?.personAvatarStyle])
 
     async function saveName() {
         const trimmedName = name.trim()
@@ -47,6 +58,24 @@ export function Profile() {
             setSnack({ message: 'Failed to update your name.', severity: 'error' })
         } finally {
             setSavingName(false)
+        }
+    }
+
+    async function saveAvatarStyle(nextStyle: PersonAvatarStyle) {
+        const previousStyle = avatarStyle
+        setAvatarStyle(nextStyle)
+        setSavingAvatarStyle(true)
+        try {
+            await updater<{ personAvatarStyle: PersonAvatarStyle }>('update_current_ombuds', {
+                personAvatarStyle: nextStyle,
+            })
+            await ombudsRes.refetch()
+            setSnack({ message: 'Person avatar preference updated.', severity: 'success' })
+        } catch {
+            setAvatarStyle(previousStyle)
+            setSnack({ message: 'Failed to update your person avatar preference.', severity: 'error' })
+        } finally {
+            setSavingAvatarStyle(false)
         }
     }
 
@@ -186,6 +215,47 @@ export function Profile() {
                                 Light
                             </ToggleButton>
                         </ToggleButtonGroup>
+
+                        <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                            <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>
+                                Person identity markers
+                            </Typography>
+                            <Typography sx={{ mt: 0.35, mb: 1.25, color: 'text.secondary' }}>
+                                Choose how people are represented to you. This changes only their appearance; the same
+                                private person keeps the same underlying identity marker.
+                            </Typography>
+                            <ToggleButtonGroup
+                                exclusive
+                                value={avatarStyle}
+                                onChange={(_event, nextStyle: PersonAvatarStyle | null) => {
+                                    if (nextStyle && nextStyle !== avatarStyle) void saveAvatarStyle(nextStyle)
+                                }}
+                                aria-label="Person identity marker style"
+                                disabled={savingAvatarStyle || !ombudsRes.data}
+                                sx={{ alignSelf: 'flex-start' }}
+                            >
+                                <ToggleButton
+                                    value="monster"
+                                    aria-label="Monster person markers"
+                                    sx={{ gap: 1 }}
+                                >
+                                    <Box sx={{ width: 38, height: 38 }}>
+                                        <PersonMonster seed={avatarPreviewSeed} />
+                                    </Box>
+                                    Monsters
+                                </ToggleButton>
+                                <ToggleButton
+                                    value="geometric"
+                                    aria-label="Neutral geometric person markers"
+                                    sx={{ gap: 1 }}
+                                >
+                                    <Box sx={{ width: 38, height: 38 }}>
+                                        <PersonGeometricPortrait seed={avatarPreviewSeed} />
+                                    </Box>
+                                    Neutral geometry
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
                     </Stack>
                 </RoundedContainer>
 
