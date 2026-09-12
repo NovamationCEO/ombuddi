@@ -26,6 +26,7 @@ import {
 } from '@mui/material'
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { CaseSceneThumbnail } from '../components/CaseSceneThumbnail'
 import { CodeChip } from '../components/CodeChip'
 import { EditCodeDialog } from '../components/EditCodeDialog'
 import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
@@ -35,7 +36,13 @@ import { useGetter } from '../tools/db_tools/useGetter'
 import { updater } from '../tools/db_tools/updater'
 import { encryptProtectedText, isEncrypted } from '../tools/notesCrypto'
 import { referralSelectionsAreValid } from '../tools/referralSources'
-import { CaseReferralSourceType, CaseType, EntryType, PersonType, ReferralSourceSelectionType } from '../types/majorTypes'
+import {
+    CaseReferralSourceType,
+    CaseType,
+    EntryType,
+    PersonType,
+    ReferralSourceSelectionType,
+} from '../types/majorTypes'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
 
@@ -172,8 +179,8 @@ export function CaseSummary() {
             const storedDescription = descriptionLocked
                 ? rawDescription
                 : editDescription
-                    ? await encryptProtectedText(editDescription, editDescriptionPhrase.phrase ?? '', organizationId)
-                    : ''
+                  ? await encryptProtectedText(editDescription, editDescriptionPhrase.phrase ?? '', organizationId)
+                  : ''
             await updater('update_case', {
                 id: caseId,
                 name: editName,
@@ -188,11 +195,13 @@ export function CaseSummary() {
     }
 
     function openReferralEditor() {
-        setEditReferralSources((referralSourcesRes.data ?? []).map((source) => ({
-            id: source.id,
-            behavior: source.behavior,
-            ...(source.detail ? { detail: source.detail } : {}),
-        })))
+        setEditReferralSources(
+            (referralSourcesRes.data ?? []).map((source) => ({
+                id: source.id,
+                behavior: source.behavior,
+                ...(source.detail ? { detail: source.detail } : {}),
+            })),
+        )
         setShowReferralErrors(false)
         setEditingReferrals(true)
     }
@@ -291,8 +300,17 @@ export function CaseSummary() {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setEditingReferrals(false)} disabled={savingReferrals}>Cancel</Button>
-                    <Button variant="contained" onClick={() => void saveReferralSources()} disabled={savingReferrals}>
+                    <Button
+                        onClick={() => setEditingReferrals(false)}
+                        disabled={savingReferrals}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void saveReferralSources()}
+                        disabled={savingReferrals}
+                    >
                         {savingReferrals ? 'Saving…' : 'Save referral sources'}
                     </Button>
                 </DialogActions>
@@ -363,11 +381,11 @@ export function CaseSummary() {
                     <Button
                         variant="contained"
                         onClick={saveEdit}
-                        disabled={saving
-                            || !editName.trim()
-                            || (!descriptionLocked
-                                && Boolean(editDescription)
-                                && editDescriptionPhrase.phrase === null)}
+                        disabled={
+                            saving ||
+                            !editName.trim() ||
+                            (!descriptionLocked && Boolean(editDescription) && editDescriptionPhrase.phrase === null)
+                        }
                         sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
                     >
                         {saving ? 'Saving…' : 'Save changes'}
@@ -427,17 +445,16 @@ export function CaseSummary() {
                             }}
                         >
                             <Box
-                                component="img"
-                                src={`https://picsum.photos/seed/${caseItem.id}/88/88`}
-                                alt=""
                                 sx={{
                                     width: { xs: 54, sm: 68 },
                                     height: { xs: 54, sm: 68 },
-                                    objectFit: 'cover',
                                     borderRadius: 2,
                                     boxShadow: '0 7px 18px var(--mui-palette-app-shadow)',
+                                    overflow: 'hidden',
                                 }}
-                            />
+                            >
+                                <CaseSceneThumbnail seed={caseItem.id} />
+                            </Box>
 
                             <Box sx={{ minWidth: 0 }}>
                                 <Stack
@@ -485,7 +502,9 @@ export function CaseSummary() {
                                         />
                                     </Box>
                                 ) : (
-                                    <Typography sx={{ color: 'var(--mui-palette-app-headerMuted)', fontStyle: 'italic' }}>
+                                    <Typography
+                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontStyle: 'italic' }}
+                                    >
                                         No case description
                                     </Typography>
                                 )}
@@ -629,7 +648,10 @@ export function CaseSummary() {
                                 Referral sources
                             </Typography>
                             {referralSourcesRes.isLoading ? (
-                                <CircularProgress size={18} sx={{ color: 'var(--mui-palette-app-headerMuted)' }} />
+                                <CircularProgress
+                                    size={18}
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)' }}
+                                />
                             ) : referralSourcesRes.data?.length ? (
                                 referralSourcesRes.data.map((source) => (
                                     <Chip
@@ -778,7 +800,9 @@ export function CaseSummary() {
                                                 borderLeftColor: selected ? workspace.purple : 'transparent',
                                                 bgcolor: selected ? workspace.tealPale : workspace.paper,
                                                 transition: 'background-color 150ms ease, border-color 150ms ease',
-                                                '&:hover': { bgcolor: selected ? workspace.tealPale : workspace.raised },
+                                                '&:hover': {
+                                                    bgcolor: selected ? workspace.tealPale : workspace.raised,
+                                                },
                                                 '&:focus-visible': {
                                                     outline: `3px solid ${workspace.purple}`,
                                                     outlineOffset: -3,

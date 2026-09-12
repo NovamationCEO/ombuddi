@@ -6,6 +6,7 @@ import { CaseType } from '../../types/majorTypes'
 import { CaseCodeRow } from './CaseCodeRow'
 import { CaseCardWrapper } from './CaseCardWrapper'
 import { useProtectedText } from '../../tools/useProtectedText'
+import { CaseSceneThumbnail } from '../CaseSceneThumbnail'
 
 const statusStyles = {
     active: {
@@ -34,8 +35,11 @@ function formatCaseDate(value: Date) {
 
 function CaseDescriptionPreview({ caseItem }: { caseItem: CaseType }) {
     const description = useProtectedText(caseItem.description, caseItem.organizationId, 'default', '')
-    const text = description.plaintext
-        ?? (description.status === 'decrypting' ? 'Decrypting description…' : 'Encrypted description — open case to unlock')
+    const text =
+        description.plaintext ??
+        (description.status === 'decrypting'
+            ? 'Decrypting description…'
+            : 'Encrypted description — open case to unlock')
 
     return (
         <Typography
@@ -79,19 +83,18 @@ export function CaseCard({ caseItem }: { caseItem: CaseType }) {
             >
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
                     <Box
-                        component="img"
-                        src={`https://picsum.photos/seed/${caseItem.id}/72/72`}
-                        alt=""
                         sx={{
                             width: { xs: 54, sm: 60 },
                             height: { xs: 54, sm: 60 },
                             display: 'block',
-                            objectFit: 'cover',
                             bgcolor: palette.surfaceRaised,
                             borderRadius: 2.25,
                             boxShadow: '0 6px 14px var(--mui-palette-app-shadow)',
+                            overflow: 'hidden',
                         }}
-                    />
+                    >
+                        <CaseSceneThumbnail seed={caseItem.id} />
+                    </Box>
                     <Box
                         sx={{
                             width: '100%',
@@ -121,9 +124,7 @@ export function CaseCard({ caseItem }: { caseItem: CaseType }) {
                     >
                         {caseItem.name}
                     </Typography>
-                    {caseItem.description && (
-                        <CaseDescriptionPreview caseItem={caseItem} />
-                    )}
+                    {caseItem.description && <CaseDescriptionPreview caseItem={caseItem} />}
 
                     {!!caseItem.codes?.length && <CaseCodeRow codeIds={caseItem.codes} />}
                 </Box>
