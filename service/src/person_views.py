@@ -36,6 +36,12 @@ person_write_model = {
     if key not in {'monsterSeed', 'monsterVersion'}
 }
 
+# Queries below must select columns in the model's order.  SELECT * is unsafe
+# here because ALTER TABLE appends columns, so upgraded and freshly-created
+# databases can have different physical column orders.
+PERSON_SELECT_COLUMNS = ', '.join(f'p.{column}' for column in person_model.values())
+
+
 @person_views.before_request
 def _salt_name():
     #  Does not target URL params
@@ -94,7 +100,9 @@ def get_public_persons_by_organization_id(organization_id):
 @person_views.route('/api/v1/search_public_persons/<organization_id>/<query>')
 def search_public_persons(organization_id, query):
     return _get_persons_by_sql(
-        "SELECT * FROM persons WHERE organization_id = %s AND is_public = TRUE AND public_name ILIKE %s ORDER BY public_name",
+        f"SELECT {PERSON_SELECT_COLUMNS} FROM persons p "
+        "WHERE p.organization_id = %s AND p.is_public = TRUE "
+        "AND p.public_name ILIKE %s ORDER BY p.public_name",
         (g.organization_id, f'%{query}%'),
     )
 
@@ -141,8 +149,8 @@ def _get_persons_by_sql(sql: str, params: tuple):
             500,
         )
 
-SQL_PERSONS_BY_CASE_ID = """
-    SELECT p.*
+SQL_PERSONS_BY_CASE_ID = f"""
+    SELECT {PERSON_SELECT_COLUMNS}
     FROM persons p
     WHERE p.organization_id = %s
       AND EXISTS (
@@ -156,8 +164,8 @@ SQL_PERSONS_BY_CASE_ID = """
     ORDER BY p.id;
 """
 
-SQL_PERSONS_BY_ENTRY_ID = """
-    SELECT p.*
+SQL_PERSONS_BY_ENTRY_ID = f"""
+    SELECT {PERSON_SELECT_COLUMNS}
     FROM persons p
     WHERE p.organization_id = %s
       AND EXISTS (

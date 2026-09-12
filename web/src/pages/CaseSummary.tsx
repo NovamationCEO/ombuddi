@@ -45,7 +45,7 @@ import {
 } from '../types/majorTypes'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
-import { PersonAvatar } from '../components/PersonAvatar'
+import { EntryPersonMarker } from '../components/EntryPersonMarker'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -80,14 +80,6 @@ const statusStyles = {
         border: 'var(--mui-palette-divider)',
     },
 } as const
-
-function personLabel(person: PersonType): string {
-    if (person.isPublic && person.publicName) return person.publicName
-    const parts = [person.primaryRole, person.generation, person.gender].filter(
-        (value) => value && value !== 'unknown' && value !== 'N/A',
-    )
-    return parts.length > 0 ? parts.join(' · ') : 'Unspecified'
-}
 
 function formatDate(value?: Date) {
     if (!value) return '—'
@@ -969,16 +961,9 @@ export function CaseSummary() {
                                             sx={{ flexWrap: 'wrap', gap: 0.75 }}
                                         >
                                             {(highlightedPeopleRes.data ?? []).map((person) => (
-                                                <Chip
+                                                <EntryPersonMarker
                                                     key={person.id}
-                                                    avatar={
-                                                        <PersonAvatar
-                                                            seed={person.monsterSeed || person.id}
-                                                            version={person.monsterVersion}
-                                                        />
-                                                    }
-                                                    label={personLabel(person)}
-                                                    sx={{ color: workspace.tealDark, bgcolor: workspace.tealPale }}
+                                                    person={person}
                                                 />
                                             ))}
                                         </Stack>

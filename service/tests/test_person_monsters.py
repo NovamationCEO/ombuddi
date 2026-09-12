@@ -12,7 +12,7 @@ sys.path.insert(0, SERVICE_DIR)
 sys.path.insert(0, SRC_DIR)
 
 from app import app
-from src.person_views import add_person, person_model, update_person
+from src.person_views import add_person, get_persons_by_entry_id, person_model, update_person
 
 
 ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -38,6 +38,11 @@ class FakeCursor:
 
     def fetchone(self):
         return self.rows.pop(0) if self.rows else None
+
+    def fetchall(self):
+        rows = self.rows
+        self.rows = []
+        return rows
 
 
 class FakeConnection:
@@ -120,6 +125,38 @@ class PersonMonsterTests(unittest.TestCase):
         self.assertNotIn("monster_version", sql)
         self.assertNotIn(CLIENT_CHOSEN_SEED, params)
         self.assertEqual(params, ["Updated public name", PERSON_ID, ORGANIZATION_ID])
+
+    def test_entry_person_query_uses_model_column_order_instead_of_select_star(self):
+        row = (
+            PERSON_ID,
+            MONSTER_SEED,
+            1,
+            "private-hash",
+            None,
+            False,
+            "Woman",
+            "Millennial",
+            "Multiracial",
+            "Faculty",
+            True,
+            "Graduate program",
+            None,
+            None,
+            ORGANIZATION_ID,
+        )
+        connection = FakeConnection(rows=[row])
+        with app.test_request_context(f"/api/v1/get_persons_by_entry_id/{PERSON_ID}"):
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.person_views.get_db_connection", return_value=connection):
+                response = get_persons_by_entry_id(PERSON_ID)
+
+        data = response.get_json()
+        self.assertEqual(data[0]["monsterSeed"], MONSTER_SEED)
+        self.assertEqual(data[0]["gender"], "Woman")
+        self.assertTrue(data[0]["isInternational"])
+        sql, _params = connection.fake_cursor.executions[0]
+        self.assertNotIn("SELECT p.*", sql)
+        self.assertIn("SELECT p.id, p.monster_seed, p.monster_version", sql)
 
 
 if __name__ == "__main__":
