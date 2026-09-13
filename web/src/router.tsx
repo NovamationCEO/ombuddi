@@ -1,21 +1,23 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { HomePage } from './pages/HomePage'
 import { Page } from './components/Page'
 import { ErrorElement } from './trusted-components/ErrorElement'
 import { PageAlternate } from './components/PageAlternate'
-import { WelcomePage } from './pages/WelcomePage'
-import { Cases } from './pages/Cases'
-import { ReportPage } from './pages/Report'
-import { AddPerson } from './components/AddPerson/AddPerson'
-import { Profile } from './pages/Profile'
-import { Organization } from './pages/Organization'
-import { SelectCase } from './components/LoadAllCases/SelectCase'
-import { CaseSummary } from './pages/CaseSummary'
-import { AddEntry } from './pages/AddEntry'
-import { AddNewCase } from './components/AddEntry/AddNewCase'
-import { AdminUsers } from './pages/AdminUsers'
-import { AcceptInvitation } from './pages/AcceptInvitation'
-import { SystemAdmin } from './pages/SystemAdmin'
+import {
+    AcceptInvitation,
+    AddEntry,
+    AddNewCase,
+    AddPerson,
+    AdminUsers,
+    Cases,
+    CaseSummary,
+    HomePage,
+    Organization,
+    Profile,
+    ReportPage,
+    SelectCase,
+    SystemAdmin,
+    WelcomePage,
+} from './routeComponents'
 
 export const router = createBrowserRouter([
     {

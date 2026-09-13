@@ -158,5 +158,5 @@ Implications:
 
 The full plan, gap list, and test scenarios live in `docs/MULTI_TENANCY.md`. Short version:
 
-- Pre-auth lift is **done**: every table has an `organization_id` column (denormalized on `entries` for query simplicity), and `utils.py` helpers now accept an `owner_constraint` parameter that the auth layer will pass through.
-- Enforcement is **pending Phase 4** (Keycloak). Until then, endpoints trust the org id supplied in the request body / URL.
+- Auth0 authentication and principal resolution are implemented. Every authenticated request resolves `ombuds.auth0_sub` to local ombuds and organization UUIDs before protected view code runs.
+- API queries use principal-derived ownership constraints, inserts force-stamp ownership, and database relationships/triggers reject cross-tenant associations. Request bodies and organization IDs in URLs are never treated as authority.

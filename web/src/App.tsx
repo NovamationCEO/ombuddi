@@ -9,12 +9,14 @@ import { initTokenGetter } from './tools/auth/tokenProvider'
 import { showDevtools } from './constants/showDevtools'
 import { Snack } from './trusted-components/Snack'
 import { Background } from './trusted-components/Background'
-import { Box, CssBaseline, ThemeProvider, SxProps } from '@mui/material'
+import { Box, CircularProgress, CssBaseline, ThemeProvider, SxProps } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
 import { appTheme, colorSchemeStorageKey } from './theme/appTheme'
 import { useSessionSalt } from './libraries/useSessionSalt'
 import { useVerifiedPersonNames } from './libraries/useVerifiedPersonNames'
+
+const queryClient = new QueryClient()
 
 const App: React.FC = () => {
     return (
@@ -40,8 +42,6 @@ const App: React.FC = () => {
 }
 
 const QueryWrap: React.FC = () => {
-    const queryClient = new QueryClient()
-
     return (
         <React.StrictMode>
             <QueryClientProvider client={queryClient}>
@@ -98,7 +98,19 @@ const InnerApp: React.FC = () => {
             <Box sx={outerBoxStyle}>
                 <Background />
                 <Box sx={innerBoxStyle}>
-                    <RouterProvider router={router} />
+                    <React.Suspense
+                        fallback={(
+                            <Box
+                                role="status"
+                                aria-label="Loading page"
+                                sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}
+                            >
+                                <CircularProgress />
+                            </Box>
+                        )}
+                    >
+                        <RouterProvider router={router} />
+                    </React.Suspense>
                 </Box>
             </Box>
         </ThemeProvider>

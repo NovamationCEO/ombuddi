@@ -1,3 +1,5 @@
+import { hashSeed, randomInteger, randomSource } from './seededRandom'
+
 export type ScenePalette = {
     sky: string
     haze: string
@@ -54,4 +56,3 @@ export function getCaseSceneDescriptor(seed: string): CaseSceneDescriptor {
         detailShift: randomInteger(random, 13),
     }
 }
-import { hashSeed, randomInteger, randomSource } from './seededRandom'

@@ -17,7 +17,7 @@
 - `add_one` uses raw `f"{model[k]}"` for column names; lowercase fine, but if a new column is added with mixed case or a reserved word, this will need `psycopg2.sql.Identifier`.
 - `update_one` uses `COALESCE(%s, existing)` so passing `null` for a field is treated as "leave alone". That means you can never blank a field via update — be aware.
 - `person_views.py._salt_name` mutates `request._cached_json` (a Flask private). It works today but is one Flask upgrade away from breaking; prefer building a proper request-body decorator.
-- CORS currently combines unrestricted `CORS(app)` with a manually added `FRONTEND_URL` response header. Replace this with one explicit environment-controlled allowlist before broadening production access.
+- CORS has one source of truth: Flask-Cors permits the exact `FRONTEND_URL`, while the shared response hook handles non-CORS security/cache headers. Do not reintroduce unconditional access-control headers.
 - `connection.py` opens a fresh connection per operation with `autocommit=False`. Shared CRUD/report/person paths use `managed_connection`, which commits success, rolls back failure, and always closes. Specialized admin flows keep explicit transactions because they rely on row locks and multi-step writes. Consider pooling (`psycopg2.pool`) before the first paying customer.
 - Database and token-verification exception details belong in server logs, never API responses. Client-facing 500/401 messages should remain stable and generic.
 - Soft-delete is implemented as a `soft_delete` BOOL on `codes`, `code_categories`, `primary_roles`. List endpoints filter on `soft_delete: False`. Hard delete endpoints exist in `utils.py` (`remove_one`, `remove_many`) but aren't wired into any blueprint.
@@ -27,9 +27,13 @@
 - `useGetter<T>([address, param1, param2])` joins its query-key segments with `/` to build the URL and uses them as the React Query cache key. So a key like `['get_case_by_id', undefined]` is correctly disabled (the `enabled` check skips it). Always pass `undefined` rather than `''` for "I don't have it yet."
 - `creator`, `updater`, `deleter` are imperative — they do NOT invalidate React Query caches on success. Callers refetch by hand (e.g. `caseRes.refetch()`). When adding new mutations, remember to refetch or wire up `useMutation` + `queryClient.invalidateQueries`.
 - Auth0's `sub` is an external textual identity, not an Ombuddi UUID. The API maps it through `ombuds.auth0_sub` and exposes principal-scoped current-user/current-organization endpoints. Frontend code must never submit `sub` as `ombuds_id`.
-- Auth0 is the active identity provider. Old commented Keycloak scaffolding may still exist in `App.tsx`, `Page.tsx`, or constants; remove it when touching those areas rather than treating it as an active plan.
+- Auth0 is the active identity provider. No alternative identity-provider path remains in the application or current architecture documents.
 - `useHashName` hashes off `organization.id` (UUID), not name. Don't reintroduce the name into the hash — renames would orphan persons.
 - Dependencies were bumped to current major versions in early 2026 (MUI v9, React 19, react-router 7, Vite 8, TypeScript 6). Mapping/stats deps (leaflet, georaster, chroma-js, simple-statistics) were pruned at the same time. Treat any older code patterns (Unstable_Grid2, MUI v5 sx-prop quirks, etc.) as bugs.
+- Keep the `QueryClient` at module scope. Recreating it during an app rerender discards cached profile data and can make preference-dependent UI, including avatars, return to a loading placeholder.
+- Route page components are deliberately lazy-loaded from `routeComponents.ts`; keep shared shell components eager. This prevents report/admin code and their dependencies from inflating every initial page load.
+- `web/package.json` owns the application version. `web/versionNumber.ts` reads it for UI display; do not update a second literal.
+- Home/rail artwork should remain WebP at the resolution needed by the UI. Preserve source-quality originals outside the shipped repository if they are needed for future editing; unused multi-megabyte variants should not be committed.
 
 ## Known bugs / smells
 
@@ -51,6 +55,7 @@
 - The API validates Auth0 tokens, resolves local principal IDs, rejects inactive accounts, and applies tenant constraints. New endpoints must follow the same principal-derived ownership pattern and must never trust organization/user IDs submitted by the client.
 - The "scramble" only protects the name → person lookup. Demographics, codes, dates, durations, and case names remain plaintext under local IDs. A breach could expose rich profiles even when the attacker cannot link them to a real-world name without the salt phrase.
 - Case thumbnails and person avatars are generated locally from opaque seeds; rendering them must not call a third-party image service. Stable avatars make returning visitors recognizable across cases inside the organization—currently an intentional tradeoff, not an anonymity guarantee.
+- A person's avatar preference comes from the API. While that first request is unresolved, `PersonAvatar` renders a neutral circle at the final dimensions; rendering a guessed style causes a more distracting and misleading style swap. Do not persist the preference separately in browser storage merely to eliminate this brief placeholder.
 
 ## MUI v9 breaking changes to remember
 

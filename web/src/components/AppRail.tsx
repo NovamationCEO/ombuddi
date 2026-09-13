@@ -10,7 +10,7 @@ import {
 import { Box, ButtonBase, Tooltip, useMediaQuery, useTheme } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import mascot from '../assets/images/mascot.png'
+import mascot from '../assets/images/mascot.webp'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { AccountButton } from './AccountButton'

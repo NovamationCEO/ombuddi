@@ -10,9 +10,13 @@ function usefulValue(value: unknown): value is string {
     return !['unknown', 'n/a'].includes(value.trim().toLowerCase())
 }
 
-export function personDisplayLabel(person: PersonType): string {
+export function personPublicName(person: PersonType): string | undefined {
     if (person.isPublic && usefulValue(person.publicName)) return person.publicName.trim()
-    return 'Person details'
+    return undefined
+}
+
+export function personDisplayLabel(person: PersonType): string {
+    return personPublicName(person) ?? 'Person details'
 }
 
 export function personDisplayDetails(person: PersonType): PersonDisplayDetail[] {

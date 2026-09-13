@@ -1,9 +1,9 @@
-import casesImage from '../assets/images/cases.png'
-import adminUsersImage from '../assets/images/admin-users.png'
-import planningBoardImage from '../assets/images/planning-board.png'
-import profileImage from '../assets/images/profile.png'
-import reportImage from '../assets/images/report.png'
-import systemAdminImage from '../assets/images/system-admin.png'
+import casesImage from '../assets/images/cases.webp'
+import adminUsersImage from '../assets/images/admin-users.webp'
+import planningBoardImage from '../assets/images/planning-board.webp'
+import profileImage from '../assets/images/profile.webp'
+import reportImage from '../assets/images/report.webp'
+import systemAdminImage from '../assets/images/system-admin.webp'
 
 export type Destination = {
     name: string

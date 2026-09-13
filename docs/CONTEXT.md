@@ -83,6 +83,8 @@ Working / wired:
 - Database errors return stable client-safe messages while detailed exceptions remain in server logs. Shared CRUD/report/person paths use a common commit/rollback/close lifecycle helper.
 - Backend and frontend regression suites are active. Keep exact test counts in test output rather than this document; frontend lint and type-checking also pass.
 - Frontend dependency management is standardized on npm. Generated Python bytecode and Yarn runtime files are no longer tracked.
+- Frontend routes are loaded on demand, the React Query client is stable for the lifetime of the app, and referenced raster artwork is stored as thumbnail-appropriate WebP rather than multi-megabyte source PNGs. `web/package.json` is the single source for the displayed application version.
+- Flask debug mode is opt-in through `FLASK_DEBUG`; local Docker enables it explicitly. CORS responses are produced by one `FRONTEND_URL` allowlist configuration rather than overlapping unrestricted and manual headers.
 
 Still incomplete:
 
@@ -91,18 +93,16 @@ Still incomplete:
 
 ## Deferred engineering cleanup
 
-These are intentionally bookmarked rather than part of the current record-integrity work:
+These items remain deferred for specific operational reasons:
 
-- **Production server configuration:** stop setting `app.debug = True` and run Flask behind Gunicorn (already in `requirements.txt`) rather than `python app.py`. Keep the convenient development command local to Docker Compose.
+- **Production WSGI command:** debug mode is no longer hard-coded, but the repository does not contain the live Render start-command configuration. Change production from `python app.py` to Gunicorn only alongside codifying and smoke-testing that deployment configuration; local Docker deliberately keeps the development server.
 - **Automated migration deployment:** add a migration runner/release step when the Render plan or deployment model supports it reliably. The free-tier alpha continues to use the documented manual migration sequence for now.
-- **CORS tightening:** configure Flask-Cors from an explicit environment-controlled allowlist instead of calling unrestricted `CORS(app)` and then adding a second header manually.
 - **Connection pooling:** the shared transaction helper fixes cleanup and rollback behavior, but the API still opens one PostgreSQL connection per operation. Pooling can wait until usage warrants it.
-- **Frontend bundle splitting:** the production build passes but warns that the main JavaScript bundle exceeds 500 kB. Add route-level/dynamic imports before performance becomes a user-visible problem.
+- **Shared frontend vendor chunk:** route splitting reduced the initial JavaScript substantially, but the shared React/MUI/Auth0 shell remains about 730 kB minified (about 230 kB gzip) and triggers Vite's conservative raw-size warning. Manual vendor chunking would mostly redistribute the same download; measure actual load performance before adding bundler-specific grouping rules.
 - **Broader test coverage and CI:** preserve the current suites and add endpoint/error-path coverage as features change; configure CI when repository/deployment automation is worth maintaining.
-- **Dead frontend code and dependency audit:** continue removing unused `web/src/tools`, `trusted-components`, and questionable dependencies on a read-on-demand basis rather than as a risky bulk deletion.
-- **Component decomposition:** `EntryPersonMarker` still owns verification and phrase-change dialogs. Split those dialogs when the component next needs substantive work; the current behavior is tested, so this is maintainability rather than a confidentiality blocker.
-- **Procedural-art evolution:** version-one descriptor outputs are pinned in tests, shared seeded-random helpers have one implementation, monster and geometric renderers have independent versions, and unknown person-monster versions render a placeholder. Case scenes are also pinned but still need a persisted version before introducing a second mapping.
-- **Real migration testing:** report SQL is exercised against local PostgreSQL, but CI still needs a disposable database test that builds the pre-migration schema and applies the ordered migration chain.
+- **Legacy frontend inventory:** static analysis currently identifies several unreferenced template utilities/components and their drag-and-drop/data-grid dependencies. They are candidates for a separate explicit deletion pass, but bulk source deletion is kept out of this cleanup because these files were historically presented as reusable inventory and indirect future use cannot be disproved by a name search alone. The obsolete template README has been replaced so it no longer advertises them as active architecture.
+- **Procedural-art evolution:** version-one descriptor outputs are pinned in tests, shared seeded-random helpers have one implementation, monster and geometric renderers have independent versions, and unknown person-monster versions render a placeholder. Case scenes need a persisted version before introducing a second mapping; adding a column and migration before a second renderer exists would create schema work without changing behavior.
+- **Real migration testing:** report SQL is exercised against local PostgreSQL, but applying the full ordered migration chain safely requires an isolated disposable database in CI. It must not target either a developer's persistent Docker volume or the live alpha database.
 
 ## Key files to know
 
@@ -137,13 +137,14 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 - **Reports run in two modes**, toggled per render:
   - *Full mode* (ombuds-only): every bucket visible, no suppression. The ombuds can see narrow bands their own memory might be missing.
   - *Shareable mode* (for leadership): minimum cell size enforced (default 5, org-configurable); below-threshold buckets are merged into "Other" or suppressed entirely. This is the only version that can be exported / shared.
-- **Authentication: Auth0.** Auth0's `sub` remains an external textual identifier in `ombuds.auth0_sub`; all application relationships use local UUIDs. Old commented Keycloak scaffolding is legacy code, not the current plan.
+- **Authentication: Auth0.** Auth0's `sub` remains an external textual identifier in `ombuds.auth0_sub`; all application relationships use local UUIDs. There is no alternate authentication path in the current codebase.
 - **Alpha migrations may change the model, but must preserve live alpha data.** Apply production migrations in order and avoid destructive rebuild instructions outside development. See Guiding Principle 1.
 - **IOA reporting categories and codes are application-level reference data, not DB rows.** They live in `web/src/constants/ioaConstants.ts`, with deterministic uuid5-derived ids resolved at runtime. A future "Hospital ombuds defaults" or "Government ombuds defaults" pack ships the same way: another constants file with another uuid5 namespace. No "fake organization" rows; no cross-org read exception in the multi-tenancy model.
 - **Multi-ombuds records are collaborative at the case level and attributable at the entry level.** Any ombuds in an organization may add an entry to a standard case. Only the ombuds who authored an entry may later edit it or change its person links. General activity containers are different: each belongs to one ombuds, and only that owner may add entries there. General activity has no case codes or referral sources.
 - **Report scopes describe the same population at different breadths.** “My activity” uses entries authored by the signed-in ombuds; “Organization” uses every office entry. Case charts count distinct standard cases worked during the selected period, so a colleague-opened case appears in a contributor's report and is counted only once in the organization view. `cases.created_by_ombuds_id` remains useful provenance but does not define report membership.
 - **Durations are whole minutes.** Create and edit flows reject negative or fractional durations; the product intentionally does not imply hour-level or timezone precision the user never supplied.
 - **Stable person avatars intentionally reveal recurrence within an organization.** Helping an ombuds recognize that the same visitor appears across cases is currently part of the visual goal. The pre-verification hover details may be narrowed later, but that disclosure question is tabled rather than accidental.
+- **Avatar preference loading uses a neutral, size-stable placeholder.** The UI never draws one avatar style and then swaps to another. A placeholder may appear on the first uncached profile request because the authoritative preference is stored in the local Ombuddi database; it is intentionally not duplicated into Auth0 or durable browser storage, where it could become stale or cross account boundaries.
 
 ## Open product questions (resolve before/with the user)
 

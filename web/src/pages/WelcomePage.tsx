@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material'
 import { Box, Button, Divider, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Grid'
-import mascot from '../assets/images/mascot.png'
+import mascot from '../assets/images/mascot.webp'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 
 type PrivacyCardProps = {

@@ -25,7 +25,7 @@ Goal: make the codebase safe to build on top of. The live alpha now requires ord
 - [x] Rename DB table `person` → `persons` (and the table-name string in `person_views.py`). Wipe + recreate dev DB.
 - [x] Switch hashing input from `organization.name` to `organization.id`.
 - [x] Retire the "IOA organization" sentinel; IOA codes are application constants now. See `web/src/constants/ioaConstants.ts` and `web/src/tools/useCodeSource.ts`.
-- [ ] Remove obsolete commented-out Keycloak scaffolding when touching the affected frontend files; Auth0 is the active identity provider.
+- [x] Remove obsolete alternative-authentication scaffolding from the application code; Auth0 is the sole identity provider. Historical planning language was removed from the multi-tenancy reference.
 - [ ] Strip dead utilities from `web/src/tools/` and `trusted-components/` on a read-on-demand basis.
 
 **Tier 4 — dependency upgrades:**
@@ -46,7 +46,7 @@ Goal: make the codebase safe to build on top of. The live alpha now requires ord
 - [x] Centralize routine transaction cleanup, preserve provider database DSNs intact, and cover connection failures with tests.
 - [x] Remove tracked Python bytecode and obsolete duplicate backend utilities.
 - [x] Standardize frontend dependency management on npm and remove checked-in Yarn runtime files.
-- [ ] Deferred production/runtime cleanup is recorded in `docs/CONTEXT.md` under **Deferred engineering cleanup**.
+- [x] Deferred production/runtime cleanup is recorded with explicit reasons in `docs/CONTEXT.md` under **Deferred engineering cleanup**.
 
 The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/MULTI_TENANCY.md`.
 

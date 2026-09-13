@@ -1,0 +1,16 @@
+import { lazy } from 'react'
+
+export const HomePage = lazy(() => import('./pages/HomePage').then(({ HomePage }) => ({ default: HomePage })))
+export const WelcomePage = lazy(() => import('./pages/WelcomePage').then(({ WelcomePage }) => ({ default: WelcomePage })))
+export const Cases = lazy(() => import('./pages/Cases').then(({ Cases }) => ({ default: Cases })))
+export const ReportPage = lazy(() => import('./pages/Report').then(({ ReportPage }) => ({ default: ReportPage })))
+export const AddPerson = lazy(() => import('./components/AddPerson/AddPerson').then(({ AddPerson }) => ({ default: AddPerson })))
+export const Profile = lazy(() => import('./pages/Profile').then(({ Profile }) => ({ default: Profile })))
+export const Organization = lazy(() => import('./pages/Organization').then(({ Organization }) => ({ default: Organization })))
+export const SelectCase = lazy(() => import('./components/LoadAllCases/SelectCase').then(({ SelectCase }) => ({ default: SelectCase })))
+export const CaseSummary = lazy(() => import('./pages/CaseSummary').then(({ CaseSummary }) => ({ default: CaseSummary })))
+export const AddEntry = lazy(() => import('./pages/AddEntry').then(({ AddEntry }) => ({ default: AddEntry })))
+export const AddNewCase = lazy(() => import('./components/AddEntry/AddNewCase').then(({ AddNewCase }) => ({ default: AddNewCase })))
+export const AdminUsers = lazy(() => import('./pages/AdminUsers').then(({ AdminUsers }) => ({ default: AdminUsers })))
+export const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(({ AcceptInvitation }) => ({ default: AcceptInvitation })))
+export const SystemAdmin = lazy(() => import('./pages/SystemAdmin').then(({ SystemAdmin }) => ({ default: SystemAdmin })))

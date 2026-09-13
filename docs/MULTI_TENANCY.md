@@ -1,134 +1,72 @@
-# Ombuddi — Multi-Tenancy Plan
+# Ombuddi — Multi-Tenancy Implementation
 
-> Planning doc, not a spec. Updated as decisions land. The implementation lands with Phase 4 (Keycloak auth); the *column* additions can land sooner under Principle 1 (pre-production freedom).
+> Current implementation reference. Auth0 authentication and database-backed
+> principal resolution are live; this document describes behavior, not a future plan.
 
-## The principle
+## The rule
 
-Every row in the database is owned by exactly one organization. Every read, write, update, or delete must demonstrably match the calling principal's `organization_id`. URL parameters and request bodies are **inputs, never authority** — the only authority is the verified auth token.
+Every tenant-owned row belongs to exactly one organization. Request bodies and
+URL parameters are inputs, never authority. The verified Auth0 subject is
+resolved through `ombuds.auth0_sub`, and the resulting local ombuds and
+organization UUIDs are the only identities used for authorization.
 
-Stated as a rule the codebase enforces: *no query is allowed without an `organization_id` predicate derived from the token.* There are no legitimate cross-org reads in the data model — IOA reference codes live in code, not in the DB (see CONTEXT.md "Settled decisions").
+There are no cross-organization data reads. IOA reference codes are application
+constants, so they do not require a privileged shared database tenant.
 
-## The principal
+## Request principal
 
-Every authenticated request resolves to a principal constructed by middleware:
+`service/app.py` validates the bearer token before protected API requests and
+`service/src/principal.py` resolves the Auth0 subject to:
 
-```python
-@dataclass(frozen=True)
-class Principal:
-    ombuds_id: UUID          # Auth0 token sub -> ombuds.auth0_sub -> ombuds.id
-    organization_id: UUID    # derived from the linked ombuds row
-    roles: frozenset[str]    # e.g. {"ombuds"}, {"ombuds", "org_admin"}
-```
+- local `ombuds_id`;
+- immutable `organization_id`;
+- organization-admin and system-admin flags;
+- active status for both the seat and organization.
 
-Middleware contract: missing or invalid tokens receive `401`; authenticated
-subjects not linked to an ombuds row receive `403`; identity lookup failures
-receive `503`. Views only receive local UUIDs resolved from the database.
+Missing or invalid tokens receive `401`. Authenticated but unlinked identities
+receive `403` except for diagnostics and invitation claiming. Database lookup
+failures receive `503`. Deactivated seats and organizations are rejected before
+view code runs.
 
-## Current gaps — endpoint by endpoint
+## Enforcement layers
 
-Sourced from `service/src/ombuddi_views.py` and `service/src/person_views.py`. "Owner check" means: does the query AND in an `organization_id` predicate that came from the principal (not the URL)?
+1. Generic CRUD helpers receive an `owner_constraint` derived from the request
+   principal. They do not trust client-supplied ownership fields.
+2. Specialized endpoints use explicit organization predicates and transactions.
+3. Inserts force-stamp principal organization and ombuds IDs where applicable.
+4. Composite foreign keys and triggers reject cross-tenant relationships even if
+   application validation regresses.
+5. Tenant-scoped missing rows generally return `404` so row existence is not
+   disclosed across organizations.
 
-| Endpoint | Owner check today | Notes |
-|---|---|---|
-| `GET /get_all_cases` | None | Returns every active case in every org. The single worst leak. |
-| `GET /get_case_by_id/<id>` | None | Anyone can read any case by guessing/leaking a UUID. |
-| `POST /create_case` | None | No org_id on cases at all today. |
-| `PUT /update_case` | None | Same. |
-| `GET /get_current_organization` | Principal | Returns the principal's linked organization. |
-| `GET /get_current_ombuds` | Principal | Returns the principal's local ombuds row. |
-| `GET /get_code_categories_by_organization_id/<id>` | URL only | Must match principal.org_id. |
-| `POST /add_code_category` | None | Body says org_id; verify it matches principal. |
-| `PUT /update_code_category` | None | Verify the target row's org_id matches principal. |
-| `GET /get_codes_by_category_id/<id>` | None | Join through `code_categories.organization_id`; match principal. |
-| `GET /get_codes_by_organization_id/<id>` | URL only | Match principal. |
-| `POST /add_code`, `PUT /update_code` | None | Verify org_id matches principal. |
-| `GET /get_code_by_id/<id>` | None | Verify org of the row matches principal. |
-| `GET /get_all_codes_by_organization_id/<id>` | URL only | (Note: this duplicates `get_codes_by_organization_id` minus the soft_delete filter; consider collapsing.) |
-| `GET /get_primary_roles_by_organization_id/<id>` | URL only | Match principal. |
-| `POST /add_primary_role`, `PUT /update_primary_role`, `GET /get_primary_role_by_id/<id>`, `GET /get_all_primary_roles_by_organization_id/<id>` | None / URL only | All match principal. |
-| `GET /get_entry_by_id/<id>` | None | Join through `entries.case_id → cases.organization_id` (or add `entries.organization_id` directly — see Schema Changes). |
-| `POST /add_entry` | None | Verify the target `case_id` belongs to principal.org. |
-| `GET /get_entries_by_case_id/<case_id>` | None | Verify the case belongs to principal.org before returning entries. |
-| `PUT /update_entry` | None | Verify the row's org via case_id. |
-| `GET /get_person_by_id/<person_id>` | None | Match `persons.organization_id` to principal. |
-| `GET /get_persons_by_hashed_name/<hash>` | None | Match `persons.organization_id` to principal. The hash already includes the org UUID, so a cross-org collision is mathematically vanishing — but defense in depth: enforce the org filter anyway. |
-| `POST /add_person`, `PUT /update_person` | None | Match `organization_id` from body to principal. |
-| `GET /get_persons_by_organization_id/<id>` | URL only | Match principal. |
-| `GET /get_persons_by_case_id/<case_id>` | None | Verify case belongs to principal.org. |
-| `GET /get_persons_by_entry_id/<entry_id>` | None | Verify entry's case belongs to principal.org. |
+Cases are collaborative inside an organization. Any organization ombuds may add
+an entry to a standard case, while only the entry author may edit that entry or
+change its person links. General activity containers are owner-only. System
+administrators manage organizations and seats but receive no bypass for reading
+tenant case, entry, person, or report data.
 
-## Schema changes the plan requires  *(complete)*
+## Identity boundaries
 
-1. **`cases.organization_id UUID NOT NULL`** (FK to organizations). Populated at case-create time from the frontend's `useOrganization()`; will be force-stamped from the principal once auth lands.
-2. **`entries.organization_id UUID NOT NULL`** (FK to organizations). Denormalized from `cases.organization_id`; lets every `entries`-touching query AND in the org constraint without a join. Frontend source is `caseRes.data?.organizationId` so the invariant `case.org_id === entry.org_id` is explicit.
-3. **`ombuds.auth0_sub TEXT UNIQUE`** maps Auth0's external subject to the local UUID primary key. It may be null while a seat awaits account linking.
-4. **`entry_person`** — pure join table, no org column needed; ownership is verified via the parent `entries` row.
+- Auth0 `sub` is external text stored only in `ombuds.auth0_sub`; it is never used
+  as a local foreign key.
+- One Auth0 identity currently maps to one Ombuddi seat and organization.
+- A signed legacy organization claim, when present, must match the database
+  principal. The database remains authoritative.
+- Invitation claims require a signed, verified email matching the invited seat.
 
-The columns exist now. Enforcement (refusing reads/writes that don't match the principal's org) lands with Phase 4 auth.
+## Regression coverage
 
-## The wrapper approach  *(parameter shape done; enforcement pending)*
+The backend suite covers token/principal failures, cross-tenant CRUD and
+relationship attempts, invitation identity checks, deactivation, administrative
+authorization, General-container ownership, entry authorship, and report scope.
+When adding an endpoint, include both an allowed same-tenant request and a denied
+cross-tenant or wrong-owner request.
 
-Each generic CRUD helper in `service/src/utils.py` now accepts an `owner_constraint` parameter (default `None` → behavior unchanged). Once the auth layer exists, every view will pass the principal's `{'organization_id': principal.organization_id}` and the WHERE / INSERT clauses will close around it automatically:
+## Remaining product decisions
 
-```python
-def get_one(table, model, constraints, owner_constraint, db_name="default"):
-    full = {**constraints, **owner_constraint}
-    # build WHERE off `full`...
-
-def get_many(table, model, constraints, owner_constraint, db_name="default"):
-    # same: AND owner into the WHERE
-```
-
-Views become:
-
-```python
-@ombuddi_views.route('/api/v1/get_case_by_id/<id>')
-@requires_principal
-def get_case_by_id(id, principal: Principal):
-    constraints = {'id': id}
-    owner = {'organization_id': principal.organization_id}
-    return get_one('cases', case_model, constraints, owner)
-```
-
-`@requires_principal` is a small decorator that decodes the Keycloak token, looks up / caches the ombuds row, and injects the principal. Missing or invalid → 401 before the view body runs.
-
-For endpoints where the owner check has to traverse a relationship (e.g. `update_entry` needs to verify the entry's case's org matches), we add one helper: `verify_owner_via_parent(table, id, parent_table, parent_fk, owner_constraint)`. Used sparingly; the `organization_id`-on-entries addition above is specifically to reduce how often we need this.
-
-## Cross-org reads
-
-There are none. IOA reference codes are loaded from `web/src/constants/ioaConstants.ts` at runtime, not from the DB. If a future Ombuddi-provided reference pack (e.g. "Hospital ombuds defaults") needs to ship, it ships as another constants file with its own uuid5 namespace — same pattern.
-
-## Open questions
-
-- **Org-admin role.** Most real orgs will want a non-ombuds admin (HR contact, IT contact, IOA license holder) who can manage seats and billing but never see ombuds data. Define this when we get to subscriptions (Phase 6). Until then, principals are always ombuds.
-- **Ombuddi-staff role.** Per Principle 5, Ombuddi staff must NOT be able to read tenant data. With IOA codes now living in code rather than the DB, there is no DB-side reason staff would need privileged access. Updating IOA codes is a code edit + deploy.
-- **Org switching.** Can a single Keycloak user belong to multiple orgs? Common in higher ed (a person who's an ombuds at two universities). Punt for v1: one Keycloak account = one ombuds seat at one org.
-- **Soft delete of an org.** A licensing lapse shouldn't immediately destroy data, but reads should be denied. Add an `organizations.status` column when we get to Phase 6.
-
-## Test scenarios (write these as actual tests once auth lands)
-
-1. **Two orgs, two ombuds.** Ombuds A's `/get_all_cases` returns only org A's cases.
-2. **Direct UUID guess.** Ombuds A asks `/get_case_by_id/<a_case_belonging_to_org_B>` → 404. (Prefer 404 over 403 to avoid leaking row existence.)
-3. **Update across orgs.** Ombuds A PUTs `/update_case` with an org B id → 404; row unchanged.
-4. **Person enumeration.** Ombuds A's `/get_persons_by_hashed_name/<hash>` never returns org B persons even when the hash happens to collide (it won't, mathematically, but we still test).
-5. **IOA codes resolve client-side.** Rendering a case that uses IOA codes never triggers `/get_code_by_id` for those ids. Confirmed via network panel.
-6. **Cross-org reference in body.** Ombuds A POSTs `/add_entry` with a `case_id` whose case belongs to org B → 404 (case not visible to A) or 403; never accidentally writes.
-7. **No-auth.** All endpoints, no token → 401.
-
-## Implementation sequence (when Phase 4 starts)
-
-1. Schema additions (`cases.organization_id`, `entries.organization_id`). Wipe + re-seed dev DB; update `schema.sql`. Pre-production freedom makes this trivial.
-2. `auth.py`: token decode, JWKS verification, principal construction, the `@requires_principal` decorator.
-3. `utils.py` rewrite: every generic helper takes `owner_constraint`.
-4. View rewrite: every route adopts `@requires_principal`, drops the `<organization_id>` URL parameter where present (it's now redundant), and passes the principal's org as owner.
-5. Frontend: never use the Auth0 subject as a local ID. Fetch current-user and current-organization resources from principal-scoped endpoints.
-6. Manual run-through of the test scenarios above. Convert to automated tests when we add a test harness (Phase 0 follow-up).
-
-## Pre-auth lift  *(complete)*
-
-- [x] `cases.organization_id NOT NULL` added; `AddNewCase.tsx` passes it from `useOrganization()`.
-- [x] `entries.organization_id NOT NULL` added; `AddEntry.tsx` passes it from `caseRes.data?.organizationId`.
-- [x] `owner_constraint` parameter on `get_one` / `get_many` / `add_one` / `update_one`; default `None` preserves current behavior; non-empty ANDs into WHERE (read/update) or merges into INSERT (add).
-- [x] `update_one` returns 404 when an `owner_constraint` is supplied and zero rows match (ambiguous-by-design — doesn't leak that the row exists in another tenant).
-
-What remains for Phase 4: the `Principal` decoder, the `@requires_principal` decorator, and per-view adoption of the new parameter shape.
+- Whether one Auth0 identity should eventually switch among seats in multiple
+  organizations. Version one intentionally uses one identity per seat.
+- How a non-ombuds billing/contact role should work without receiving access to
+  confidential case data.
+- Automated retention and legal-hold policy, including who can pause purging and
+  how that action is audited.

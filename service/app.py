@@ -15,7 +15,7 @@ from src.principal import PrincipalLookupError, get_principal
 logger = logging.getLogger(__name__)
 SESSION_DIAGNOSTICS_PATH = '/api/v1/auth/session-diagnostics'
 app = Flask(__name__)
-app.debug = True
+app.debug = os.environ.get('FLASK_DEBUG', '').strip().lower() in {'1', 'true', 'yes', 'on'}
 app.register_blueprint(ombuddi_views)
 app.register_blueprint(person_views)
 app.register_blueprint(picklist_views)
@@ -24,7 +24,13 @@ app.register_blueprint(admin_views)
 app.register_blueprint(auth_views)
 app.register_blueprint(system_admin_views)
 
-CORS(app)
+frontend_origin = os.environ.get('FRONTEND_URL', 'http://localhost:5173').strip().rstrip('/')
+CORS(
+    app,
+    origins=[frontend_origin],
+    allow_headers=['Content-Type', 'Authorization'],
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+)
 
 
 def _session_diagnostics(claims, principal):
@@ -189,9 +195,6 @@ def authenticate():
 
 @app.after_request
 def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Referrer-Policy"] = "no-referrer"
     if (
         'invitation' in request.path

@@ -29,6 +29,7 @@ services:
       AUTH0_DOMAIN: ombuddi.us.auth0.com
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      FLASK_DEBUG: ${FLASK_DEBUG:-true}
     ports:
       - "5002:5000"
     volumes:
