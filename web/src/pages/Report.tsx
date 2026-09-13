@@ -432,7 +432,7 @@ export function ReportPage() {
 
                 <Typography sx={{ mb: 1.5, color: 'text.secondary', fontSize: '0.82rem' }}>
                     {reportScope === 'my'
-                        ? 'My activity includes cases you opened and entries you recorded.'
+                        ? 'My activity includes cases you worked and entries you recorded.'
                         : `Organization activity combines all ombuds work${org.name ? ` at ${org.name}` : ''}.`}
                 </Typography>
 
@@ -522,7 +522,7 @@ export function ReportPage() {
                                 highcharts={Highcharts}
                                 options={colOptions(
                                     chartTheme,
-                                    'Cases Opened per Month',
+                                    reportScope === 'my' ? 'Cases Worked per Month' : 'Cases Opened per Month',
                                     caseMonths,
                                     [
                                         {

@@ -21,7 +21,7 @@ export function ProtectedText(props: {
     organizationId: string
     emptyText?: string
     compact?: boolean
-    onDecrypted?: (plaintext: string) => void
+    onDecrypted?: (plaintext: string, phraseUsed: string) => void
 }) {
     const { stored, organizationId, emptyText = 'No text recorded.', compact = false, onDecrypted } = props
     const phrase = usePhraseSelection()
@@ -38,11 +38,11 @@ export function ProtectedText(props: {
     })
 
     React.useEffect(() => {
-        if (result.plaintext !== null) {
-            onDecrypted?.(result.plaintext)
+        if (result.plaintext !== null && result.phraseUsed !== null) {
+            onDecrypted?.(result.plaintext, result.phraseUsed)
             setAnchorElement(null)
         }
-    }, [onDecrypted, result.plaintext])
+    }, [onDecrypted, result.phraseUsed, result.plaintext])
 
     function openRecovery(event: React.MouseEvent<HTMLElement>) {
         setOneTimeDraft('')
@@ -193,10 +193,11 @@ export function ProtectedText(props: {
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                This retries other locked text and lasts until refresh or logout.
+                                This changes the phrase used for future protected notes and person lookups until
+                                refresh or logout. It does not re-encrypt existing records. Spaces are significant.
                             </Typography>
                             <TextField
-                                type="password"
+                                type="text"
                                 size="small"
                                 label="New session default"
                                 value={defaultDraft}

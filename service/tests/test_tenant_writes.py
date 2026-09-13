@@ -21,6 +21,7 @@ ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 OTHER_ORGANIZATION_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 ROW_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 PERSON_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+OMBUDS_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 
 
 class FakeCursor:
@@ -124,6 +125,7 @@ class TenantWriteTests(unittest.TestCase):
         connection = FakeConnection(rows=[])
         with app.test_request_context("/api/v1/add_entry_person", method="POST"):
             g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
             with patch("src.person_views.get_db_connection", return_value=connection):
                 _response, status = _exec_entry_person(SQL_ADD_ENTRY_PERSON, ROW_ID, PERSON_ID)
 
@@ -132,7 +134,7 @@ class TenantWriteTests(unittest.TestCase):
         _sql, params = connection.fake_cursor.executions[0]
         self.assertEqual(
             params,
-            (PERSON_ID, ROW_ID, ORGANIZATION_ID, ORGANIZATION_ID),
+            (PERSON_ID, ROW_ID, ORGANIZATION_ID, OMBUDS_ID, ORGANIZATION_ID),
         )
 
 

@@ -16,6 +16,7 @@ export function PhraseSourceControl(props: {
     onCustomPhraseChange: (phrase: string) => void
     customLabel?: string
     purpose?: 'encrypt' | 'decrypt' | 'lookup'
+    phraseIsNew?: boolean
     compact?: boolean
 }) {
     const {
@@ -25,11 +26,14 @@ export function PhraseSourceControl(props: {
         onCustomPhraseChange,
         customLabel = 'Free text',
         purpose = 'encrypt',
+        phraseIsNew = purpose === 'encrypt',
         compact = false,
     } = props
     const defaultPhrase = useSessionSalt((state) => state.sessionSalt)
     const setDefaultPhrase = useSessionSalt((state) => state.setSessionSalt)
     const action = purpose === 'lookup' ? 'lookup' : purpose === 'decrypt' ? 'decryption' : 'encryption'
+    const phraseInputType = phraseIsNew ? 'text' : 'password'
+    const visibilityGuidance = phraseIsNew ? 'Visible to prevent mistyping. ' : ''
 
     return (
         <Box onClick={(event) => event.stopPropagation()} sx={{ minWidth: 0 }}>
@@ -51,7 +55,7 @@ export function PhraseSourceControl(props: {
 
                 {source === 'default' && (
                     <TextField
-                        type="password"
+                        type={phraseInputType}
                         size="small"
                         label="Session default Salt"
                         value={defaultPhrase ?? ''}
@@ -59,23 +63,35 @@ export function PhraseSourceControl(props: {
                         autoComplete="off"
                         error={!defaultPhrase?.length}
                         helperText={defaultPhrase?.length
-                            ? `Editing this changes the session default for ${action}.`
+                            ? `${visibilityGuidance}Editing changes future ${action} choices for this session; existing records are unchanged. Spaces count.`
                             : 'No session default is set. Enter one here or explicitly choose Blank.'}
                         fullWidth
+                        slotProps={{
+                            htmlInput: {
+                                'data-1p-ignore': '',
+                                'data-op-ignore': '',
+                            },
+                        }}
                     />
                 )}
 
                 {source === 'custom' && (
                     <TextField
-                        type="password"
+                        type={phraseInputType}
                         size="small"
                         label={customLabel}
                         value={customPhrase}
                         onChange={(event) => onCustomPhraseChange(event.target.value)}
                         autoComplete="off"
                         error={!customPhrase.length}
-                        helperText="Used only for this item; it does not change the session default."
+                        helperText={`${visibilityGuidance}Used only for this item; exact spaces count and the session default is unchanged.`}
                         fullWidth
+                        slotProps={{
+                            htmlInput: {
+                                'data-1p-ignore': '',
+                                'data-op-ignore': '',
+                            },
+                        }}
                     />
                 )}
 

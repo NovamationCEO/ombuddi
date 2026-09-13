@@ -1,4 +1,5 @@
 import {
+    Alert,
     Box,
     Button,
     Chip,
@@ -38,6 +39,8 @@ import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
 import { entryPersonChanges } from '../tools/entryPersonChanges'
 import { calendarDateInputValue, localCalendarDateInputValue } from '../tools/calendarDate'
+import { protectedTextForSave } from '../tools/protectedTextEdit'
+import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
 const entryWorkspace = {
     background: 'var(--mui-palette-background-default)',
@@ -79,8 +82,12 @@ export function AddEntry() {
     const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
     const entryRes = useGetter<EntryType>(['get_entry_by_id', entryId])
     const existingEntryPeopleRes = useGetter<PersonType[]>(['get_persons_by_entry_id', entryId])
+    const currentOmbudsRes = useCurrentOmbuds(isEditing)
     const [notes, setNotes] = useState('')
     const [storedNotes, setStoredNotes] = useState('')
+    const [originalNotes, setOriginalNotes] = useState('')
+    const [unlockPhrase, setUnlockPhrase] = useState<string | null>(null)
+    const [changeNoteProtection, setChangeNoteProtection] = useState(false)
     const [notesLocked, setNotesLocked] = useState(false)
     const [entryInitialized, setEntryInitialized] = useState(!isEditing)
     const navigate = useNavigate()
@@ -116,8 +123,8 @@ export function AddEntry() {
         }
     }, [priorities.items, entryPriority])
 
-    // People staged for this entry. Kept in component state until the entry is
-    // saved; then we POST add_entry_person for each.
+    // People staged for this entry. New entries send them with the entry so the
+    // server can create the note and all relationships in one transaction.
     const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
 
     React.useEffect(() => {
@@ -130,8 +137,12 @@ export function AddEntry() {
         setMedium(entry.medium)
         setDuration(entry.duration)
         setStoredNotes(entry.notes ?? '')
-        setNotes(isEncrypted(entry.notes ?? '') ? '' : entry.notes ?? '')
-        setNotesLocked(isEncrypted(entry.notes ?? ''))
+        const encrypted = isEncrypted(entry.notes ?? '')
+        setNotes(encrypted ? '' : entry.notes ?? '')
+        setOriginalNotes(encrypted ? '' : entry.notes ?? '')
+        setUnlockPhrase(encrypted ? null : '')
+        setNotesLocked(encrypted)
+        setChangeNoteProtection(false)
         setEntryPeople(people)
         originalPersonIds.current = people.map((person) => person.id)
         initializedEntryId.current = entryId
@@ -155,11 +166,20 @@ export function AddEntry() {
 
     async function save() {
         const organizationId = caseRes.data?.organizationId
-        if (!organizationId || isSaving || (!notesLocked && notes && notePhrase.phrase === null)) return
+        const replacementRequired = isEditing ? changeNoteProtection : Boolean(notes)
+        if (!organizationId || isSaving || (!notesLocked && replacementRequired && notePhrase.phrase === null)) return
         setIsSaving(true)
         try {
-            const nextStoredNotes = notesLocked
-                ? storedNotes
+            const nextStoredNotes = isEditing
+                ? await protectedTextForSave({
+                      stored: storedNotes,
+                      originalPlaintext: originalNotes,
+                      editedPlaintext: notes,
+                      unlockPhrase,
+                      replaceProtection: changeNoteProtection,
+                      replacementPhrase: notePhrase.phrase,
+                      organizationId,
+                  })
                 : notes
                   ? await encryptNotes(notes, notePhrase.phrase ?? '', organizationId)
                   : ''
@@ -189,20 +209,10 @@ export function AddEntry() {
                     ),
                 ])
             } else {
-                const created = await creator<{ id: string; success: boolean }>('add_entry', payload)
-                const newEntryId = created?.id
-                if (newEntryId && entryPeople.length > 0) {
-                    // Fan out the join inserts. If one fails the rest still run; the
-                    // entry itself is created either way. (Future: batch endpoint.)
-                    await Promise.all(
-                        entryPeople.map((person) =>
-                            creator<{ entryId: string; personId: string }>('add_entry_person', {
-                                entryId: newEntryId,
-                                personId: person.id,
-                            }),
-                        ),
-                    )
-                }
+                await creator<{ id: string; success: boolean }>('add_entry', {
+                    ...payload,
+                    personIds: entryPeople.map((person) => person.id),
+                })
             }
             await queryClient.invalidateQueries({ queryKey: ['get_entries_by_case_id', caseId] })
             await queryClient.invalidateQueries({ queryKey: ['get_persons_by_case_id', caseId] })
@@ -248,6 +258,20 @@ export function AddEntry() {
         return (
             <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center' }}>
                 <CircularProgress />
+            </Box>
+        )
+    }
+
+    if (isEditing && entryRes.data && currentOmbudsRes.data && entryRes.data.ombudsId !== currentOmbudsRes.data.id) {
+        return (
+            <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center', p: 3 }}>
+                <Stack spacing={2} sx={{ alignItems: 'center', textAlign: 'center' }}>
+                    <Typography>Only the ombuds who recorded this entry can edit it.</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        You can still view the entry from the case record.
+                    </Typography>
+                    <Button onClick={() => navigate(`/case/${caseId}`)}>Back to case</Button>
+                </Stack>
             </Box>
         )
     }
@@ -537,7 +561,9 @@ export function AddEntry() {
                                 onClick={save}
                                 disabled={isSaving
                                     || !caseRes.data?.organizationId
-                                    || Boolean(notes && notePhrase.phrase === null)}
+                                    || Boolean(!notesLocked
+                                        && (isEditing ? changeNoteProtection : notes)
+                                        && notePhrase.phrase === null)}
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
                                     color: 'var(--mui-palette-primary-contrastText)',
@@ -639,8 +665,10 @@ export function AddEntry() {
                                             stored={storedNotes}
                                             organizationId={caseRes.data?.organizationId ?? ''}
                                             emptyText="No notes recorded."
-                                            onDecrypted={(plaintext) => {
+                                            onDecrypted={(plaintext, phraseUsed) => {
                                                 setNotes(plaintext)
+                                                setOriginalNotes(plaintext)
+                                                setUnlockPhrase(phraseUsed)
                                                 setNotesLocked(false)
                                             }}
                                         />
@@ -659,21 +687,53 @@ export function AddEntry() {
                                         sx={fieldStyle}
                                     />
                                     <Box sx={{ mt: 1.5 }}>
-                                        {isEditing && (
-                                            <Typography
-                                                variant="caption"
-                                                sx={{ display: 'block', color: entryWorkspace.muted, mb: 0.75 }}
-                                            >
-                                                Saving re-encrypts this note with the phrase selected below.
-                                            </Typography>
+                                        {isEditing ? (
+                                            <Stack spacing={1.25}>
+                                                <Typography variant="caption" sx={{ color: entryWorkspace.muted }}>
+                                                    Saving keeps the note’s existing protection. Its phrase changes
+                                                    only if you explicitly choose to replace it.
+                                                </Typography>
+                                                {!changeNoteProtection ? (
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        onClick={() => setChangeNoteProtection(true)}
+                                                        sx={{ alignSelf: 'flex-start' }}
+                                                    >
+                                                        Change protection phrase
+                                                    </Button>
+                                                ) : (
+                                                    <>
+                                                        <Alert severity="warning">
+                                                            Changing this phrase replaces the only phrase that can
+                                                            recover this note. Confirm it carefully; exact spaces count.
+                                                        </Alert>
+                                                        <PhraseSourceControl
+                                                            source={notePhrase.source}
+                                                            onSourceChange={notePhrase.setSource}
+                                                            customPhrase={notePhrase.customPhrase}
+                                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                            purpose="encrypt"
+                                                        />
+                                                        <Button
+                                                            size="small"
+                                                            onClick={() => setChangeNoteProtection(false)}
+                                                            sx={{ alignSelf: 'flex-start' }}
+                                                        >
+                                                            Keep existing protection
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </Stack>
+                                        ) : (
+                                            <PhraseSourceControl
+                                                source={notePhrase.source}
+                                                onSourceChange={notePhrase.setSource}
+                                                customPhrase={notePhrase.customPhrase}
+                                                onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                purpose="encrypt"
+                                            />
                                         )}
-                                        <PhraseSourceControl
-                                            source={notePhrase.source}
-                                            onSourceChange={notePhrase.setSource}
-                                            customPhrase={notePhrase.customPhrase}
-                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                            purpose="encrypt"
-                                        />
                                     </Box>
                                 </>
                             )}

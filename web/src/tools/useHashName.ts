@@ -3,7 +3,7 @@ import { useOrganization } from './useOrganization'
 import React from 'react'
 
 export function hashPersonName(name: string, salt: string | undefined, orgId: string): string {
-    const combined = `${name}${salt || ''}${orgId}`
+    const combined = `${name.trim()}${salt || ''}${orgId}`
     const normalized = combined.trim().toLowerCase().normalize('NFC')
     return sha256(normalized)
 }

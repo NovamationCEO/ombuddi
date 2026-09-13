@@ -52,6 +52,7 @@ vi.mock('../tools/db_tools/useGetter', () => ({
             'get_entry_by_id/entry-1': {
                 id: 'entry-1',
                 caseId: 'case-1',
+                ombudsId: 'ombuds-1',
                 organizationId: 'org-1',
                 date: 'Tue, 01 Sep 2026 00:00:00 GMT',
                 medium: 'Phone',
@@ -71,6 +72,9 @@ vi.mock('../tools/usePicklists', () => ({
     usePicklists: (kind: string) => ({
         items: kind === 'medium' ? [{ id: 'medium-1', name: 'Phone' }] : [],
     }),
+}))
+vi.mock('../tools/useCurrentOmbuds', () => ({
+    useCurrentOmbuds: () => ({ data: { id: 'ombuds-1' }, isLoading: false }),
 }))
 vi.mock('../libraries/useSnack', () => ({
     useSnack: (selector: (state: { setSnack: typeof mocks.setSnack }) => unknown) =>

@@ -28,7 +28,7 @@ import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { updater } from '../tools/db_tools/updater'
-import { encryptProtectedText, isEncrypted } from '../tools/notesCrypto'
+import { isEncrypted } from '../tools/notesCrypto'
 import { referralSelectionsAreValid } from '../tools/referralSources'
 import {
     CaseReferralSourceType,
@@ -44,6 +44,8 @@ import { uniquePeopleById } from '../components/personDisplay'
 import { formatCalendarDate } from '../tools/calendarDate'
 import { useResolvedCaseCodes } from '../tools/useResolvedCaseCodes'
 import { CaseCodeTooltip } from '../components/CaseCodeTooltip'
+import { protectedTextForSave } from '../tools/protectedTextEdit'
+import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -100,6 +102,7 @@ export function CaseSummary() {
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
     const referralSourcesRes = useGetter<CaseReferralSourceType[]>(['get_case_referral_sources', caseId])
     const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
+    const currentOmbudsRes = useCurrentOmbuds()
     const setSnack = useSnack((state) => state.setSnack)
 
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
@@ -109,6 +112,8 @@ export function CaseSummary() {
     const [editName, setEditName] = React.useState('')
     const [editDescription, setEditDescription] = React.useState('')
     const [decryptedDescription, setDecryptedDescription] = React.useState<string | null>(null)
+    const [descriptionUnlockPhrase, setDescriptionUnlockPhrase] = React.useState<string | null>(null)
+    const [changeDescriptionProtection, setChangeDescriptionProtection] = React.useState(false)
     const editDescriptionPhrase = usePhraseSelection()
     const [editStatus, setEditStatus] = React.useState('')
     const [editingReferrals, setEditingReferrals] = React.useState(false)
@@ -147,21 +152,25 @@ export function CaseSummary() {
 
     React.useEffect(() => {
         setDecryptedDescription(isEncrypted(rawDescription) ? null : rawDescription)
+        setDescriptionUnlockPhrase(isEncrypted(rawDescription) ? null : '')
+        setChangeDescriptionProtection(false)
     }, [rawDescription])
 
-    const rememberDescription = React.useCallback((plaintext: string) => {
+    const rememberDescription = React.useCallback((plaintext: string, phraseUsed: string) => {
         setDecryptedDescription(plaintext)
+        setDescriptionUnlockPhrase(phraseUsed)
     }, [])
 
     function openEdit() {
         setEditName(caseRes.data?.name ?? '')
         setEditDescription(decryptedDescription ?? '')
         setEditStatus(caseRes.data?.status ?? 'active')
+        setChangeDescriptionProtection(false)
         setEditing(true)
     }
 
     async function saveEdit() {
-        if (!descriptionLocked && editDescription && editDescriptionPhrase.phrase === null) {
+        if (!descriptionLocked && changeDescriptionProtection && editDescriptionPhrase.phrase === null) {
             setSnack({
                 message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
                 severity: 'error',
@@ -172,9 +181,15 @@ export function CaseSummary() {
         try {
             const storedDescription = descriptionLocked
                 ? rawDescription
-                : editDescription
-                  ? await encryptProtectedText(editDescription, editDescriptionPhrase.phrase ?? '', organizationId)
-                  : ''
+                : await protectedTextForSave({
+                      stored: rawDescription,
+                      originalPlaintext: decryptedDescription ?? '',
+                      editedPlaintext: editDescription,
+                      unlockPhrase: descriptionUnlockPhrase,
+                      replaceProtection: changeDescriptionProtection,
+                      replacementPhrase: editDescriptionPhrase.phrase,
+                      organizationId,
+                  })
             await updater('update_case', {
                 id: caseId,
                 name: editName,
@@ -254,6 +269,7 @@ export function CaseSummary() {
 
     const normalizedStatus = caseItem.status?.toLowerCase() as keyof typeof statusStyles
     const isGeneral = caseItem.caseKind === 'general'
+    const canAddEntry = !isGeneral || caseItem.ownerOmbudsId === currentOmbudsRes.data?.id
     const status = isGeneral
         ? {
               label: 'General',
@@ -350,14 +366,42 @@ export function CaseSummary() {
                                 Unlock the case description on the case page before editing it. Saving other case
                                 details will preserve the encrypted description unchanged.
                             </Alert>
+                        ) : !changeDescriptionProtection ? (
+                            <Stack spacing={1}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Saving keeps the existing description protection. Changing the case name or
+                                    status will not rotate its phrase.
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setChangeDescriptionProtection(true)}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    Change description phrase
+                                </Button>
+                            </Stack>
                         ) : (
-                            <PhraseSourceControl
-                                source={editDescriptionPhrase.source}
-                                onSourceChange={editDescriptionPhrase.setSource}
-                                customPhrase={editDescriptionPhrase.customPhrase}
-                                onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
-                                purpose="encrypt"
-                            />
+                            <Stack spacing={1.25}>
+                                <Alert severity="warning">
+                                    Changing this phrase replaces the only phrase that can recover this description.
+                                    Confirm it carefully; exact spaces count.
+                                </Alert>
+                                <PhraseSourceControl
+                                    source={editDescriptionPhrase.source}
+                                    onSourceChange={editDescriptionPhrase.setSource}
+                                    customPhrase={editDescriptionPhrase.customPhrase}
+                                    onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                    purpose="encrypt"
+                                />
+                                <Button
+                                    size="small"
+                                    onClick={() => setChangeDescriptionProtection(false)}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    Keep existing protection
+                                </Button>
+                            </Stack>
                         )}
                         <TextField
                             select
@@ -386,7 +430,9 @@ export function CaseSummary() {
                         disabled={
                             saving ||
                             !editName.trim() ||
-                            (!descriptionLocked && Boolean(editDescription) && editDescriptionPhrase.phrase === null)
+                            (!descriptionLocked
+                                && changeDescriptionProtection
+                                && editDescriptionPhrase.phrase === null)
                         }
                         sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
                     >
@@ -666,7 +712,14 @@ export function CaseSummary() {
                             >
                                 Referral sources
                             </Typography>
-                            {referralSourcesRes.isLoading ? (
+                            {isGeneral ? (
+                                <Typography
+                                    variant="body2"
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
+                                >
+                                    Not used for general activity
+                                </Typography>
+                            ) : referralSourcesRes.isLoading ? (
                                 <CircularProgress
                                     size={18}
                                     sx={{ color: 'var(--mui-palette-app-headerMuted)' }}
@@ -687,26 +740,28 @@ export function CaseSummary() {
                                     None recorded
                                 </Typography>
                             )}
-                            <Button
-                                startIcon={<EditOutlined />}
-                                onClick={openReferralEditor}
-                                sx={{
-                                    ml: { xs: 0, sm: 'auto' },
-                                    px: 0.75,
-                                    py: 0.35,
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    textTransform: 'none',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    '&:hover': {
+                            {!isGeneral && (
+                                <Button
+                                    startIcon={<EditOutlined />}
+                                    onClick={openReferralEditor}
+                                    sx={{
+                                        ml: { xs: 0, sm: 'auto' },
+                                        px: 0.75,
+                                        py: 0.35,
                                         color: 'var(--mui-palette-app-headerText)',
-                                        bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    },
-                                }}
-                            >
-                                Manage referral sources
-                            </Button>
+                                        textTransform: 'none',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap',
+                                        '&:hover': {
+                                            color: 'var(--mui-palette-app-headerText)',
+                                            bgcolor: 'var(--mui-palette-app-headerHover)',
+                                        },
+                                    }}
+                                >
+                                    Manage referral sources
+                                </Button>
+                            )}
                         </Box>
 
                         <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
@@ -804,21 +859,27 @@ export function CaseSummary() {
                                     {sortedEntries.length} {sortedEntries.length === 1 ? 'entry' : 'entries'}
                                 </Typography>
                             </Box>
-                            <Button
-                                variant="contained"
-                                startIcon={<Add />}
-                                onClick={() => navigate(`/case/${caseId}/add_entry`)}
-                                sx={{
-                                    bgcolor: workspace.purple,
-                                    color: 'primary.contrastText',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
-                                }}
-                            >
-                                Add entry
-                            </Button>
+                            {canAddEntry ? (
+                                <Button
+                                    variant="contained"
+                                    startIcon={<Add />}
+                                    onClick={() => navigate(`/case/${caseId}/add_entry`)}
+                                    sx={{
+                                        bgcolor: workspace.purple,
+                                        color: 'primary.contrastText',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap',
+                                        '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
+                                    }}
+                                >
+                                    Add entry
+                                </Button>
+                            ) : (
+                                <Typography variant="caption" sx={{ color: workspace.muted, textAlign: 'right' }}>
+                                    This General record belongs to another ombuds.
+                                </Typography>
+                            )}
                         </Box>
 
                         {entriesRes.isLoading ? (
@@ -949,7 +1010,7 @@ export function CaseSummary() {
                                         : 'Select an activity entry'}
                                 </Typography>
                             </Box>
-                            {highlightedEntry && (
+                            {highlightedEntry && highlightedEntry.ombudsId === currentOmbudsRes.data?.id && (
                                 <Tooltip title="Edit entry">
                                     <IconButton
                                         aria-label="Edit entry"

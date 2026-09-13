@@ -27,15 +27,15 @@ export function PersonFinder(props: {
     const queryClient = useQueryClient()
     const organization = useOrganization()
     const orgId = organization?.id
+    const trimmedName = name.trim()
 
-    const hashedName = useHashName(name, phraseChoice.phrase ?? undefined)
+    const hashedName = useHashName(trimmedName, phraseChoice.phrase ?? undefined)
     const privateLookupHash = phraseChoice.phrase === null ? undefined : hashedName
 
     // Private persons: exact hash match
     const privateRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', privateLookupHash])
 
     // Public persons: partial name match via backend ILIKE — only fires when orgId + name ready
-    const trimmedName = name.trim()
     const publicRes = useGetter<PersonType[]>(
         ['search_public_persons', orgId, trimmedName],
         false, // no retry on 404
@@ -162,10 +162,10 @@ export function PersonFinder(props: {
                     <div
                         className="result-item create"
                         onClick={() =>
-                            onCreateRequest ? onCreateRequest(name) : navigate('/add_person')
+                            onCreateRequest ? onCreateRequest(trimmedName) : navigate('/add_person')
                         }
                     >
-                        ✚ Create new person "{name}"
+                        ✚ Create new person "{trimmedName}"
                     </div>
                 )}
             </Box>

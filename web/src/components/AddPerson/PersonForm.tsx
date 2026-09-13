@@ -177,11 +177,16 @@ export function PersonForm(props: {
     const configuredRoles = [...(primaryRolesRes.data ?? [])].sort((a, b) => a.index - b.index)
     const primaryRolesLoading = !orgId || primaryRolesRes.isLoading
     const primaryRoleOptions = getPrimaryRoleOptions(configuredRoles, primaryRolesLoading)
+    const normalizedName = name.trim()
 
-    const hashedName = useHashName(name, phraseChoice.phrase ?? undefined)
+    const hashedName = useHashName(normalizedName, phraseChoice.phrase ?? undefined)
 
     async function save() {
         if (!orgId) return
+        if (!normalizedName) {
+            setSnack({ message: 'Enter a name before saving this person.', severity: 'error' })
+            return
+        }
         if (isSecure && phraseChoice.phrase === null) {
             setSnack({
                 message: 'Choose Blank, set the Default Salt, or provide free text before saving this person.',
@@ -204,7 +209,7 @@ export function PersonForm(props: {
                   organizationId: orgId,
               }
             : {
-                  publicName: name,
+                  publicName: normalizedName,
                   isPublic: true,
                   gender,
                   generation,
@@ -231,7 +236,7 @@ export function PersonForm(props: {
                 monsterSeed: res.monsterSeed,
                 monsterVersion: res.monsterVersion,
                 hashedName: isSecure ? (hashedName ?? '') : undefined,
-                publicName: isSecure ? undefined : name,
+                publicName: isSecure ? undefined : normalizedName,
                 isPublic: !isSecure,
                 gender,
                 generation,
@@ -280,6 +285,7 @@ export function PersonForm(props: {
                                     customPhrase={phraseChoice.customPhrase}
                                     onCustomPhraseChange={phraseChoice.setCustomPhrase}
                                     purpose="lookup"
+                                    phraseIsNew
                                 />
                             </Box>
                             <Box

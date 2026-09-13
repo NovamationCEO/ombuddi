@@ -164,6 +164,16 @@ class ReportTests(unittest.TestCase):
                 sql,
             )
 
+        personal_case_queries = [
+            sql for sql, _params in connection.fake_cursor.executions
+            if "case_kind = 'standard'" in sql
+        ]
+        self.assertTrue(any("COUNT(DISTINCT c.id)" in sql and "JOIN cases c" in sql
+                            for sql in personal_case_queries))
+        self.assertGreaterEqual(sum("EXISTS ( SELECT 1 FROM entries e" in sql
+                                    for sql in personal_case_queries), 2)
+        self.assertTrue(all("created_by_ombuds_id" not in sql for sql in personal_case_queries))
+
     def test_organization_scope_does_not_add_an_ombuds_filter(self):
         connection = EmptyReportConnection()
         with app.test_request_context(

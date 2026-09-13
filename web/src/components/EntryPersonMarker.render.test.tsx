@@ -12,9 +12,13 @@ import { EntryPersonMarker } from './EntryPersonMarker'
 
 const getterMock = vi.hoisted(() => vi.fn())
 const updaterMock = vi.hoisted(() => vi.fn())
+const invalidateQueriesMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../tools/db_tools/getter', () => ({ getter: getterMock }))
 vi.mock('../tools/db_tools/updater', () => ({ updater: updaterMock }))
+vi.mock('@tanstack/react-query', () => ({
+    useQueryClient: () => ({ invalidateQueries: invalidateQueriesMock }),
+}))
 
 vi.mock('./PersonAvatar', () => ({
     PersonAvatar: ({ size }: { size: number }) => <span data-avatar-size={size} />,
@@ -41,6 +45,7 @@ describe('EntryPersonMarker interaction', () => {
     afterEach(() => {
         getterMock.mockReset()
         updaterMock.mockReset()
+        invalidateQueriesMock.mockReset().mockResolvedValue(undefined)
         useSessionSalt.getState().clearSessionSalt()
         useVerifiedPersonNames.getState().clearVerifiedNames()
         document.body.replaceChildren()
@@ -167,9 +172,12 @@ describe('EntryPersonMarker interaction', () => {
             })
         }
 
-        const textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input')]
+        const textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')]
         expect(textInputs).toHaveLength(3)
         expect(textInputs[0].value).toBe('old phrase')
+        expect(textInputs[0].type).toBe('password')
+        expect(textInputs[1].type).toBe('text')
+        expect(textInputs[2].type).toBe('text')
         await setValue(textInputs[1], 'new phrase')
         await setValue(textInputs[2], 'new phrase')
 
@@ -185,6 +193,7 @@ describe('EntryPersonMarker interaction', () => {
             currentHashedName: hashPersonName('Jordan Lee', 'old phrase', person.organizationId),
             newHashedName: hashPersonName('Jordan Lee', 'new phrase', person.organizationId),
         })
+        expect(invalidateQueriesMock).toHaveBeenCalledWith({ queryKey: ['get_persons_by_hashed_name'] })
         expect(container.textContent).toContain('Jordan Lee')
 
         await act(async () => root.unmount())

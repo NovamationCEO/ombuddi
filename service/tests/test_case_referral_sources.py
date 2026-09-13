@@ -223,6 +223,24 @@ class CaseReferralSourceTests(unittest.TestCase):
             (CASE_ID, ORGANIZATION_ID, OTHER_ID, "Professional association"),
         ])
 
+    def test_general_activity_rejects_case_level_referral_sources(self):
+        connection = FakeConnection(fetchone_rows=[("general",)])
+        with app.test_request_context(
+            "/api/v1/update_case_referral_sources",
+            method="PUT",
+            json={"caseId": CASE_ID, "referralSources": []},
+        ):
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.ombuddi_views.get_db_connection", return_value=connection):
+                response, status = update_case_referral_sources()
+
+        self.assertEqual(status, 400)
+        self.assertIn("does not use referral sources", response.get_json()["error"])
+        self.assertFalse(any(
+            "DELETE FROM case_referral_sources" in sql
+            for sql, _params in connection.fake_cursor.executions
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

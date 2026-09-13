@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 from uuid import UUID
 
 from flask import Blueprint, request, g, jsonify
@@ -60,6 +61,70 @@ def _require_owned_reference(table, row_id, label):
     finally:
         if conn:
             conn.close()
+
+
+def _require_writable_case_reference(row_id, label='caseId'):
+    """Allow shared standard cases, but only the owner's General container."""
+    if not row_id:
+        return jsonify({
+            'success': False,
+            'status': 'input error',
+            'error': f'Missing {label}',
+        }), 400
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM cases
+                WHERE id = %s
+                  AND organization_id = %s
+                  AND (case_kind = 'standard' OR owner_ombuds_id = %s)
+                """,
+                (row_id, g.organization_id, g.ombuds_id),
+            )
+            exists = cur.fetchone() is not None
+        if not exists:
+            return jsonify({
+                'success': False,
+                'status': '404 error',
+                'error': 'Not found',
+            }), 404
+        return None
+    except Exception:
+        logger.exception('Failed to validate writable case reference')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': f'Unable to validate {label}',
+        }), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+def _entry_input_error(message):
+    return jsonify({
+        'success': False,
+        'status': 'input error',
+        'error': message,
+    }), 400
+
+
+def _normalized_uuid_list(values, label):
+    if values is None:
+        return [], None
+    if not isinstance(values, list):
+        return None, _entry_input_error(f'{label} must be a list')
+    try:
+        normalized = [str(UUID(str(value))) for value in values]
+    except (ValueError, TypeError, AttributeError):
+        return None, _entry_input_error(f'{label} contains an invalid id')
+    return list(dict.fromkeys(normalized)), None
 
 
 def _reject_foreign_code_references(code_ids):
@@ -341,12 +406,17 @@ def update_case_referral_sources():
         with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    'SELECT 1 FROM cases WHERE id = %s AND organization_id = %s FOR UPDATE',
+                    'SELECT case_kind FROM cases WHERE id = %s AND organization_id = %s FOR UPDATE',
                     (case_id, g.organization_id),
                 )
-                if cur.fetchone() is None:
+                case_row = cur.fetchone()
+                if case_row is None:
                     raise _ReferralTransactionAbort(
                         (jsonify({'error': 'Not found', 'message': 'Case not found'}), 404)
+                    )
+                if case_row[0] == 'general':
+                    raise _ReferralTransactionAbort(
+                        (_referral_input_error('General activity does not use referral sources'))
                     )
                 error = _validate_referral_sources(cur, referral_sources)
                 if error:
@@ -680,18 +750,107 @@ def get_entry_by_id(id):
 @ombuddi_views.route('/api/v1/add_entry', methods=['POST'])
 def add_entry():
     payload = request.get_json(silent=True) or {}
-    error = _require_owned_reference('cases', payload.get('caseId'), 'caseId')
+    try:
+        case_id = str(UUID(str(payload.get('caseId'))))
+    except (ValueError, TypeError, AttributeError):
+        return _entry_input_error('Invalid caseId')
+
+    event_date = payload.get('date')
+    try:
+        date.fromisoformat(event_date)
+    except (ValueError, TypeError):
+        return _entry_input_error('date must use YYYY-MM-DD')
+
+    medium = payload.get('medium', 'inPerson')
+    duration = payload.get('duration', 0)
+    notes = payload.get('notes', '')
+    if not isinstance(medium, str) or not isinstance(notes, str):
+        return _entry_input_error('Invalid entry details')
+    if isinstance(duration, bool) or not isinstance(duration, int) or duration < 0:
+        return _entry_input_error('duration must be a non-negative whole number')
+
+    person_ids, error = _normalized_uuid_list(payload.get('personIds'), 'personIds')
     if error:
         return error
-    return add_one(
-        'entries',
-        entry_model,
-        request,
-        owner_constraint={
-            'organization_id': g.organization_id,
-            'ombuds_id': g.ombuds_id,
-        },
-    )
+
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT case_kind, owner_ombuds_id
+                    FROM cases
+                    WHERE id = %s AND organization_id = %s
+                    FOR KEY SHARE
+                    """,
+                    (case_id, g.organization_id),
+                )
+                case_row = cur.fetchone()
+                if case_row is None or (
+                    case_row[0] == 'general'
+                    and str(case_row[1]) != str(g.ombuds_id)
+                ):
+                    return jsonify({
+                        'success': False,
+                        'status': '404 error',
+                        'error': 'Not found',
+                    }), 404
+
+                if person_ids:
+                    cur.execute(
+                        """
+                        SELECT id::text
+                        FROM persons
+                        WHERE organization_id = %s
+                          AND id = ANY(%s::uuid[])
+                        FOR KEY SHARE
+                        """,
+                        (g.organization_id, person_ids),
+                    )
+                    found_person_ids = {row[0] for row in cur.fetchall()}
+                    if found_person_ids != set(person_ids):
+                        return jsonify({
+                            'success': False,
+                            'status': '404 error',
+                            'error': 'One or more people were not found',
+                        }), 404
+
+                cur.execute(
+                    """
+                    INSERT INTO entries (
+                        case_id, ombuds_id, organization_id,
+                        date, medium, duration, notes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        case_id,
+                        g.ombuds_id,
+                        g.organization_id,
+                        event_date,
+                        medium,
+                        duration,
+                        notes,
+                    ),
+                )
+                entry_id = cur.fetchone()[0]
+                for person_id in person_ids:
+                    cur.execute(
+                        """
+                        INSERT INTO entry_person (entry_id, person_id)
+                        VALUES (%s, %s)
+                        """,
+                        (entry_id, person_id),
+                    )
+        return jsonify({'success': True, 'status': 'success', 'id': entry_id}), 200
+    except Exception:
+        logger.exception('Failed to create entry with people')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to save the entry',
+        }), 500
 
 @ombuddi_views.route('/api/v1/get_entries_by_case_id/<case_id>')
 def get_entries_by_case_id(case_id):
@@ -701,13 +860,16 @@ def get_entries_by_case_id(case_id):
 def update_entry():
     payload = request.get_json(silent=True) or {}
     if 'caseId' in payload:
-        error = _require_owned_reference('cases', payload.get('caseId'), 'caseId')
+        error = _require_writable_case_reference(payload.get('caseId'))
         if error:
             return error
     return update_one(
         'entries',
         entry_model,
         request,
-        owner_constraint=_org(),
+        owner_constraint={
+            'organization_id': g.organization_id,
+            'ombuds_id': g.ombuds_id,
+        },
         immutable_columns={'ombuds_id'},
     )

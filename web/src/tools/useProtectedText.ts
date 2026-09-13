@@ -16,6 +16,7 @@ export function useProtectedText(
     const defaultPhrase = useSessionSalt((state) => state.sessionSalt)
     const encrypted = isEncrypted(stored)
     const [plaintext, setPlaintext] = React.useState<string | null>(encrypted ? null : stored)
+    const [phraseUsed, setPhraseUsed] = React.useState<string | null>(encrypted ? null : '')
     const [status, setStatus] = React.useState<ProtectedTextStatus>(encrypted ? 'awaiting-phrase' : 'plain')
     const itemIdentity = `${organizationId}\u0000${stored}`
     const previousIdentity = React.useRef(itemIdentity)
@@ -24,6 +25,7 @@ export function useProtectedText(
         if (previousIdentity.current === itemIdentity) return
         previousIdentity.current = itemIdentity
         setPlaintext(encrypted ? null : stored)
+        setPhraseUsed(encrypted ? null : '')
         setStatus(encrypted ? 'awaiting-phrase' : 'plain')
     }, [encrypted, itemIdentity, stored])
 
@@ -51,6 +53,7 @@ export function useProtectedText(
                 if (!active) return
                 if (result !== null) {
                     setPlaintext(result)
+                    setPhraseUsed(phrase)
                     setStatus('decrypted')
                     return
                 }
@@ -64,5 +67,5 @@ export function useProtectedText(
         }
     }, [attemptKey, customPhrase, defaultPhrase, encrypted, organizationId, plaintext, source, stored, tryLegacyBlank])
 
-    return { encrypted, plaintext, status }
+    return { encrypted, plaintext, phraseUsed, status }
 }
