@@ -22,7 +22,6 @@ import {
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CaseSceneThumbnail } from '../components/CaseSceneThumbnail'
-import { CodeChip } from '../components/CodeChip'
 import { EditCodeDialog } from '../components/EditCodeDialog'
 import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
 import { ProtectedText } from '../components/ProtectedText'
@@ -43,6 +42,8 @@ import { PhraseSourceControl } from '../components/PhraseSourceControl'
 import { EntryPersonMarker } from '../components/EntryPersonMarker'
 import { uniquePeopleById } from '../components/personDisplay'
 import { formatCalendarDate } from '../tools/calendarDate'
+import { useResolvedCaseCodes } from '../tools/useResolvedCaseCodes'
+import { CaseCodeTooltip } from '../components/CaseCodeTooltip'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -123,6 +124,7 @@ export function CaseSummary() {
         [entriesRes.data],
     )
     const casePeople = React.useMemo(() => uniquePeopleById(casePeopleRes.data ?? []), [casePeopleRes.data])
+    const resolvedCaseCodes = useResolvedCaseCodes(caseRes.data?.codes ?? [])
 
     React.useEffect(() => {
         if (!sortedEntries.length) {
@@ -574,13 +576,13 @@ export function CaseSummary() {
                                 Codes
                             </Typography>
                             {caseItem.codes?.length ? (
-                                caseItem.codes.map((code) => (
-                                    <CodeChip
-                                        key={code}
-                                        code={code}
-                                        compact
-                                    />
-                                ))
+                                <CaseCodeTooltip codes={resolvedCaseCodes} placement="top-start">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
+                                        {resolvedCaseCodes.map((code) => (
+                                            <Chip key={code.id} label={code.shortName} />
+                                        ))}
+                                    </Box>
+                                </CaseCodeTooltip>
                             ) : (
                                 <Typography
                                     variant="body2"

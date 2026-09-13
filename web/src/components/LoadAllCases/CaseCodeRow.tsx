@@ -1,10 +1,8 @@
-import { Box, Chip, Tooltip, Typography } from '@mui/material'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ioaCodesFull } from '../../constants/ioaConstants'
+import { Box, Chip } from '@mui/material'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { institutionalPalette as palette } from '../../theme/institutionalPalette'
-import { CodeType } from '../../types/majorTypes'
-import { useGetter } from '../../tools/db_tools/useGetter'
-import { useOrganization } from '../../tools/useOrganization'
+import { useResolvedCaseCodes } from '../../tools/useResolvedCaseCodes'
+import { CaseCodeTooltip } from '../CaseCodeTooltip'
 
 const chipStyle = {
     flexShrink: 0,
@@ -14,23 +12,11 @@ const chipStyle = {
 } as const
 
 export function CaseCodeRow({ codeIds }: { codeIds: string[] }) {
-    const organization = useOrganization()
-    const customCodesRes = useGetter<CodeType[]>(['get_codes_by_organization_id', organization.id])
     const containerRef = useRef<HTMLDivElement | null>(null)
     const measurementRef = useRef<HTMLDivElement | null>(null)
     const [visibleCount, setVisibleCount] = useState(Math.min(codeIds.length, 2))
 
-    const codes = useMemo(() => {
-        const codeById = new Map([...ioaCodesFull, ...(customCodesRes.data ?? [])].map((code) => [code.id, code]))
-        return codeIds.map((id) => {
-            const code = codeById.get(id)
-            return {
-                id,
-                shortName: code?.code ?? 'Code',
-                description: code?.description ?? 'Code details loading…',
-            }
-        })
-    }, [codeIds, customCodesRes.data])
+    const codes = useResolvedCaseCodes(codeIds)
 
     const measurementKey = codes.map((code) => code.shortName).join('|')
 
@@ -76,26 +62,6 @@ export function CaseCodeRow({ codeIds }: { codeIds: string[] }) {
     if (!codes.length) return null
 
     const hiddenCount = Math.max(0, codes.length - visibleCount)
-    const tooltipContent = (
-        <Box sx={{ py: 0.25 }}>
-            {codes.map((code) => (
-                <Typography
-                    key={code.id}
-                    component="div"
-                    sx={{ fontSize: '0.9rem', lineHeight: 1.45, py: 0.35 }}
-                >
-                    <Box
-                        component="span"
-                        sx={{ fontWeight: 700 }}
-                    >
-                        {code.shortName}:
-                    </Box>{' '}
-                    {code.description}
-                </Typography>
-            ))}
-        </Box>
-    )
-
     return (
         <Box
             ref={containerRef}
@@ -103,31 +69,25 @@ export function CaseCodeRow({ codeIds }: { codeIds: string[] }) {
         >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                 {codes.slice(0, visibleCount).map((code) => (
-                    <Tooltip
+                    <CaseCodeTooltip
                         key={code.id}
-                        title={tooltipContent}
-                        arrow
-                        placement="top"
+                        codes={codes}
                     >
                         <Chip
                             label={code.shortName}
                             size="small"
                             sx={chipStyle}
                         />
-                    </Tooltip>
+                    </CaseCodeTooltip>
                 ))}
                 {!!hiddenCount && (
-                    <Tooltip
-                        title={tooltipContent}
-                        arrow
-                        placement="top"
-                    >
+                    <CaseCodeTooltip codes={codes}>
                         <Chip
                             label={`+${hiddenCount}`}
                             size="small"
                             sx={chipStyle}
                         />
-                    </Tooltip>
+                    </CaseCodeTooltip>
                 )}
             </Box>
 
