@@ -4,8 +4,15 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PersonType } from '../types/majorTypes'
+import { useSessionSalt } from '../libraries/useSessionSalt'
+import { useVerifiedPersonNames } from '../libraries/useVerifiedPersonNames'
+import { hashPersonName } from '../tools/useHashName'
 import { EntryPersonMarker } from './EntryPersonMarker'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+const getterMock = vi.hoisted(() => vi.fn())
+
+vi.mock('../tools/db_tools/getter', () => ({ getter: getterMock }))
 
 vi.mock('./PersonAvatar', () => ({
     PersonAvatar: ({ size }: { size: number }) => <span data-avatar-size={size} />,
@@ -30,6 +37,9 @@ const person: PersonType = {
 
 describe('EntryPersonMarker interaction', () => {
     afterEach(() => {
+        getterMock.mockReset()
+        useSessionSalt.getState().clearSessionSalt()
+        useVerifiedPersonNames.getState().clearVerifiedNames()
         document.body.replaceChildren()
     })
 
@@ -55,6 +65,75 @@ describe('EntryPersonMarker interaction', () => {
         expect(document.body.textContent).toContain('Woman')
         expect(document.body.textContent).not.toContain(person.hashedName)
         expect(document.body.textContent).not.toContain(person.organizationId)
+
+        await act(async () => root.unmount())
+    })
+
+    it('shows a public name beneath the avatar', async () => {
+        const container = document.createElement('div')
+        document.body.append(container)
+        const root = createRoot(container)
+        await act(async () =>
+            root.render(
+                <EntryPersonMarker
+                    person={{ ...person, isPublic: true, publicName: 'Jordan Lee' }}
+                />,
+            ),
+        )
+
+        expect(container.textContent).toContain('Jordan Lee')
+
+        await act(async () => root.unmount())
+    })
+
+    it('verifies a private name for every matching avatar without persisting it', async () => {
+        useSessionSalt.getState().setSessionSalt('shared phrase')
+        getterMock.mockResolvedValue([person])
+
+        const container = document.createElement('div')
+        document.body.append(container)
+        const root = createRoot(container)
+        await act(async () =>
+            root.render(
+                <>
+                    <EntryPersonMarker person={person} />
+                    <EntryPersonMarker person={person} />
+                </>,
+            ),
+        )
+
+        expect(container.textContent).not.toContain('Jordan Lee')
+        const marker = container.querySelector('[tabindex="0"]')
+        await act(async () => {
+            marker?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+        })
+
+        const inputs = [...document.body.querySelectorAll('input')]
+        expect(inputs).toHaveLength(2)
+        expect(inputs.every((input) => input.hasAttribute('data-1p-ignore'))).toBe(true)
+        expect(inputs.every((input) => input.hasAttribute('data-op-ignore'))).toBe(true)
+        expect(inputs[1].value).toBe('shared phrase')
+
+        await act(async () => {
+            const valueSetter = Object.getOwnPropertyDescriptor(
+                HTMLInputElement.prototype,
+                'value',
+            )?.set
+            valueSetter?.call(inputs[0], 'Jordan Lee')
+            inputs[0].dispatchEvent(new Event('input', { bubbles: true }))
+        })
+
+        const form = document.body.querySelector('form')
+        await act(async () => {
+            form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+            await Promise.resolve()
+        })
+
+        expect(getterMock).toHaveBeenCalledWith(
+            `get_persons_by_hashed_name/${hashPersonName('Jordan Lee', 'shared phrase', person.organizationId)}`,
+        )
+        expect(container.textContent?.match(/Jordan Lee/g)).toHaveLength(2)
+        expect(useVerifiedPersonNames.getState().names[person.id]).toBe('Jordan Lee')
 
         await act(async () => root.unmount())
     })

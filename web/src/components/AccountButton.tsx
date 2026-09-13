@@ -7,11 +7,13 @@ import React from 'react'
 import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
 import { useSessionSalt } from '../libraries/useSessionSalt'
+import { useVerifiedPersonNames } from '../libraries/useVerifiedPersonNames'
 
 export function AccountButton({ placement = 'bottom-end' }: { placement?: PopperPlacementType }) {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
     const { isAuthenticated, loginWithRedirect, logout } = useAuth0()
     const clearSessionSalt = useSessionSalt((state) => state.clearSessionSalt)
+    const clearVerifiedNames = useVerifiedPersonNames((state) => state.clearVerifiedNames)
 
     const open = Boolean(anchorEl)
 
@@ -25,11 +27,13 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
 
     const handleLogin = () => {
         clearSessionSalt()
+        clearVerifiedNames()
         void loginWithRedirect()
     }
 
     const handleLogout = () => {
         clearSessionSalt()
+        clearVerifiedNames()
         void logout({ logoutParams: { returnTo: window.location.origin } })
     }
 

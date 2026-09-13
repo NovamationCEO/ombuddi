@@ -2,6 +2,12 @@ import { sha256 } from 'js-sha256'
 import { useOrganization } from './useOrganization'
 import React from 'react'
 
+export function hashPersonName(name: string, salt: string | undefined, orgId: string): string {
+    const combined = `${name}${salt || ''}${orgId}`
+    const normalized = combined.trim().toLowerCase().normalize('NFC')
+    return sha256(normalized)
+}
+
 /**
  * Client-side first hash pass for a visitor name.
  * Result is sent to the server, which mixes in NAME_SALT and re-hashes
@@ -15,9 +21,7 @@ export function useHashName(name: string, salt?: string): string | undefined {
     const orgId = organization?.id
 
     const res = React.useMemo(() => {
-        const combined = `${name}${salt || ''}${orgId || ''}`
-        const normalized = combined.trim().toLowerCase().normalize('NFC')
-        return sha256(normalized)
+        return hashPersonName(name, salt, orgId || '')
     }, [name, salt, orgId])
 
     if (!orgId || !orgId.length) {

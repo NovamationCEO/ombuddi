@@ -14,6 +14,7 @@ import { Theme } from '@mui/material/styles'
 import { useSnack } from './libraries/useSnack'
 import { appTheme, colorSchemeStorageKey } from './theme/appTheme'
 import { useSessionSalt } from './libraries/useSessionSalt'
+import { useVerifiedPersonNames } from './libraries/useVerifiedPersonNames'
 
 const App: React.FC = () => {
     return (
@@ -69,6 +70,7 @@ const InnerApp: React.FC = () => {
     const snack = useSnack((state) => state.snack)
     const { getAccessTokenSilently, isAuthenticated, user } = useAuth0()
     const clearSessionSalt = useSessionSalt((state) => state.clearSessionSalt)
+    const clearVerifiedNames = useVerifiedPersonNames((state) => state.clearVerifiedNames)
     const authIdentity = isAuthenticated ? user?.sub ?? 'authenticated' : null
     const previousAuthIdentity = React.useRef(authIdentity)
 
@@ -79,9 +81,10 @@ const InnerApp: React.FC = () => {
     React.useEffect(() => {
         if (previousAuthIdentity.current !== authIdentity) {
             clearSessionSalt()
+            clearVerifiedNames()
             previousAuthIdentity.current = authIdentity
         }
-    }, [authIdentity, clearSessionSalt])
+    }, [authIdentity, clearSessionSalt, clearVerifiedNames])
 
     return (
         <ThemeProvider
