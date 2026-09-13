@@ -242,7 +242,7 @@ export function Profile() {
                                     <Box sx={{ width: 38, height: 38 }}>
                                         <PersonMonster seed={avatarPreviewSeed} />
                                     </Box>
-                                    Monsters
+                                    Avatars
                                 </ToggleButton>
                                 <ToggleButton
                                     value="geometric"
@@ -252,7 +252,7 @@ export function Profile() {
                                     <Box sx={{ width: 38, height: 38 }}>
                                         <PersonGeometricPortrait seed={avatarPreviewSeed} />
                                     </Box>
-                                    Neutral geometry
+                                    Geometry
                                 </ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
