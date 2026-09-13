@@ -11,10 +11,12 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    IconButton,
     MenuItem,
     Paper,
     Stack,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material'
 import React from 'react'
@@ -40,6 +42,7 @@ import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
 import { EntryPersonMarker } from '../components/EntryPersonMarker'
 import { uniquePeopleById } from '../components/personDisplay'
+import { formatCalendarDate } from '../tools/calendarDate'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -852,7 +855,7 @@ export function CaseSummary() {
                                             >
                                                 <Box sx={{ minWidth: 0 }}>
                                                     <Typography sx={{ color: workspace.ink, fontWeight: 700 }}>
-                                                        {formatDate(entry.date)}
+                                                        {formatCalendarDate(entry.date)}
                                                     </Typography>
                                                     <Typography
                                                         variant="body2"
@@ -914,9 +917,22 @@ export function CaseSummary() {
                                     variant="body2"
                                     sx={{ color: workspace.muted }}
                                 >
-                                    {highlightedEntry ? formatDate(highlightedEntry.date) : 'Select an activity entry'}
+                                    {highlightedEntry
+                                        ? formatCalendarDate(highlightedEntry.date)
+                                        : 'Select an activity entry'}
                                 </Typography>
                             </Box>
+                            {highlightedEntry && (
+                                <Tooltip title="Edit entry">
+                                    <IconButton
+                                        aria-label="Edit entry"
+                                        onClick={() => navigate(`/case/${caseId}/entry/${highlightedEntry.id}/edit`)}
+                                        sx={{ color: workspace.teal }}
+                                    >
+                                        <EditOutlined />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
                         </Box>
 
                         {!highlightedEntry ? (
@@ -945,7 +961,7 @@ export function CaseSummary() {
                                 >
                                     <DetailFact
                                         label="Date"
-                                        value={formatDate(highlightedEntry.date)}
+                                        value={formatCalendarDate(highlightedEntry.date)}
                                     />
                                     <DetailFact
                                         label="Method"

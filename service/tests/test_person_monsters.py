@@ -12,7 +12,13 @@ sys.path.insert(0, SERVICE_DIR)
 sys.path.insert(0, SRC_DIR)
 
 from app import app
-from src.person_views import add_person, get_persons_by_entry_id, person_model, update_person
+from src.person_views import (
+    add_person,
+    change_person_name_phrase,
+    get_persons_by_entry_id,
+    person_model,
+    update_person,
+)
 
 
 ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -111,6 +117,7 @@ class PersonMonsterTests(unittest.TestCase):
             json={
                 "id": PERSON_ID,
                 "publicName": "Updated public name",
+                "hashedName": "replacement-must-be-ignored",
                 "monsterSeed": CLIENT_CHOSEN_SEED,
                 "monsterVersion": 99,
             },
@@ -123,8 +130,61 @@ class PersonMonsterTests(unittest.TestCase):
         sql, params = connection.fake_cursor.executions[0]
         self.assertNotIn("monster_seed", sql)
         self.assertNotIn("monster_version", sql)
+        self.assertNotIn("hashed_name", sql)
         self.assertNotIn(CLIENT_CHOSEN_SEED, params)
         self.assertEqual(params, ["Updated public name", PERSON_ID, ORGANIZATION_ID])
+
+    def test_change_phrase_conditionally_replaces_the_server_hash(self):
+        connection = FakeConnection()
+        with app.test_request_context(
+            "/api/v1/change_person_name_phrase",
+            method="PUT",
+            json={
+                "id": PERSON_ID,
+                "currentHashedName": "current-client-hash",
+                "newHashedName": "new-client-hash",
+            },
+        ):
+            g.organization_id = ORGANIZATION_ID
+            with (
+                patch("src.person_views.get_db_connection", return_value=connection),
+                patch("src.person_views.hash_name", side_effect=lambda value: f"server-{value}"),
+            ):
+                response, status = change_person_name_phrase()
+
+        self.assertEqual(status, 200)
+        self.assertTrue(response.get_json()["success"])
+        sql, params = connection.fake_cursor.executions[0]
+        self.assertIn("is_public = FALSE", sql)
+        self.assertIn("hashed_name = %s", sql)
+        self.assertEqual(
+            params,
+            (
+                "server-new-client-hash",
+                PERSON_ID,
+                ORGANIZATION_ID,
+                "server-current-client-hash",
+            ),
+        )
+
+    def test_change_phrase_rejects_a_non_matching_current_hash(self):
+        connection = FakeConnection()
+        connection.fake_cursor.rowcount = 0
+        with app.test_request_context(
+            "/api/v1/change_person_name_phrase",
+            method="PUT",
+            json={
+                "id": PERSON_ID,
+                "currentHashedName": "wrong-client-hash",
+                "newHashedName": "new-client-hash",
+            },
+        ):
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.person_views.get_db_connection", return_value=connection):
+                response, status = change_person_name_phrase()
+
+        self.assertEqual(status, 400)
+        self.assertEqual(response.get_json()["error"], "Verification failed")
 
     def test_entry_person_query_uses_model_column_order_instead_of_select_star(self):
         row = (

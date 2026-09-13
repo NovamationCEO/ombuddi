@@ -1,17 +1,20 @@
 import { GenericResponse } from '../../types/miscTypes'
-
-let host = window.location.host
-host = host.includes('localhost') ? 'http://localhost:5002' : `https://${host}`
+import { getToken } from '../auth/tokenProvider'
+import { apiUrl } from '../../constants/apiUrl'
 
 export async function deleter<T>(address: string, payload: Partial<T>) {
+    const token = await getToken()
     const requestOptions = {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
     }
 
     try {
-        const response = await fetch(`${host}/api/v1/${address}`, requestOptions)
+        const response = await fetch(`${apiUrl}/api/v1/${address}`, requestOptions)
         const isJson = response.headers.get('content-type')?.includes('application/json')
         const data = isJson && (await response.json())
 

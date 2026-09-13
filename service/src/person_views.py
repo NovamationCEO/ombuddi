@@ -86,8 +86,61 @@ def update_person():
         person_model,
         request,
         owner_constraint=_org(),
-        immutable_columns={'monster_seed', 'monster_version'},
+        immutable_columns={'monster_seed', 'monster_version', 'hashed_name'},
     )
+
+
+@person_views.route('/api/v1/change_person_name_phrase', methods=['PUT'])
+def change_person_name_phrase():
+    """Replace a private person's lookup hash after verifying the current one.
+
+    Both values are already first-pass hashes from the browser. The server adds
+    NAME_SALT to each, then performs one conditional UPDATE so verification and
+    replacement cannot be separated by a race or bypassed through update_person.
+    """
+    data = request.get_json(silent=True) or {}
+    person_id = data.get('id')
+    current_client_hash = data.get('currentHashedName')
+    new_client_hash = data.get('newHashedName')
+    if not all(isinstance(value, str) and value for value in (person_id, current_client_hash, new_client_hash)):
+        return jsonify({
+            'success': False,
+            'status': 'input error',
+            'error': 'Missing person or name hashes',
+        }), 400
+
+    current_hash = hash_name(current_client_hash)
+    new_hash = hash_name(new_client_hash)
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE persons
+                    SET hashed_name = %s
+                    WHERE id = %s
+                      AND organization_id = %s
+                      AND is_public = FALSE
+                      AND hashed_name = %s
+                    """,
+                    (new_hash, person_id, g.organization_id, current_hash),
+                )
+                if cur.rowcount != 1:
+                    return jsonify({
+                        'success': False,
+                        'status': 'verification failed',
+                        'error': 'Verification failed',
+                        'message': 'The current name and phrase do not match this private person.',
+                    }), 400
+        return jsonify({'success': True, 'status': 'success'}), 200
+    except Exception:
+        logger.exception('change_person_name_phrase failed')
+        return jsonify({
+            'success': False,
+            'status': 'db error',
+            'error': 'Database error',
+            'message': 'Unable to change the person phrase',
+        }), 500
 
 @person_views.route('/api/v1/get_persons_by_organization_id/<organization_id>')
 def get_persons_by_organization_id(organization_id):

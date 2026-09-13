@@ -126,6 +126,17 @@ export const router = createBrowserRouter([
         ),
     },
     {
+        path: '/case/:caseId/entry/:entryId/edit',
+        element: (
+            <Page
+                element={<AddEntry />}
+                title="Edit Case Entry"
+                description="Edit a protected entry on an ombuds case."
+                fullBleed
+            />
+        ),
+    },
+    {
         path: '/case/:caseId',
         element: (
             <Page

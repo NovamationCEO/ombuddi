@@ -11,8 +11,10 @@ import { EntryPersonMarker } from './EntryPersonMarker'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const getterMock = vi.hoisted(() => vi.fn())
+const updaterMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../tools/db_tools/getter', () => ({ getter: getterMock }))
+vi.mock('../tools/db_tools/updater', () => ({ updater: updaterMock }))
 
 vi.mock('./PersonAvatar', () => ({
     PersonAvatar: ({ size }: { size: number }) => <span data-avatar-size={size} />,
@@ -38,6 +40,7 @@ const person: PersonType = {
 describe('EntryPersonMarker interaction', () => {
     afterEach(() => {
         getterMock.mockReset()
+        updaterMock.mockReset()
         useSessionSalt.getState().clearSessionSalt()
         useVerifiedPersonNames.getState().clearVerifiedNames()
         document.body.replaceChildren()
@@ -108,7 +111,9 @@ describe('EntryPersonMarker interaction', () => {
             marker?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
         })
 
-        const inputs = [...document.body.querySelectorAll('input')]
+        const inputs = [
+            ...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])'),
+        ]
         expect(inputs).toHaveLength(2)
         expect(inputs.every((input) => input.hasAttribute('data-1p-ignore'))).toBe(true)
         expect(inputs.every((input) => input.hasAttribute('data-op-ignore'))).toBe(true)
@@ -134,6 +139,55 @@ describe('EntryPersonMarker interaction', () => {
         )
         expect(container.textContent?.match(/Jordan Lee/g)).toHaveLength(2)
         expect(useVerifiedPersonNames.getState().names[person.id]).toBe('Jordan Lee')
+
+        await act(async () => root.unmount())
+    })
+
+    it('changes a private phrase only through the verification endpoint', async () => {
+        updaterMock.mockResolvedValue({ success: true })
+
+        const container = document.createElement('div')
+        document.body.append(container)
+        const root = createRoot(container)
+        await act(async () => root.render(<EntryPersonMarker person={person} />))
+
+        const marker = container.querySelector('[tabindex="0"]')
+        await act(async () => {
+            marker?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+        })
+
+        const setValue = async (input: HTMLInputElement, value: string) => {
+            await act(async () => {
+                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+                setter?.call(input, value)
+                input.dispatchEvent(new Event('input', { bubbles: true }))
+            })
+        }
+
+        let textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')]
+        await setValue(textInputs[0], 'Jordan Lee')
+        await setValue(textInputs[1], 'old phrase')
+
+        const checkbox = document.body.querySelector<HTMLInputElement>('input[type="checkbox"]')
+        await act(async () => checkbox?.click())
+
+        textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')]
+        await setValue(textInputs[2], 'new phrase')
+        await setValue(textInputs[3], 'new phrase')
+
+        const form = document.body.querySelector('form')
+        await act(async () => {
+            form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+            await Promise.resolve()
+        })
+
+        expect(getterMock).not.toHaveBeenCalled()
+        expect(updaterMock).toHaveBeenCalledWith('change_person_name_phrase', {
+            id: person.id,
+            currentHashedName: hashPersonName('Jordan Lee', 'old phrase', person.organizationId),
+            newHashedName: hashPersonName('Jordan Lee', 'new phrase', person.organizationId),
+        })
+        expect(container.textContent).toContain('Jordan Lee')
 
         await act(async () => root.unmount())
     })

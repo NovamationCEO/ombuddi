@@ -2,6 +2,7 @@ import {
     Box,
     Button,
     Chip,
+    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
@@ -19,18 +20,24 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType, PersonType } from '../types/majorTypes'
+import { CaseType, EntryType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
+import { updater } from '../tools/db_tools/updater'
+import { deleter } from '../tools/db_tools/deleter'
 import { PersonFinder } from '../components/PersonFinder'
 import { PersonForm } from '../components/AddPerson/PersonForm'
 import { ArrowBack, LockOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
-import { encryptNotes } from '../tools/notesCrypto'
+import { encryptNotes, isEncrypted } from '../tools/notesCrypto'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
 import { PersonAvatar } from '../components/PersonAvatar'
+import { ProtectedText } from '../components/ProtectedText'
+import { useSnack } from '../libraries/useSnack'
+import { entryPersonChanges } from '../tools/entryPersonChanges'
+import { calendarDateInputValue, localCalendarDateInputValue } from '../tools/calendarDate'
 
 const entryWorkspace = {
     background: 'var(--mui-palette-background-default)',
@@ -66,17 +73,26 @@ function personLabel(p: PersonType): string {
 }
 
 export function AddEntry() {
-    const { caseId } = useParams()
+    const { caseId, entryId } = useParams()
+    const isEditing = Boolean(entryId)
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
+    const entryRes = useGetter<EntryType>(['get_entry_by_id', entryId])
+    const existingEntryPeopleRes = useGetter<PersonType[]>(['get_persons_by_entry_id', entryId])
     const [notes, setNotes] = useState('')
+    const [storedNotes, setStoredNotes] = useState('')
+    const [notesLocked, setNotesLocked] = useState(false)
+    const [entryInitialized, setEntryInitialized] = useState(!isEditing)
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const setSnack = useSnack((state) => state.setSnack)
     const [duration, setDuration] = useState(30)
-    const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10))
+    const [eventDate, setEventDate] = useState(() => localCalendarDateInputValue())
     const notePhrase = usePhraseSelection()
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
+    const initializedEntryId = React.useRef<string | null>(null)
+    const originalPersonIds = React.useRef<string[]>([])
 
     // Entry medium and priority are org-customizable picklists. The stored
     // value on entries.medium is the picklist row's display name directly
@@ -104,6 +120,24 @@ export function AddEntry() {
     // saved; then we POST add_entry_person for each.
     const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
 
+    React.useEffect(() => {
+        const entry = entryRes.data
+        const people = existingEntryPeopleRes.data
+        if (!isEditing || !entryId || !entry || !people || initializedEntryId.current === entryId) return
+        if (entry.caseId !== caseId) return
+
+        setEventDate((current) => calendarDateInputValue(entry.date) ?? current)
+        setMedium(entry.medium)
+        setDuration(entry.duration)
+        setStoredNotes(entry.notes ?? '')
+        setNotes(isEncrypted(entry.notes ?? '') ? '' : entry.notes ?? '')
+        setNotesLocked(isEncrypted(entry.notes ?? ''))
+        setEntryPeople(people)
+        originalPersonIds.current = people.map((person) => person.id)
+        initializedEntryId.current = entryId
+        setEntryInitialized(true)
+    }, [caseId, entryId, entryRes.data, existingEntryPeopleRes.data, isEditing])
+
     // Inline "Create new user" dialog: triggered from PersonFinder when no
     // search matches. The typed name pre-fills PersonForm so the ombuds
     // doesn't retype it.
@@ -121,33 +155,71 @@ export function AddEntry() {
 
     async function save() {
         const organizationId = caseRes.data?.organizationId
-        if (!organizationId || isSaving || (notes && notePhrase.phrase === null)) return
+        if (!organizationId || isSaving || (!notesLocked && notes && notePhrase.phrase === null)) return
         setIsSaving(true)
         try {
-            const storedNotes = notes ? await encryptNotes(notes, notePhrase.phrase ?? '', organizationId) : ''
+            const nextStoredNotes = notesLocked
+                ? storedNotes
+                : notes
+                  ? await encryptNotes(notes, notePhrase.phrase ?? '', organizationId)
+                  : ''
             const payload = {
                 caseId,
                 date: eventDate,
                 medium,
                 duration,
-                notes: storedNotes,
+                notes: nextStoredNotes,
             }
-            const created = await creator<{ id: string; success: boolean }>('add_entry', payload)
-            const newEntryId = created?.id
-            if (newEntryId && entryPeople.length > 0) {
-                // Fan out the join inserts. If one fails the rest still run; the
-                // entry itself is created either way. (Future: batch endpoint.)
-                await Promise.all(
-                    entryPeople.map((person) =>
+            if (isEditing && entryId) {
+                await updater('update_entry', { id: entryId, ...payload })
+                const { additions, removals } = entryPersonChanges(originalPersonIds.current, entryPeople)
+
+                await Promise.all([
+                    ...additions.map((person) =>
                         creator<{ entryId: string; personId: string }>('add_entry_person', {
-                            entryId: newEntryId,
+                            entryId,
                             personId: person.id,
                         }),
                     ),
-                )
+                    ...removals.map((personId) =>
+                        deleter<{ entryId: string; personId: string }>('remove_entry_person', {
+                            entryId,
+                            personId,
+                        }),
+                    ),
+                ])
+            } else {
+                const created = await creator<{ id: string; success: boolean }>('add_entry', payload)
+                const newEntryId = created?.id
+                if (newEntryId && entryPeople.length > 0) {
+                    // Fan out the join inserts. If one fails the rest still run; the
+                    // entry itself is created either way. (Future: batch endpoint.)
+                    await Promise.all(
+                        entryPeople.map((person) =>
+                            creator<{ entryId: string; personId: string }>('add_entry_person', {
+                                entryId: newEntryId,
+                                personId: person.id,
+                            }),
+                        ),
+                    )
+                }
             }
             await queryClient.invalidateQueries({ queryKey: ['get_entries_by_case_id', caseId] })
+            await queryClient.invalidateQueries({ queryKey: ['get_persons_by_case_id', caseId] })
+            if (entryId) {
+                await queryClient.invalidateQueries({ queryKey: ['get_entry_by_id', entryId] })
+                await queryClient.invalidateQueries({ queryKey: ['get_persons_by_entry_id', entryId] })
+            }
+            setSnack({
+                message: isEditing ? 'Entry updated.' : 'Entry saved.',
+                severity: 'success',
+            })
             navigate(`/case/${caseId}`)
+        } catch (error) {
+            setSnack({
+                message: error instanceof Error ? error.message : 'Unable to save the entry.',
+                severity: 'error',
+            })
         } finally {
             setIsSaving(false)
         }
@@ -155,6 +227,30 @@ export function AddEntry() {
 
     // People on the case but not yet staged for this entry.
     const casePeopleNotStaged = (casePeopleRes.data ?? []).filter((cp) => !entryPeople.some((ep) => ep.id === cp.id))
+
+    if (
+        isEditing &&
+        (entryRes.isError ||
+            existingEntryPeopleRes.isError ||
+            Boolean(entryRes.data && entryRes.data.caseId !== caseId))
+    ) {
+        return (
+            <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center', p: 3 }}>
+                <Stack spacing={2} sx={{ alignItems: 'center' }}>
+                    <Typography>Unable to load this entry for editing.</Typography>
+                    <Button onClick={() => navigate(`/case/${caseId}`)}>Back to case</Button>
+                </Stack>
+            </Box>
+        )
+    }
+
+    if (isEditing && !entryInitialized) {
+        return (
+            <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center' }}>
+                <CircularProgress />
+            </Box>
+        )
+    }
 
     return (
         <Box>
@@ -408,7 +504,7 @@ export function AddEntry() {
                                     fontWeight: 700,
                                 }}
                             >
-                                New case note
+                                {isEditing ? 'Edit case note' : 'New case note'}
                             </Typography>
                         </Box>
                         <Stack
@@ -454,7 +550,7 @@ export function AddEntry() {
                                     },
                                 }}
                             >
-                                {isSaving ? 'Saving…' : 'Save entry'}
+                                {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Save entry'}
                             </Button>
                         </Stack>
                     </Box>
@@ -523,25 +619,64 @@ export function AddEntry() {
                                     </Typography>
                                 </Stack>
                             </Box>
-                            <TextField
-                                aria-label="Entry notes"
-                                value={notes}
-                                onChange={(event) => setNotes(event.target.value)}
-                                multiline
-                                minRows={12}
-                                fullWidth
-                                placeholder="Record the interaction, options discussed, and any planned follow-up…"
-                                sx={fieldStyle}
-                            />
-                            <Box sx={{ mt: 1.5 }}>
-                                <PhraseSourceControl
-                                    source={notePhrase.source}
-                                    onSourceChange={notePhrase.setSource}
-                                    customPhrase={notePhrase.customPhrase}
-                                    onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                    purpose="encrypt"
-                                />
-                            </Box>
+                            {notesLocked ? (
+                                <Box
+                                    sx={{
+                                        minHeight: 180,
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        border: '1px solid',
+                                        borderColor: entryWorkspace.border,
+                                        borderRadius: 2,
+                                        bgcolor: entryWorkspace.tealPale,
+                                    }}
+                                >
+                                    <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', p: 3 }}>
+                                        <Typography variant="body2" sx={{ color: entryWorkspace.muted }}>
+                                            Unlock this note to edit its text or change the phrase used to protect it.
+                                        </Typography>
+                                        <ProtectedText
+                                            stored={storedNotes}
+                                            organizationId={caseRes.data?.organizationId ?? ''}
+                                            emptyText="No notes recorded."
+                                            onDecrypted={(plaintext) => {
+                                                setNotes(plaintext)
+                                                setNotesLocked(false)
+                                            }}
+                                        />
+                                    </Stack>
+                                </Box>
+                            ) : (
+                                <>
+                                    <TextField
+                                        aria-label="Entry notes"
+                                        value={notes}
+                                        onChange={(event) => setNotes(event.target.value)}
+                                        multiline
+                                        minRows={12}
+                                        fullWidth
+                                        placeholder="Record the interaction, options discussed, and any planned follow-up…"
+                                        sx={fieldStyle}
+                                    />
+                                    <Box sx={{ mt: 1.5 }}>
+                                        {isEditing && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ display: 'block', color: entryWorkspace.muted, mb: 0.75 }}
+                                            >
+                                                Saving re-encrypts this note with the phrase selected below.
+                                            </Typography>
+                                        )}
+                                        <PhraseSourceControl
+                                            source={notePhrase.source}
+                                            onSourceChange={notePhrase.setSource}
+                                            customPhrase={notePhrase.customPhrase}
+                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                            purpose="encrypt"
+                                        />
+                                    </Box>
+                                </>
+                            )}
                         </Box>
 
                         <Divider sx={{ borderColor: entryWorkspace.border }} />
@@ -588,7 +723,7 @@ export function AddEntry() {
                                         },
                                     }}
                                 >
-                                    Add people
+                                    {isEditing ? 'Manage people' : 'Add people'}
                                 </Button>
                             </Box>
                             {!!entryPeople.length && (
