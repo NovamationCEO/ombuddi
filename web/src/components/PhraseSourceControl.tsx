@@ -1,11 +1,14 @@
 import {
+    Alert,
     Box,
+    Button,
     Stack,
     TextField,
     ToggleButton,
     ToggleButtonGroup,
     Typography,
 } from '@mui/material'
+import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { PhraseSource } from '../tools/phraseSource'
 
@@ -31,6 +34,8 @@ export function PhraseSourceControl(props: {
     } = props
     const defaultPhrase = useSessionSalt((state) => state.sessionSalt)
     const setDefaultPhrase = useSessionSalt((state) => state.setSessionSalt)
+    const [replacingDefault, setReplacingDefault] = React.useState(false)
+    const [defaultDraft, setDefaultDraft] = React.useState('')
     const action = purpose === 'lookup' ? 'lookup' : purpose === 'decrypt' ? 'decryption' : 'encryption'
     const phraseInputType = phraseIsNew ? 'text' : 'password'
     const visibilityGuidance = phraseIsNew ? 'Visible to prevent mistyping. ' : ''
@@ -53,26 +58,80 @@ export function PhraseSourceControl(props: {
                     <ToggleButton value="custom">{customLabel}</ToggleButton>
                 </ToggleButtonGroup>
 
-                {source === 'default' && (
-                    <TextField
-                        type={phraseInputType}
-                        size="small"
-                        label="Session default Salt"
-                        value={defaultPhrase ?? ''}
-                        onChange={(event) => setDefaultPhrase(event.target.value)}
-                        autoComplete="off"
-                        error={!defaultPhrase?.length}
-                        helperText={defaultPhrase?.length
-                            ? `${visibilityGuidance}Editing changes future ${action} choices for this session; existing records are unchanged. Spaces count.`
-                            : 'No session default is set. Enter one here or explicitly choose Blank.'}
-                        fullWidth
-                        slotProps={{
-                            htmlInput: {
-                                'data-1p-ignore': '',
-                                'data-op-ignore': '',
-                            },
-                        }}
-                    />
+                {source === 'default' && defaultPhrase && !replacingDefault && (
+                    <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 650 }}>
+                            Using session default
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            The saved phrase is not displayed. Spaces in it remain significant.
+                        </Typography>
+                        <Button
+                            type="button"
+                            size="small"
+                            onClick={() => {
+                                setDefaultDraft('')
+                                setReplacingDefault(true)
+                            }}
+                        >
+                            Replace session default
+                        </Button>
+                    </Stack>
+                )}
+
+                {source === 'default' && (!defaultPhrase || replacingDefault) && (
+                    <Stack spacing={1}>
+                        {replacingDefault && (
+                            <Alert severity="warning">
+                                This changes future {action} choices throughout this session. Existing records are
+                                unchanged, and exact spaces count.
+                            </Alert>
+                        )}
+                        <TextField
+                            type="text"
+                            size="small"
+                            label="New session default phrase"
+                            value={defaultDraft}
+                            onChange={(event) => setDefaultDraft(event.target.value)}
+                            autoComplete="off"
+                            error={!defaultDraft.length}
+                            helperText="Visible while entering to prevent a hidden mistype."
+                            fullWidth
+                            slotProps={{
+                                htmlInput: {
+                                    'data-1p-ignore': '',
+                                    'data-op-ignore': '',
+                                },
+                            }}
+                        />
+                        <Stack direction="row" spacing={1}>
+                            <Button
+                                type="button"
+                                variant="outlined"
+                                size="small"
+                                disabled={!defaultDraft.length}
+                                onClick={() => {
+                                    setDefaultPhrase(defaultDraft)
+                                    setDefaultDraft('')
+                                    setReplacingDefault(false)
+                                }}
+                            >
+                                Save session default
+                            </Button>
+                            {replacingDefault && (
+                                <Button
+                                    type="button"
+                                    size="small"
+                                    onClick={() => {
+                                        setDefaultDraft('')
+                                        setReplacingDefault(false)
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                        </Stack>
+                    </Stack>
                 )}
 
                 {source === 'custom' && (

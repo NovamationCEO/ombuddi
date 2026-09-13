@@ -18,11 +18,14 @@ export function useResolvedCaseCodes(codeIds: string[]): ResolvedCaseCode[] {
         const codeById = new Map([...ioaCodesFull, ...(customCodesRes.data ?? [])].map((code) => [code.id, code]))
         return codeIds.map((id) => {
             const code = codeById.get(id)
+            const unresolvedDescription = customCodesRes.isLoading
+                ? 'Code details loading…'
+                : 'Code details are unavailable. The code may have been removed.'
             return {
                 id,
-                shortName: code?.code ?? 'Code',
-                description: code?.description ?? 'Code details loading…',
+                shortName: code?.code ?? (customCodesRes.isLoading ? 'Code' : 'Unknown code'),
+                description: code?.description ?? unresolvedDescription,
             }
         })
-    }, [codeIds, customCodesRes.data])
+    }, [codeIds, customCodesRes.data, customCodesRes.isLoading])
 }

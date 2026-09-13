@@ -9,6 +9,22 @@ describe('getPersonMonsterDescriptor', () => {
         )
     })
 
+    it('pins the frozen version-one mapping', () => {
+        expect(getPersonMonsterDescriptor('37b5d34c-d7cc-4f02-9f98-41deef664c35')).toEqual({
+            palette: 0,
+            bodyShape: 1,
+            horns: 3,
+            hornPattern: 3,
+            ears: 4,
+            eyes: 1,
+            markings: 7,
+            accessory: 6,
+            mouth: 4,
+            tuft: 3,
+            backdrop: 3,
+        })
+    })
+
     it('produces substantial visual variation across random person seeds', () => {
         const descriptors = Array.from({ length: 24 }, (_, index) =>
             getPersonMonsterDescriptor(`00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`),
@@ -31,5 +47,9 @@ describe('getPersonMonsterDescriptor', () => {
         expect(descriptor.eyes).toBeLessThan(6)
         expect(descriptor.markings).toBeLessThan(8)
         expect(descriptor.accessory).toBeLessThan(8)
+    })
+
+    it('does not silently render an unknown portrait version as version one', () => {
+        expect(() => getPersonMonsterDescriptor('person-seed', 99)).toThrow('Unsupported monster portrait version')
     })
 })

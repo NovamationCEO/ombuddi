@@ -87,29 +87,17 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
     """, (organization_id, start, end, *entry_scope_params))
     duration_by_month = [{'month': r[0], 'totalMinutes': int(r[1])} for r in cur.fetchall()]
 
-    if ombuds_id is None:
-        cur.execute("""
-            SELECT TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
-                   COUNT(*) AS count
-            FROM cases
-            WHERE organization_id = %s
-              AND case_kind = 'standard'
-              AND created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
-              AND created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
-            GROUP BY month ORDER BY month
-        """, (organization_id, start, end))
-    else:
-        cur.execute("""
-            SELECT TO_CHAR(DATE_TRUNC('month', e.date), 'YYYY-MM') AS month,
-                   COUNT(DISTINCT c.id) AS count
-            FROM entries e
-            JOIN cases c ON c.id = e.case_id
-            WHERE e.organization_id = %s
-              AND c.case_kind = 'standard'
-              AND e.date >= %s AND e.date <= %s
-              AND e.ombuds_id = %s
-            GROUP BY month ORDER BY month
-        """, (organization_id, start, end, ombuds_id))
+    cur.execute(f"""
+        SELECT TO_CHAR(DATE_TRUNC('month', e.date), 'YYYY-MM') AS month,
+               COUNT(DISTINCT c.id) AS count
+        FROM entries e
+        JOIN cases c ON c.id = e.case_id
+        WHERE e.organization_id = %s
+          AND c.case_kind = 'standard'
+          AND e.date >= %s AND e.date <= %s
+          {aliased_entry_scope}
+        GROUP BY month ORDER BY month
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     cases_by_month = [{'month': r[0], 'count': r[1]} for r in cur.fetchall()]
 
     cur.execute(f"""
@@ -183,71 +171,45 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
     """, (organization_id, start, end, *aliased_entry_scope_params))
     persons_by_generation = [{'generation': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    # Organization status is a current snapshot. Personal status includes each
-    # standard case the ombuds worked during the selected period exactly once.
-    if ombuds_id is None:
-        cur.execute("""
-            SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
-            FROM cases
-            WHERE organization_id = %s
-              AND case_kind = 'standard'
-            GROUP BY status ORDER BY count DESC
-        """, (organization_id,))
-    else:
-        cur.execute("""
-            SELECT COALESCE(NULLIF(TRIM(c.status), ''), 'unknown') AS status, COUNT(*) AS count
-            FROM cases c
-            WHERE c.organization_id = %s
-              AND c.case_kind = 'standard'
-              AND EXISTS (
-                  SELECT 1 FROM entries e
-                  WHERE e.case_id = c.id
-                    AND e.organization_id = %s
-                    AND e.date >= %s AND e.date <= %s
-                    AND e.ombuds_id = %s
-              )
-            GROUP BY status ORDER BY count DESC
-        """, (organization_id, organization_id, start, end, ombuds_id))
+    # Count each standard case worked during the selected period once, grouped
+    # by its current status. Personal scope narrows the qualifying entries.
+    cur.execute(f"""
+        SELECT COALESCE(NULLIF(TRIM(c.status), ''), 'unknown') AS status, COUNT(*) AS count
+        FROM cases c
+        WHERE c.organization_id = %s
+          AND c.case_kind = 'standard'
+          AND EXISTS (
+              SELECT 1 FROM entries e
+              WHERE e.case_id = c.id
+                AND e.organization_id = %s
+                AND e.date >= %s AND e.date <= %s
+                {aliased_entry_scope}
+          )
+        GROUP BY status ORDER BY count DESC
+    """, (organization_id, organization_id, start, end, *aliased_entry_scope_params))
     cases_by_status = [{'status': r[0], 'count': r[1]} for r in cur.fetchall()]
 
     # Most common codes across cases (by number of cases carrying each code)
-    if ombuds_id is None:
-        cur.execute("""
-            SELECT code_id::text,
-                   org_code.code AS code_label,
-                   COUNT(DISTINCT c.id) AS case_count
-            FROM cases c
-            CROSS JOIN unnest(c.codes) AS code_id
-            LEFT JOIN codes org_code ON org_code.id = code_id
-            WHERE c.organization_id = %s
-              AND c.case_kind = 'standard'
-              AND c.created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
-              AND c.created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
-            GROUP BY code_id, org_code.code
-            ORDER BY case_count DESC
-            LIMIT 20
-        """, (organization_id, start, end))
-    else:
-        cur.execute("""
-            SELECT code_id::text,
-                   org_code.code AS code_label,
-                   COUNT(DISTINCT c.id) AS case_count
-            FROM cases c
-            CROSS JOIN unnest(c.codes) AS code_id
-            LEFT JOIN codes org_code ON org_code.id = code_id
-            WHERE c.organization_id = %s
-              AND c.case_kind = 'standard'
-              AND EXISTS (
-                  SELECT 1 FROM entries e
-                  WHERE e.case_id = c.id
-                    AND e.organization_id = %s
-                    AND e.date >= %s AND e.date <= %s
-                    AND e.ombuds_id = %s
-              )
-            GROUP BY code_id, org_code.code
-            ORDER BY case_count DESC
-            LIMIT 20
-        """, (organization_id, organization_id, start, end, ombuds_id))
+    cur.execute(f"""
+        SELECT code_id::text,
+               org_code.code AS code_label,
+               COUNT(DISTINCT c.id) AS case_count
+        FROM cases c
+        CROSS JOIN unnest(c.codes) AS code_id
+        LEFT JOIN codes org_code ON org_code.id = code_id
+        WHERE c.organization_id = %s
+          AND c.case_kind = 'standard'
+          AND EXISTS (
+              SELECT 1 FROM entries e
+              WHERE e.case_id = c.id
+                AND e.organization_id = %s
+                AND e.date >= %s AND e.date <= %s
+                {aliased_entry_scope}
+          )
+        GROUP BY code_id, org_code.code
+        ORDER BY case_count DESC
+        LIMIT 20
+    """, (organization_id, organization_id, start, end, *aliased_entry_scope_params))
     codes_by_case_count = [
         {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
         for r in cur.fetchall()

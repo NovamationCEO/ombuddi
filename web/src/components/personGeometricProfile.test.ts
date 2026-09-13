@@ -1,10 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { geometricPalettes, getPersonGeometricDescriptor } from './personGeometricProfile'
+import {
+    geometricPalettes,
+    getPersonGeometricDescriptor,
+    PERSON_GEOMETRIC_VERSION,
+} from './personGeometricProfile'
 
 describe('getPersonGeometricDescriptor', () => {
     it('is stable for the same person seed', () => {
         const seed = '37b5d34c-d7cc-4f02-9f98-41deef664c35'
         expect(getPersonGeometricDescriptor(seed)).toEqual(getPersonGeometricDescriptor(seed))
+    })
+
+    it('pins the frozen version-one mapping', () => {
+        expect(getPersonGeometricDescriptor('37b5d34c-d7cc-4f02-9f98-41deef664c35')).toEqual({
+            palette: 2,
+            frame: 2,
+            motif: 1,
+            pattern: 0,
+            rotation: 0,
+            offset: 2,
+            detail: 5,
+        })
     })
 
     it('creates varied neutral markers from different seeds', () => {
@@ -21,5 +37,12 @@ describe('getPersonGeometricDescriptor', () => {
         expect(descriptor.frame).toBeLessThan(6)
         expect(descriptor.motif).toBeLessThan(8)
         expect(descriptor.pattern).toBeLessThan(6)
+    })
+
+    it('has its own version and rejects unknown versions', () => {
+        expect(PERSON_GEOMETRIC_VERSION).toBe(1)
+        expect(() => getPersonGeometricDescriptor('person-seed', 99)).toThrow(
+            'Unsupported geometric portrait version',
+        )
     })
 })

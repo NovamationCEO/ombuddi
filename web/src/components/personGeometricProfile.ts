@@ -1,4 +1,6 @@
-import { PERSON_MONSTER_VERSION } from './personMonsterProfile'
+import { hashSeed, randomInteger, randomSource } from './seededRandom'
+
+export const PERSON_GEOMETRIC_VERSION = 1
 
 export type GeometricPalette = {
     background: string
@@ -31,44 +33,20 @@ export const geometricPalettes: GeometricPalette[] = [
     { background: '#ece5f0', field: '#685579', primary: '#be7a65', secondary: '#8ca474', ink: '#322a39' },
 ]
 
-function hashSeed(seed: string) {
-    let hash = 2166136261
-    for (let index = 0; index < seed.length; index += 1) {
-        hash ^= seed.charCodeAt(index)
-        hash = Math.imul(hash, 16777619)
-    }
-    return hash >>> 0
-}
-
-function randomSource(seed: number) {
-    let state = seed || 1
-    return () => {
-        state += 0x6d2b79f5
-        let value = state
-        value = Math.imul(value ^ (value >>> 15), value | 1)
-        value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
-        return ((value ^ (value >>> 14)) >>> 0) / 4294967296
-    }
-}
-
-function integer(random: () => number, maximum: number) {
-    return Math.floor(random() * maximum)
-}
-
 /** Frozen neutral presentation of the same opaque person seed. */
 export function getPersonGeometricDescriptor(
     seed: string,
-    version = PERSON_MONSTER_VERSION,
+    version = PERSON_GEOMETRIC_VERSION,
 ): PersonGeometricDescriptor {
-    const supportedVersion = version === PERSON_MONSTER_VERSION ? version : PERSON_MONSTER_VERSION
-    const random = randomSource(hashSeed(`ombuddi-person-geometric:v${supportedVersion}:${seed}`))
+    if (version !== PERSON_GEOMETRIC_VERSION) throw new Error(`Unsupported geometric portrait version: ${version}`)
+    const random = randomSource(hashSeed(`ombuddi-person-geometric:v${version}:${seed}`))
     return {
-        palette: integer(random, geometricPalettes.length),
-        frame: integer(random, 6),
-        motif: integer(random, 8),
-        pattern: integer(random, 6),
-        rotation: integer(random, 4) * 15,
-        offset: integer(random, 11) - 5,
-        detail: integer(random, 6),
+        palette: randomInteger(random, geometricPalettes.length),
+        frame: randomInteger(random, 6),
+        motif: randomInteger(random, 8),
+        pattern: randomInteger(random, 6),
+        rotation: randomInteger(random, 4) * 15,
+        offset: randomInteger(random, 11) - 5,
+        detail: randomInteger(random, 6),
     }
 }

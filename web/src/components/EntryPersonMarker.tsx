@@ -273,8 +273,7 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                         }}
                     >
                         <PersonAvatar
-                            seed={person.monsterSeed || person.id}
-                            version={person.monsterVersion}
+                            person={person}
                             size={46}
                         />
                     </Box>

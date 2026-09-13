@@ -47,4 +47,31 @@ describe('protectedTextForSave', () => {
         await expect(decryptProtectedText(saved, 'new phrase ', organizationId)).resolves.toBe('original')
         await expect(decryptProtectedText(saved, 'old phrase', organizationId)).resolves.toBeNull()
     })
+
+    it('refuses to save newly added text as plaintext', async () => {
+        await expect(protectedTextForSave({
+            stored: '',
+            originalPlaintext: '',
+            editedPlaintext: 'new protected note',
+            unlockPhrase: '',
+            replaceProtection: false,
+            replacementPhrase: null,
+            organizationId,
+        })).rejects.toThrow('Choose protection')
+    })
+
+    it('encrypts edited legacy plaintext after protection is explicitly selected', async () => {
+        const saved = await protectedTextForSave({
+            stored: 'legacy text',
+            originalPlaintext: 'legacy text',
+            editedPlaintext: 'edited text',
+            unlockPhrase: '',
+            replaceProtection: true,
+            replacementPhrase: 'new phrase',
+            organizationId,
+        })
+
+        expect(saved).not.toBe('edited text')
+        await expect(decryptProtectedText(saved, 'new phrase', organizationId)).resolves.toBe('edited text')
+    })
 })

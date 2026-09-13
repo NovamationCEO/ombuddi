@@ -1,26 +1,45 @@
 import { Avatar } from '@mui/material'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
+import type { PersonType } from '../types/majorTypes'
 import { PersonGeometricPortrait } from './PersonGeometricPortrait'
 import { PersonMonster } from './PersonMonsterPortrait'
+import { PERSON_MONSTER_VERSION } from './personMonsterProfile'
 
 export type PersonAvatarStyle = 'monster' | 'geometric'
 
 export function PersonAvatar({
-    seed,
-    version,
+    person,
     size = 32,
     style,
 }: {
-    seed: string
-    version?: number
+    person: Pick<PersonType, 'monsterSeed' | 'monsterVersion'>
     size?: number
     style?: PersonAvatarStyle
 }) {
     const currentOmbuds = useCurrentOmbuds(style === undefined)
-    // While a preference is loading, neutral geometry is the respectful
-    // fallback. The persisted account default remains the monster style.
-    const selectedStyle =
-        style ?? currentOmbuds.data?.personAvatarStyle ?? (currentOmbuds.isLoading ? 'geometric' : 'monster')
+    const selectedStyle = style ?? currentOmbuds.data?.personAvatarStyle ?? 'monster'
+
+    if (style === undefined && currentOmbuds.isLoading) {
+        return (
+            <Avatar
+                aria-hidden="true"
+                data-person-avatar-style="loading"
+                sx={{ width: size, height: size, bgcolor: 'action.hover' }}
+            />
+        )
+    }
+
+    if (selectedStyle === 'monster' && person.monsterVersion !== PERSON_MONSTER_VERSION) {
+        return (
+            <Avatar
+                aria-hidden="true"
+                data-person-avatar-style="unsupported"
+                sx={{ width: size, height: size, bgcolor: 'action.hover', color: 'text.disabled' }}
+            >
+                ?
+            </Avatar>
+        )
+    }
 
     return (
         <Avatar
@@ -30,13 +49,12 @@ export function PersonAvatar({
         >
             {selectedStyle === 'geometric' ? (
                 <PersonGeometricPortrait
-                    seed={seed}
-                    version={version}
+                    seed={person.monsterSeed}
                 />
             ) : (
                 <PersonMonster
-                    seed={seed}
-                    version={version}
+                    seed={person.monsterSeed}
+                    version={person.monsterVersion}
                 />
             )}
         </Avatar>

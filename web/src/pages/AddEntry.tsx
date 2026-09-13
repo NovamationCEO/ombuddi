@@ -164,9 +164,16 @@ export function AddEntry() {
         setEntryPeople((prev) => prev.filter((p) => p.id !== personId))
     }
 
+    const notesNeedProtection = isEditing
+        && !notesLocked
+        && !isEncrypted(storedNotes)
+        && Boolean(notes)
+        && notes !== originalNotes
+
     async function save() {
         const organizationId = caseRes.data?.organizationId
-        const replacementRequired = isEditing ? changeNoteProtection : Boolean(notes)
+        const replaceProtection = changeNoteProtection || notesNeedProtection
+        const replacementRequired = isEditing ? replaceProtection : Boolean(notes)
         if (!organizationId || isSaving || (!notesLocked && replacementRequired && notePhrase.phrase === null)) return
         setIsSaving(true)
         try {
@@ -176,7 +183,7 @@ export function AddEntry() {
                       originalPlaintext: originalNotes,
                       editedPlaintext: notes,
                       unlockPhrase,
-                      replaceProtection: changeNoteProtection,
+                      replaceProtection,
                       replacementPhrase: notePhrase.phrase,
                       organizationId,
                   })
@@ -355,8 +362,7 @@ export function AddEntry() {
                                         key={p.id}
                                         avatar={
                                             <PersonAvatar
-                                                seed={p.monsterSeed || p.id}
-                                                version={p.monsterVersion}
+                                                person={p}
                                             />
                                         }
                                         label={personLabel(p)}
@@ -424,8 +430,7 @@ export function AddEntry() {
                                                 key={p.id}
                                                 avatar={
                                                     <PersonAvatar
-                                                        seed={p.monsterSeed || p.id}
-                                                        version={p.monsterVersion}
+                                                        person={p}
                                                     />
                                                 }
                                                 label={personLabel(p)}
@@ -562,7 +567,7 @@ export function AddEntry() {
                                 disabled={isSaving
                                     || !caseRes.data?.organizationId
                                     || Boolean(!notesLocked
-                                        && (isEditing ? changeNoteProtection : notes)
+                                        && (isEditing ? changeNoteProtection || notesNeedProtection : notes)
                                         && notePhrase.phrase === null)}
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
@@ -687,7 +692,21 @@ export function AddEntry() {
                                         sx={fieldStyle}
                                     />
                                     <Box sx={{ mt: 1.5 }}>
-                                        {isEditing ? (
+                                        {isEditing ? notesNeedProtection ? (
+                                            <Stack spacing={1.25}>
+                                                <Alert severity="warning">
+                                                    This text was not previously protected. Choose how to protect it
+                                                    before saving; it will not be stored as plaintext.
+                                                </Alert>
+                                                <PhraseSourceControl
+                                                    source={notePhrase.source}
+                                                    onSourceChange={notePhrase.setSource}
+                                                    customPhrase={notePhrase.customPhrase}
+                                                    onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                    purpose="encrypt"
+                                                />
+                                            </Stack>
+                                        ) : (
                                             <Stack spacing={1.25}>
                                                 <Typography variant="caption" sx={{ color: entryWorkspace.muted }}>
                                                     Saving keeps the note’s existing protection. Its phrase changes
@@ -796,8 +815,7 @@ export function AddEntry() {
                                             key={person.id}
                                             avatar={
                                                 <PersonAvatar
-                                                    seed={person.monsterSeed || person.id}
-                                                    version={person.monsterVersion}
+                                                    person={person}
                                                 />
                                             }
                                             label={personLabel(person)}
@@ -856,7 +874,7 @@ export function AddEntry() {
                                     value={duration}
                                     onChange={(event) => setDuration(Number(event.target.value))}
                                     fullWidth
-                                    slotProps={{ htmlInput: { min: 0, step: 15 } }}
+                                    slotProps={{ htmlInput: { min: 0, step: 1 } }}
                                     sx={fieldStyle}
                                 />
                             </Stack>

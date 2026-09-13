@@ -116,8 +116,7 @@ export function PublicPersons() {
                             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                         >
                             <PersonAvatar
-                                seed={p.monsterSeed || p.id}
-                                version={p.monsterVersion}
+                                person={p}
                                 size={44}
                             />
                             <Box sx={{ flex: 1 }}>

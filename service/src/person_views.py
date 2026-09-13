@@ -128,8 +128,11 @@ def change_person_name_phrase():
                     return jsonify({
                         'success': False,
                         'status': 'conflict',
-                        'error': 'A person already uses that name and phrase',
-                        'message': 'Choose a different phrase or use the existing person record.',
+                        'error': 'That name and phrase identify an existing person',
+                        'message': (
+                            'The phrase itself may be reused. Choose a different phrase for this name, '
+                            'or use the existing person record.'
+                        ),
                     }), 409
                 cur.execute(
                     """

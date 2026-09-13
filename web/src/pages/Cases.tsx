@@ -1,5 +1,5 @@
 import { Add, Commit } from '@mui/icons-material'
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CaseCard } from '../components/LoadAllCases/CaseCard'
@@ -23,6 +23,17 @@ export function Cases() {
         ...(monitoringRes.data ?? []),
         ...(closedRes.data ?? []),
     ]
+    const caseLoading = activeRes.isLoading || generalRes.isLoading || monitoringRes.isLoading || closedRes.isLoading
+    const caseLoadError = activeRes.isError || generalRes.isError || monitoringRes.isError || closedRes.isError
+
+    async function retryCases() {
+        await Promise.all([
+            activeRes.refetch(),
+            generalRes.refetch(),
+            monitoringRes.refetch(),
+            closedRes.refetch(),
+        ])
+    }
 
     async function logGeneralActivity() {
         if (openingGeneral) return
@@ -126,6 +137,16 @@ export function Cases() {
                     </Stack>
                 </Box>
 
+                {caseLoadError && (
+                    <Alert
+                        severity="error"
+                        action={<Button onClick={() => void retryCases()}>Retry</Button>}
+                        sx={{ mb: 2 }}
+                    >
+                        Some case records could not be loaded.
+                    </Alert>
+                )}
+
                 <Box
                     sx={{
                         display: 'grid',
@@ -141,11 +162,7 @@ export function Cases() {
                     ))}
                 </Box>
 
-                {!cases.length &&
-                    activeRes.data &&
-                    generalRes.data !== undefined &&
-                    monitoringRes.data &&
-                    closedRes.data && (
+                {!cases.length && !caseLoading && !caseLoadError && (
                         <Box
                             sx={{
                                 p: 4,

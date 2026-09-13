@@ -40,58 +40,35 @@ export const monsterPalettes: MonsterPalette[] = [
     { body: '#4d8a9a', accent: '#d28a70', detail: '#315b68', background: '#e0edf0' },
 ]
 
-function hashSeed(seed: string) {
-    let hash = 2166136261
-    for (let index = 0; index < seed.length; index += 1) {
-        hash ^= seed.charCodeAt(index)
-        hash = Math.imul(hash, 16777619)
-    }
-    return hash >>> 0
-}
-
-function randomSource(seed: number) {
-    let state = seed || 1
-    return () => {
-        state += 0x6d2b79f5
-        let value = state
-        value = Math.imul(value ^ (value >>> 15), value | 1)
-        value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
-        return ((value ^ (value >>> 14)) >>> 0) / 4294967296
-    }
-}
-
-function integer(random: () => number, maximum: number) {
-    return Math.floor(random() * maximum)
-}
-
 /**
  * Frozen version-one mapping from an opaque random seed to visual traits.
  * Do not alter this mapping after release; introduce a version-two function
  * instead so existing people retain the same visual identity.
  */
 export function getPersonMonsterDescriptor(seed: string, version = PERSON_MONSTER_VERSION): PersonMonsterDescriptor {
-    const supportedVersion = version === PERSON_MONSTER_VERSION ? version : PERSON_MONSTER_VERSION
-    const random = randomSource(hashSeed(`ombuddi-person-monster:v${supportedVersion}:${seed}`))
-    const eyes = integer(random, 6)
-    let accessory = integer(random, 8)
+    if (version !== PERSON_MONSTER_VERSION) throw new Error(`Unsupported monster portrait version: ${version}`)
+    const random = randomSource(hashSeed(`ombuddi-person-monster:v${version}:${seed}`))
+    const eyes = randomInteger(random, 6)
+    let accessory = randomInteger(random, 8)
 
     // Glasses remain legible over the conventional two-eye configurations.
     // Other eye layouts receive one of the lower-face accessories instead.
     if ((eyes === 1 || eyes === 4) && (accessory === 1 || accessory === 2)) {
-        accessory = 3 + integer(random, 5)
+        accessory = 3 + randomInteger(random, 5)
     }
 
     return {
-        palette: integer(random, monsterPalettes.length),
-        bodyShape: integer(random, 8),
-        horns: integer(random, 8),
-        hornPattern: integer(random, 4),
-        ears: integer(random, 6),
+        palette: randomInteger(random, monsterPalettes.length),
+        bodyShape: randomInteger(random, 8),
+        horns: randomInteger(random, 8),
+        hornPattern: randomInteger(random, 4),
+        ears: randomInteger(random, 6),
         eyes,
-        markings: integer(random, 8),
+        markings: randomInteger(random, 8),
         accessory,
-        mouth: integer(random, 6),
-        tuft: integer(random, 6),
-        backdrop: integer(random, 4),
+        mouth: randomInteger(random, 6),
+        tuft: randomInteger(random, 6),
+        backdrop: randomInteger(random, 4),
     }
 }
+import { hashSeed, randomInteger, randomSource } from './seededRandom'

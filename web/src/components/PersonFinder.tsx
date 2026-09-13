@@ -131,8 +131,7 @@ export function PersonFinder(props: {
                                 }}
                             >
                                 <PersonAvatar
-                                    seed={person.monsterSeed || person.id}
-                                    version={person.monsterVersion}
+                                    person={person}
                                     size={42}
                                 />
                                 {person.isPublic ? (

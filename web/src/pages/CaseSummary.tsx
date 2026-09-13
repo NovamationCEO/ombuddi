@@ -149,6 +149,10 @@ export function CaseSummary() {
     const organizationId = caseRes.data?.organizationId ?? ''
     const rawDescription = caseRes.data?.description ?? ''
     const descriptionLocked = isEncrypted(rawDescription) && decryptedDescription === null
+    const descriptionNeedsProtection = !descriptionLocked
+        && !isEncrypted(rawDescription)
+        && Boolean(editDescription)
+        && editDescription !== (decryptedDescription ?? '')
 
     React.useEffect(() => {
         setDecryptedDescription(isEncrypted(rawDescription) ? null : rawDescription)
@@ -170,7 +174,8 @@ export function CaseSummary() {
     }
 
     async function saveEdit() {
-        if (!descriptionLocked && changeDescriptionProtection && editDescriptionPhrase.phrase === null) {
+        const replaceProtection = changeDescriptionProtection || descriptionNeedsProtection
+        if (!descriptionLocked && replaceProtection && editDescriptionPhrase.phrase === null) {
             setSnack({
                 message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
                 severity: 'error',
@@ -186,7 +191,7 @@ export function CaseSummary() {
                       originalPlaintext: decryptedDescription ?? '',
                       editedPlaintext: editDescription,
                       unlockPhrase: descriptionUnlockPhrase,
-                      replaceProtection: changeDescriptionProtection,
+                      replaceProtection,
                       replacementPhrase: editDescriptionPhrase.phrase,
                       organizationId,
                   })
@@ -366,6 +371,20 @@ export function CaseSummary() {
                                 Unlock the case description on the case page before editing it. Saving other case
                                 details will preserve the encrypted description unchanged.
                             </Alert>
+                        ) : descriptionNeedsProtection ? (
+                            <Stack spacing={1.25}>
+                                <Alert severity="warning">
+                                    This text was not previously protected. Choose how to protect it before saving;
+                                    it will not be stored as plaintext.
+                                </Alert>
+                                <PhraseSourceControl
+                                    source={editDescriptionPhrase.source}
+                                    onSourceChange={editDescriptionPhrase.setSource}
+                                    customPhrase={editDescriptionPhrase.customPhrase}
+                                    onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                    purpose="encrypt"
+                                />
+                            </Stack>
                         ) : !changeDescriptionProtection ? (
                             <Stack spacing={1}>
                                 <Typography variant="body2" color="text.secondary">
@@ -431,7 +450,7 @@ export function CaseSummary() {
                             saving ||
                             !editName.trim() ||
                             (!descriptionLocked
-                                && changeDescriptionProtection
+                                && (changeDescriptionProtection || descriptionNeedsProtection)
                                 && editDescriptionPhrase.phrase === null)
                         }
                         sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}

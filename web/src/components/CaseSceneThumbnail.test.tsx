@@ -12,6 +12,23 @@ describe('CaseSceneThumbnail', () => {
         expect(getCaseSceneDescriptor('case-a')).toEqual(getCaseSceneDescriptor('case-a'))
     })
 
+    it('pins the current case-scene mapping', () => {
+        expect(getCaseSceneDescriptor('case-a')).toEqual({
+            palette: 3,
+            terrain: 5,
+            focal: 3,
+            atmosphere: 1,
+            landmark: 1,
+            horizon: 62,
+            focalX: 28,
+            focalY: 33,
+            landmarkX: 52,
+            ridgeA: 41,
+            ridgeB: 31,
+            detailShift: 9,
+        })
+    })
+
     it('uses several independent visual features to distinguish cases', () => {
         const descriptors = Array.from({ length: 128 }, (_, index) =>
             JSON.stringify(getCaseSceneDescriptor(`case-${index}`)),

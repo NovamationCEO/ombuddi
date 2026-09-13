@@ -26,7 +26,9 @@ export async function protectedTextForSave(options: {
         return editedPlaintext ? encryptProtectedText(editedPlaintext, replacementPhrase, organizationId) : ''
     }
 
-    if (!isEncrypted(stored)) return editedPlaintext
+    if (!isEncrypted(stored)) {
+        throw new Error('Choose protection before saving newly added or edited text.')
+    }
     if (unlockPhrase === null) throw new Error('Unlock the protected text before changing it.')
     return editedPlaintext ? encryptProtectedText(editedPlaintext, unlockPhrase, organizationId) : ''
 }

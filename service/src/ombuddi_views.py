@@ -859,6 +859,19 @@ def get_entries_by_case_id(case_id):
 @ombuddi_views.route('/api/v1/update_entry', methods=['PUT'])
 def update_entry():
     payload = request.get_json(silent=True) or {}
+    if 'date' in payload:
+        try:
+            date.fromisoformat(payload['date'])
+        except (ValueError, TypeError):
+            return _entry_input_error('date must use YYYY-MM-DD')
+    if 'duration' in payload:
+        duration = payload['duration']
+        if isinstance(duration, bool) or not isinstance(duration, int) or duration < 0:
+            return _entry_input_error('duration must be a non-negative whole number')
+    if 'medium' in payload and not isinstance(payload['medium'], str):
+        return _entry_input_error('medium must be text')
+    if 'notes' in payload and not isinstance(payload['notes'], str):
+        return _entry_input_error('notes must be text')
     if 'caseId' in payload:
         error = _require_writable_case_reference(payload.get('caseId'))
         if error:

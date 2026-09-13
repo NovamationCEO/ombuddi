@@ -8,25 +8,32 @@ import { PersonAvatar } from './PersonAvatar'
 
 const mocks = vi.hoisted(() => ({
     style: 'monster' as 'monster' | 'geometric',
+    isLoading: false,
 }))
+
+const person = {
+    monsterSeed: '37b5d34c-d7cc-4f02-9f98-41deef664c35',
+    monsterVersion: 1,
+}
 
 vi.mock('../tools/useCurrentOmbuds', () => ({
     useCurrentOmbuds: () => ({
         data: { personAvatarStyle: mocks.style },
-        isLoading: false,
+        isLoading: mocks.isLoading,
     }),
 }))
 
 describe('PersonAvatar', () => {
     beforeEach(() => {
         mocks.style = 'monster'
+        mocks.isLoading = false
     })
 
     it('uses the current user monster preference by default', async () => {
         const container = document.createElement('div')
         const root = createRoot(container)
         await act(async () => {
-            root.render(<PersonAvatar seed="37b5d34c-d7cc-4f02-9f98-41deef664c35" />)
+            root.render(<PersonAvatar person={person} />)
         })
 
         expect(container.querySelector('[data-person-avatar-style="monster"]')).not.toBeNull()
@@ -39,11 +46,32 @@ describe('PersonAvatar', () => {
         const container = document.createElement('div')
         const root = createRoot(container)
         await act(async () => {
-            root.render(<PersonAvatar seed="37b5d34c-d7cc-4f02-9f98-41deef664c35" />)
+            root.render(<PersonAvatar person={person} />)
         })
 
         expect(container.querySelector('[data-person-avatar-style="geometric"]')).not.toBeNull()
         expect(container.querySelector('[data-avatar-renderer="geometric"]')).not.toBeNull()
+        await act(async () => root.unmount())
+    })
+
+    it('uses a neutral placeholder while the preference is loading', async () => {
+        mocks.isLoading = true
+        const container = document.createElement('div')
+        const root = createRoot(container)
+        await act(async () => root.render(<PersonAvatar person={person} />))
+
+        expect(container.querySelector('[data-person-avatar-style="loading"]')).not.toBeNull()
+        expect(container.querySelector('[data-avatar-renderer]')).toBeNull()
+        await act(async () => root.unmount())
+    })
+
+    it('does not silently draw an unsupported monster version as version one', async () => {
+        const container = document.createElement('div')
+        const root = createRoot(container)
+        await act(async () => root.render(<PersonAvatar person={{ ...person, monsterVersion: 99 }} />))
+
+        expect(container.querySelector('[data-person-avatar-style="unsupported"]')).not.toBeNull()
+        expect(container.querySelector('[data-avatar-renderer]')).toBeNull()
         await act(async () => root.unmount())
     })
 })

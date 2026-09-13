@@ -522,7 +522,7 @@ export function ReportPage() {
                                 highcharts={Highcharts}
                                 options={colOptions(
                                     chartTheme,
-                                    reportScope === 'my' ? 'Cases Worked per Month' : 'Cases Opened per Month',
+                                    'Cases Worked per Month',
                                     caseMonths,
                                     [
                                         {
@@ -628,7 +628,7 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Cases by Current Status"
+                            title="Cases Worked by Current Status"
                             categories={data?.casesByStatus.map((r) => r.status) ?? []}
                             data={data?.casesByStatus.map((r) => r.count) ?? []}
                             yTitle="Cases"
@@ -640,7 +640,7 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Most Common Codes (by Cases)"
+                            title="Most Common Codes (by Cases Worked)"
                             categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
                             data={data?.codesByCaseCount.map((r) => r.count ?? 0) ?? []}
                             yTitle="Cases"

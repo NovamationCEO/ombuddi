@@ -206,7 +206,8 @@ class PersonMonsterTests(unittest.TestCase):
                 response, status = change_person_name_phrase()
 
         self.assertEqual(status, 409)
-        self.assertIn("already uses", response.get_json()["error"])
+        self.assertIn("identify an existing person", response.get_json()["error"])
+        self.assertIn("phrase itself may be reused", response.get_json()["message"])
         self.assertEqual(len(connection.fake_cursor.executions), 1)
 
     def test_entry_person_query_uses_model_column_order_instead_of_select_star(self):

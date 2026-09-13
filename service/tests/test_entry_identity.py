@@ -183,6 +183,20 @@ class EntryIdentityTests(unittest.TestCase):
             {"organization_id": ORGANIZATION_ID, "ombuds_id": OMBUDS_ID},
         )
 
+    def test_entry_updates_reject_fractional_minutes(self):
+        with app.test_request_context(
+            "/api/v1/update_entry",
+            method="PUT",
+            json={"id": ENTRY_ID, "duration": 30.5},
+        ):
+            self._principal()
+            with patch("src.ombuddi_views.update_one") as update_one:
+                response, status = update_entry()
+
+        self.assertEqual(status, 400)
+        self.assertIn("whole number", response.get_json()["error"])
+        update_one.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

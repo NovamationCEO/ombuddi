@@ -97,7 +97,7 @@ class ReportTests(unittest.TestCase):
         self.assertIn("scope", response.get_json()["message"])
         get_connection.assert_not_called()
 
-    def test_timestamp_reports_include_the_entire_end_date_in_utc(self):
+    def test_case_reports_use_entry_dates_for_cases_worked(self):
         connection = EmptyReportConnection()
         with app.test_request_context(
             "/api/v1/reports?scope=organization&start=2026-01-02&end=2026-03-04",
@@ -107,14 +107,13 @@ class ReportTests(unittest.TestCase):
                 response = get_reports()
 
         self.assertEqual(response.status_code, 200)
-        timestamp_queries = [
+        case_queries = [
             execution for execution in connection.fake_cursor.executions
-            if "created_at >=" in execution[0]
+            if "case_kind = 'standard'" in execution[0]
         ]
-        self.assertEqual(len(timestamp_queries), 2)
-        for sql, params in timestamp_queries:
-            self.assertIn("created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')", sql)
-            self.assertEqual(params[1:], (date(2026, 1, 2), date(2026, 3, 4)))
+        self.assertEqual(len(case_queries), 5)
+        self.assertTrue(all("created_at" not in sql for sql, _params in case_queries))
+        self.assertTrue(all("e.date >= %s AND e.date <= %s" in sql for sql, _params in case_queries))
         self.assertTrue(connection.fake_cursor.closed)
         self.assertTrue(connection.closed)
 
@@ -133,13 +132,13 @@ class ReportTests(unittest.TestCase):
             for sql, _params in connection.fake_cursor.executions
             if "FROM cases" in sql
         ]
-        self.assertEqual(len(case_queries), 5)
+        self.assertEqual(len(case_queries), 4)
         self.assertTrue(all("case_kind = 'standard'" in sql for sql in case_queries))
 
         entry_only_queries = [
             sql
             for sql, _params in connection.fake_cursor.executions
-            if "FROM entries" in sql and "JOIN cases" not in sql
+            if "FROM entries WHERE" in sql or "FROM entries e JOIN entry_person" in sql
         ]
         self.assertGreater(len(entry_only_queries), 0)
         self.assertTrue(all("case_kind" not in sql for sql in entry_only_queries))

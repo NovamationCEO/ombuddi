@@ -2,10 +2,10 @@ import type { CSSProperties } from 'react'
 import {
     geometricPalettes,
     getPersonGeometricDescriptor,
+    PERSON_GEOMETRIC_VERSION,
     type GeometricPalette,
     type PersonGeometricDescriptor,
 } from './personGeometricProfile'
-import { PERSON_MONSTER_VERSION } from './personMonsterProfile'
 
 function Frame({ kind, palette }: { kind: number; palette: GeometricPalette }) {
     const common = { fill: palette.field, stroke: palette.ink, strokeWidth: 4 }
@@ -366,7 +366,7 @@ function Detail({ kind, palette }: { kind: number; palette: GeometricPalette }) 
 
 export function PersonGeometricPortrait({
     seed,
-    version = PERSON_MONSTER_VERSION,
+    version = PERSON_GEOMETRIC_VERSION,
     size = '100%',
     style,
 }: {
