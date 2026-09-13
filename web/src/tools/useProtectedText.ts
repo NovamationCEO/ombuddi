@@ -10,7 +10,9 @@ export function useProtectedText(
     organizationId: string,
     source: PhraseSource,
     customPhrase: string,
+    options: { tryLegacyBlank?: boolean; attemptKey?: number } = {},
 ) {
+    const { tryLegacyBlank = false, attemptKey = 0 } = options
     const defaultPhrase = useSessionSalt((state) => state.sessionSalt)
     const encrypted = isEncrypted(stored)
     const [plaintext, setPlaintext] = React.useState<string | null>(encrypted ? null : stored)
@@ -27,27 +29,40 @@ export function useProtectedText(
 
     React.useEffect(() => {
         if (!encrypted || plaintext !== null || !organizationId) return
-        const phrase = resolvePhrase(source, defaultPhrase, customPhrase)
-        if (phrase === null) {
+        const selectedPhrase = resolvePhrase(source, defaultPhrase, customPhrase)
+        const phrases =
+            tryLegacyBlank && source === 'default'
+                ? selectedPhrase === null
+                    ? ['']
+                    : [selectedPhrase, '']
+                : selectedPhrase === null
+                  ? []
+                  : [selectedPhrase]
+        if (!phrases.length) {
             setStatus('awaiting-phrase')
             return
         }
 
         let active = true
         setStatus('decrypting')
-        void decryptProtectedText(stored, phrase, organizationId).then((result) => {
-            if (!active) return
-            if (result === null) {
-                setStatus('failed')
-                return
+        void (async () => {
+            for (const phrase of phrases) {
+                const result = await decryptProtectedText(stored, phrase, organizationId)
+                if (!active) return
+                if (result !== null) {
+                    setPlaintext(result)
+                    setStatus('decrypted')
+                    return
+                }
             }
-            setPlaintext(result)
-            setStatus('decrypted')
-        })
+            if (active) {
+                setStatus('failed')
+            }
+        })()
         return () => {
             active = false
         }
-    }, [customPhrase, defaultPhrase, encrypted, organizationId, plaintext, source, stored])
+    }, [attemptKey, customPhrase, defaultPhrase, encrypted, organizationId, plaintext, source, stored, tryLegacyBlank])
 
     return { encrypted, plaintext, status }
 }

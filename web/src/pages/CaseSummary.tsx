@@ -1,11 +1,4 @@
-import {
-    Add,
-    ArrowBack,
-    CalendarMonthOutlined,
-    EditOutlined,
-    LockOutlined,
-    ScheduleOutlined,
-} from '@mui/icons-material'
+import { Add, ArrowBack, CalendarMonthOutlined, EditOutlined, ScheduleOutlined } from '@mui/icons-material'
 import {
     Box,
     Alert,
@@ -924,18 +917,6 @@ export function CaseSummary() {
                                     {highlightedEntry ? formatDate(highlightedEntry.date) : 'Select an activity entry'}
                                 </Typography>
                             </Box>
-                            {highlightedEntry?.notes && isEncrypted(highlightedEntry.notes) && (
-                                <Chip
-                                    icon={<LockOutlined />}
-                                    label="Encrypted notes"
-                                    size="small"
-                                    sx={{
-                                        color: workspace.tealDark,
-                                        bgcolor: workspace.tealPale,
-                                        '& .MuiChip-icon': { color: 'inherit' },
-                                    }}
-                                />
-                            )}
                         </Box>
 
                         {!highlightedEntry ? (
