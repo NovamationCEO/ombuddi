@@ -116,26 +116,6 @@ def change_person_name_phrase():
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT 1
-                    FROM persons
-                    WHERE organization_id = %s
-                      AND hashed_name = %s
-                      AND id <> %s
-                    """,
-                    (g.organization_id, new_hash, person_id),
-                )
-                if cur.fetchone() is not None:
-                    return jsonify({
-                        'success': False,
-                        'status': 'conflict',
-                        'error': 'That name and phrase identify an existing person',
-                        'message': (
-                            'The phrase itself may be reused. Choose a different phrase for this name, '
-                            'or use the existing person record.'
-                        ),
-                    }), 409
-                cur.execute(
-                    """
                     UPDATE persons
                     SET hashed_name = %s
                     WHERE id = %s

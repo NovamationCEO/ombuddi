@@ -41,12 +41,16 @@ Two layered protections:
 
 Important nuance the user described and we should preserve: an ombuds can choose **how granular** their salt phrases are — one per org, one per ombuds, one per month, one per case, blank, or even with deliberate per-instance spelling variations. Two records of "the same person" under two salts are mathematically two different people. This is a feature, not a bug.
 
+Salt phrases are never stored or compared by themselves. Person lookup stores only a one-way hash of the normalized name, phrase, immutable organization UUID, and server-side `NAME_SALT`. Reusing one monthly or semester phrase for many different names is expected. Even the same normalized name and phrase may legitimately return multiple people; the finder uses non-identifying details to distinguish those uncommon same-name matches.
+
 ## Confidentiality boundaries
 
 - Ombuddi staff, including admins, must NEVER be able to read meaningful visitor data. No "support" backdoor.
 - An ombuds can only see records that hash to the salt phrase they currently supply. Even another ombuds in the same org sees nothing without the same phrase.
 - Trend reports must be derivable from non-identifying fields (demographics, codes, role, medium, duration). Aggregations should respect minimum-cell-size thresholds to prevent re-identification.
 - Notes are encrypted client-side with AES-256-GCM before being stored. The key is derived from the salt phrase and organization UUID; the server and Ombuddi administrators do not receive the plaintext key.
+- New or edited nonempty protected text must never fall back to plaintext storage. Unchanged ciphertext is preserved byte-for-byte; changed ciphertext is re-encrypted with the phrase that successfully opened it. Replacing that phrase is a separate, warned action.
+- An established session-default phrase is represented in the UI only as **Using session default**. It is not inserted into the DOM or shown on screen. Entering a replacement is deliberate and visible to prevent a hidden mistype.
 
 ## Architecture (current)
 
@@ -65,7 +69,7 @@ Important nuance the user described and we should preserve: an ombuds can choose
 
 API base: `http://localhost:5002/api/v1/...` in dev; same-host `https://` in prod (per `web/src/tools/db_tools/getter.ts`). CORS currently combines unrestricted Flask-Cors with a `FRONTEND_URL` response header and is bookmarked for consolidation.
 
-## Current functional state (August 9, 2026)
+## Current functional state (September 12, 2026)
 
 Working / wired:
 
@@ -77,7 +81,7 @@ Working / wired:
 - Tenant ownership is enforced in API writes and by database relationships/triggers for cross-table associations. Local identity and organization fields are force-stamped from the authenticated principal rather than accepted from request data.
 - Cases, per-ombuds General activity containers, entries, entry-person links, encrypted notes, codes/categories, primary roles, public persons, demographic picklists, and individual/organization report aggregation are implemented.
 - Database errors return stable client-safe messages while detailed exceptions remain in server logs. Shared CRUD/report/person paths use a common commit/rollback/close lifecycle helper.
-- Backend and frontend regression suites are active. As of this update: 82 backend tests and 80 frontend tests pass; frontend lint and type-checking also pass.
+- Backend and frontend regression suites are active. Keep exact test counts in test output rather than this document; frontend lint and type-checking also pass.
 - Frontend dependency management is standardized on npm. Generated Python bytecode and Yarn runtime files are no longer tracked.
 
 Still incomplete:
@@ -87,7 +91,7 @@ Still incomplete:
 
 ## Deferred engineering cleanup
 
-These are intentionally bookmarked rather than part of the August 9 hardening work:
+These are intentionally bookmarked rather than part of the current record-integrity work:
 
 - **Production server configuration:** stop setting `app.debug = True` and run Flask behind Gunicorn (already in `requirements.txt`) rather than `python app.py`. Keep the convenient development command local to Docker Compose.
 - **Automated migration deployment:** add a migration runner/release step when the Render plan or deployment model supports it reliably. The free-tier alpha continues to use the documented manual migration sequence for now.
@@ -96,6 +100,9 @@ These are intentionally bookmarked rather than part of the August 9 hardening wo
 - **Frontend bundle splitting:** the production build passes but warns that the main JavaScript bundle exceeds 500 kB. Add route-level/dynamic imports before performance becomes a user-visible problem.
 - **Broader test coverage and CI:** preserve the current suites and add endpoint/error-path coverage as features change; configure CI when repository/deployment automation is worth maintaining.
 - **Dead frontend code and dependency audit:** continue removing unused `web/src/tools`, `trusted-components`, and questionable dependencies on a read-on-demand basis rather than as a risky bulk deletion.
+- **Component decomposition:** `EntryPersonMarker` still owns verification and phrase-change dialogs. Split those dialogs when the component next needs substantive work; the current behavior is tested, so this is maintainability rather than a confidentiality blocker.
+- **Procedural-art evolution:** version-one descriptor outputs are pinned in tests, shared seeded-random helpers have one implementation, monster and geometric renderers have independent versions, and unknown person-monster versions render a placeholder. Case scenes are also pinned but still need a persisted version before introducing a second mapping.
+- **Real migration testing:** report SQL is exercised against local PostgreSQL, but CI still needs a disposable database test that builds the pre-migration schema and applies the ordered migration chain.
 
 ## Key files to know
 
@@ -133,6 +140,10 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 - **Authentication: Auth0.** Auth0's `sub` remains an external textual identifier in `ombuds.auth0_sub`; all application relationships use local UUIDs. Old commented Keycloak scaffolding is legacy code, not the current plan.
 - **Alpha migrations may change the model, but must preserve live alpha data.** Apply production migrations in order and avoid destructive rebuild instructions outside development. See Guiding Principle 1.
 - **IOA reporting categories and codes are application-level reference data, not DB rows.** They live in `web/src/constants/ioaConstants.ts`, with deterministic uuid5-derived ids resolved at runtime. A future "Hospital ombuds defaults" or "Government ombuds defaults" pack ships the same way: another constants file with another uuid5 namespace. No "fake organization" rows; no cross-org read exception in the multi-tenancy model.
+- **Multi-ombuds records are collaborative at the case level and attributable at the entry level.** Any ombuds in an organization may add an entry to a standard case. Only the ombuds who authored an entry may later edit it or change its person links. General activity containers are different: each belongs to one ombuds, and only that owner may add entries there. General activity has no case codes or referral sources.
+- **Report scopes describe the same population at different breadths.** “My activity” uses entries authored by the signed-in ombuds; “Organization” uses every office entry. Case charts count distinct standard cases worked during the selected period, so a colleague-opened case appears in a contributor's report and is counted only once in the organization view. `cases.created_by_ombuds_id` remains useful provenance but does not define report membership.
+- **Durations are whole minutes.** Create and edit flows reject negative or fractional durations; the product intentionally does not imply hour-level or timezone precision the user never supplied.
+- **Stable person avatars intentionally reveal recurrence within an organization.** Helping an ombuds recognize that the same visitor appears across cases is currently part of the visual goal. The pre-verification hover details may be narrowed later, but that disclosure question is tabled rather than accidental.
 
 ## Open product questions (resolve before/with the user)
 

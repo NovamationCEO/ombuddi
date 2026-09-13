@@ -55,7 +55,7 @@ The full plan, endpoint-by-endpoint gap list, and test scenarios live in `docs/M
 Goal: an ombuds can fully log a meeting and associate people with it.
 
 - [x] `entry_person` API: `POST /add_entry_person`, `DELETE /remove_entry_person`, both `{entryId, personId}`. `get_persons_by_entry_id` and `get_persons_by_case_id` already existed.
-- [x] AddEntry "People" dialog: staged people persist on entry save (fans out one `add_entry_person` per staged person after the entry is created).
+- [x] AddEntry "People" dialog: new entries and staged people save in one backend transaction, preventing partial records and duplicate retries after a relationship failure. Existing-entry person changes remain idempotent author-only mutations.
 - [x] PersonFinder: `onSelect` callback wired up. Search clears after a successful pick so the dialog stays usable.
 - [x] AddEntry dialog left panel lists people already on the case (via `get_persons_by_case_id`), filtered to those not yet staged; click to add.
 - [x] CaseSummary: highlighted entry now shows associated people as chips below notes.
@@ -83,7 +83,7 @@ Goal: aggregate trend reports that an org leader can act on, with no identity le
 - [x] Initial report UI under `/report` with date range, trend/category charts, bar/pie toggles, and offline export support.
 - [ ] Add report filters for code, code category, primary role, demographic axis, medium, and ombuds.
 - [x] Backend report aggregation endpoint using tenant-scoped `GROUP BY` queries across entries, cases, codes, and persons.
-- [x] Report scope toggle between the signed-in ombuds's activity and organization-wide office trends. Entry measures use entry authorship; case-opening measures use immutable case-creator attribution.
+- [x] Report scope toggle between the signed-in ombuds's activity and organization-wide office trends. Both scopes use the same “worked during the selected period” semantics; personal scope filters entry authorship and organization scope deduplicates standard cases across all contributors.
 - [x] **Dual-mode rendering toggle** (see CONTEXT.md "Settled decisions"):
   - *Full mode* — every bucket as-is. Ombuds-only, not exportable, no share affordance in the UI.
   - *Shareable mode* — enforce minimum cell size (default 5, org-configurable). Below-threshold buckets merge into "Other" or are suppressed. Exports and external-sharing flows are gated to this mode.

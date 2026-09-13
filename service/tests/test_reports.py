@@ -158,10 +158,7 @@ class ReportTests(unittest.TestCase):
         self.assertTrue(connection.fake_cursor.executions)
         for sql, params in connection.fake_cursor.executions:
             self.assertEqual(params[-1], OMBUDS_ID)
-            self.assertTrue(
-                "ombuds_id = %s" in sql or "created_by_ombuds_id = %s" in sql,
-                sql,
-            )
+            self.assertIn("ombuds_id = %s", sql, sql)
 
         personal_case_queries = [
             sql for sql, _params in connection.fake_cursor.executions

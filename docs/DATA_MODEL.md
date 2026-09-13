@@ -1,6 +1,6 @@
 # Ombuddi — Data Model
 
-> Inferred from `service/src/*_views.py`, generic SQL in `utils.py`, and the typed shapes in `web/src/types/majorTypes.ts`. There is no migration / DDL file checked in (TODO). All `id` columns are UUID based on the `::uuid[]` casts in `get_many_by_ids` and the UUIDs that appear in seed comments.
+> The canonical DDL is `service/schema.sql`; ordered production changes live in `service/migrations/`. View-model mappings in `service/src/*_views.py` and TypeScript shapes in `web/src/types/majorTypes.ts` must remain aligned with it.
 
 ## Tables
 
@@ -87,6 +87,9 @@ Generic single-select customizable list. The chosen value gets stored as a TEXT 
 ### `cases`
 - `id` UUID, PK
 - `organization_id` UUID, FK -> organizations.id
+- `case_kind` TEXT (`standard` or the system-managed `general` container)
+- `owner_ombuds_id` UUID, required only for General activity
+- `created_by_ombuds_id` UUID, immutable creator provenance; not report membership
 - `name` TEXT (often randomized for security)
 - `description` TEXT
 - `codes` UUID[] (ids of `codes` rows or IOA reference codes; not FK-enforced because Postgres arrays)
@@ -94,7 +97,7 @@ Generic single-select customizable list. The chosen value gets stored as a TEXT 
 - `created_at` TIMESTAMPTZ
 - `updated_at` TIMESTAMPTZ (auto via trigger)
 
-The `organization_id` column exists; the API does not yet *enforce* that the caller owns the row. Enforcement lands with Phase 4 auth — see `docs/MULTI_TENANCY.md`.
+Tenant ownership is enforced by the API and composite database relationships. Standard cases are collaborative within the organization. Each ombuds has an owner-only General container, which cannot carry case codes or referral sources.
 
 ### `entries`
 - `id` UUID, PK
@@ -103,11 +106,12 @@ The `organization_id` column exists; the API does not yet *enforce* that the cal
 - `organization_id` UUID, FK -> organizations.id  *(denormalized; composite foreign keys require it to match both the parent case and ombuds seat)*
 - `date` DATE (the meeting / entry date)
 - `medium` TEXT ('inPerson', 'phone', 'video', 'email', 'other')
-- `duration` INT (minutes)
-- `notes` TEXT
+- `duration` INT (nonnegative whole minutes)
+- `notes` TEXT (client-side encrypted when nonempty; unchanged legacy plaintext may remain readable but edits require encryption)
 - `codes` UUID[] (action-level tags on this specific entry; issue-level tags live on the parent case's `codes`)
 
 "Entry" is the standardized term across DB, API, UI, and docs. Earlier drafts used "Contact" — retired.
+Entries are attributed to their author. Colleagues can view entries on shared standard cases, but only the author may edit an entry or change its person links.
 
 ### `persons`
 - `id` UUID, PK

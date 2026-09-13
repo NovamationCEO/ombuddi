@@ -154,11 +154,8 @@ class PersonMonsterTests(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertTrue(response.get_json()["success"])
-        self.assertEqual(len(connection.fake_cursor.executions), 2)
-        collision_sql, collision_params = connection.fake_cursor.executions[0]
-        self.assertIn("id <> %s", collision_sql)
-        self.assertEqual(collision_params, (ORGANIZATION_ID, "server-new-client-hash", PERSON_ID))
-        sql, params = connection.fake_cursor.executions[1]
+        self.assertEqual(len(connection.fake_cursor.executions), 1)
+        sql, params = connection.fake_cursor.executions[0]
         self.assertIn("is_public = FALSE", sql)
         self.assertIn("hashed_name = %s", sql)
         self.assertEqual(
@@ -189,26 +186,6 @@ class PersonMonsterTests(unittest.TestCase):
 
         self.assertEqual(status, 400)
         self.assertEqual(response.get_json()["error"], "Verification failed")
-
-    def test_change_phrase_rejects_a_duplicate_lookup_hash(self):
-        connection = FakeConnection(rows=[(1,)])
-        with app.test_request_context(
-            "/api/v1/change_person_name_phrase",
-            method="PUT",
-            json={
-                "id": PERSON_ID,
-                "currentHashedName": "current-client-hash",
-                "newHashedName": "duplicate-client-hash",
-            },
-        ):
-            g.organization_id = ORGANIZATION_ID
-            with patch("src.person_views.get_db_connection", return_value=connection):
-                response, status = change_person_name_phrase()
-
-        self.assertEqual(status, 409)
-        self.assertIn("identify an existing person", response.get_json()["error"])
-        self.assertIn("phrase itself may be reused", response.get_json()["message"])
-        self.assertEqual(len(connection.fake_cursor.executions), 1)
 
     def test_entry_person_query_uses_model_column_order_instead_of_select_star(self):
         row = (

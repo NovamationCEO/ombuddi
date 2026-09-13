@@ -78,6 +78,8 @@ describe('ProtectedText', () => {
 
         const defaultInput = document.body.querySelector<HTMLInputElement>('input[aria-label="New session default"]')
         expect(defaultInput).not.toBeNull()
+        expect(defaultInput?.value).toBe('')
+        expect(document.body.textContent).not.toContain('first phrase')
         await act(async () => {
             setInputValue(defaultInput, 'second phrase')
         })

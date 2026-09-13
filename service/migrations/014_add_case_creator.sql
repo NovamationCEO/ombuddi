@@ -1,6 +1,6 @@
--- Record who opened each standard case so ombuds-level reports can distinguish
--- case creation from organization-wide case activity. Historical cases use the
--- author of their earliest dated entry when one is available.
+-- Record who opened each standard case as immutable provenance. Reports use
+-- entry authorship and cases worked instead; historical cases use the author
+-- of their earliest dated entry when one is available.
 
 BEGIN;
 

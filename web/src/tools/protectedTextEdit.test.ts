@@ -60,6 +60,23 @@ describe('protectedTextForSave', () => {
         })).rejects.toThrow('Choose protection')
     })
 
+    it('encrypts text added to a previously empty field', async () => {
+        const saved = await protectedTextForSave({
+            stored: '',
+            originalPlaintext: '',
+            editedPlaintext: 'new protected note',
+            unlockPhrase: '',
+            replaceProtection: true,
+            replacementPhrase: 'semester phrase ',
+            organizationId,
+        })
+
+        expect(saved).not.toBe('new protected note')
+        await expect(decryptProtectedText(saved, 'semester phrase ', organizationId)).resolves.toBe(
+            'new protected note',
+        )
+    })
+
     it('encrypts edited legacy plaintext after protection is explicitly selected', async () => {
         const saved = await protectedTextForSave({
             stored: 'legacy text',

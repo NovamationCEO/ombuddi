@@ -29,7 +29,7 @@ export function ProtectedText(props: {
     const setSessionSalt = useSessionSalt((state) => state.setSessionSalt)
     const [anchorElement, setAnchorElement] = React.useState<HTMLElement | null>(null)
     const [oneTimeDraft, setOneTimeDraft] = React.useState('')
-    const [defaultDraft, setDefaultDraft] = React.useState(phrase.defaultPhrase ?? '')
+    const [defaultDraft, setDefaultDraft] = React.useState('')
     const [attemptKey, setAttemptKey] = React.useState(0)
     const [attemptedMode, setAttemptedMode] = React.useState<'one-time' | 'default' | null>(null)
     const result = useProtectedText(stored, organizationId, phrase.source, phrase.customPhrase, {
@@ -46,7 +46,7 @@ export function ProtectedText(props: {
 
     function openRecovery(event: React.MouseEvent<HTMLElement>) {
         setOneTimeDraft('')
-        setDefaultDraft(phrase.defaultPhrase ?? '')
+        setDefaultDraft('')
         setAttemptedMode(null)
         setAnchorElement(event.currentTarget)
     }

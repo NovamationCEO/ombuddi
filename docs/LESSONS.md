@@ -39,14 +39,18 @@
 - `PersonForm` is the reusable form body extracted from `AddPerson` — same fields, hash pipeline, salt-phrase tooltip, and save flow, but parameterized with `initialName`, `onSaved(person)`, `onCancel`. Two consumers: the `/add_person` page route (thin wrapper) and the inline dialog inside `AddEntry`. The page wrapper passes `onSaved={() => null}` and skips `onCancel` — the inline dialog passes both to close itself and stage the new person.
 - Stacked MUI dialogs work: AddEntry's PersonForm dialog sits on top of the People dialog with no special z-index handling. Snacks from `useSnack` render globally so they appear above both.
 - "Log general activity" creates or reuses one system-managed General activity container per ombuds, then opens Add Entry against it. General containers have no codes and are omitted from case/status/code reports; their entries remain in activity, time, method, and person reports. The legacy `/select_case` screen redirects to `/cases`.
-- Reports default to "My activity" and can toggle to organization-wide activity. Personal entry/person/time measures filter by `entries.ombuds_id`; personal case-opening measures filter by immutable `cases.created_by_ombuds_id`. Migration 014 backfills that field from each historical case's earliest dated entry where possible.
+- Reports default to "My activity" and can toggle to organization-wide activity. Both scopes use entries in the selected date range: personal measures filter by `entries.ombuds_id`, while organization measures include every office entry. Case charts count distinct standard cases worked, not cases created. `cases.created_by_ombuds_id` is retained as provenance and is not a report-membership rule.
 
 ## Security pitfalls to keep top of mind
 
 - Entry notes are encrypted client-side before storage. Preserve backward-compatible plaintext detection only for existing development/alpha data; new note flows must use the encrypted format.
+- Protected-text edits have three distinct cases: unchanged text preserves stored bytes; changed encrypted text uses the exact phrase that decrypted it; newly added or changed legacy plaintext requires an explicit phrase and encrypted output. Never infer phrase rotation from the currently selected session default.
+- Session-default phrases are secret state, not display state. Render “Using session default” without putting the phrase in the DOM. A replacement field starts empty, is explicit, and may be visible while typed to prevent a hidden typo. Unlock and lookup fields remain censored.
+- Person phrases are never stored or checked in isolation. The lookup hash covers normalized name + phrase + organization and is then server-peppered. A semester phrase can be reused freely, and identical name-and-phrase lookup identities may return multiple people distinguished by non-identifying details.
+- Standard cases are organization-collaborative, but saved entries are author-editable. General activity containers are owner-only. Keep both the UI affordances and API authorization aligned with those boundaries.
 - The API validates Auth0 tokens, resolves local principal IDs, rejects inactive accounts, and applies tenant constraints. New endpoints must follow the same principal-derived ownership pattern and must never trust organization/user IDs submitted by the client.
 - The "scramble" only protects the name → person lookup. Demographics, codes, dates, durations, and case names remain plaintext under local IDs. A breach could expose rich profiles even when the attacker cannot link them to a real-world name without the salt phrase.
-- A truncation attack on `picsum.photos/seed/{case.id}` leaks case-id existence to a CDN. Not a real privacy hit, but worth noting if anyone asks "do you call out to third parties?" — the answer is currently yes, for the security thumbnails.
+- Case thumbnails and person avatars are generated locally from opaque seeds; rendering them must not call a third-party image service. Stable avatars make returning visitors recognizable across cases inside the organization—currently an intentional tradeoff, not an anonymity guarantee.
 
 ## MUI v9 breaking changes to remember
 
