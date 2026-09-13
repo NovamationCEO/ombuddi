@@ -34,3 +34,7 @@ export function personDisplayDetails(person: PersonType): PersonDisplayDetail[] 
 
     return details
 }
+
+export function uniquePeopleById(people: PersonType[]): PersonType[] {
+    return [...new Map(people.map((person) => [person.id, person])).values()]
+}

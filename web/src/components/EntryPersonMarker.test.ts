@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PersonType } from '../types/majorTypes'
-import { personDisplayDetails, personDisplayLabel } from './personDisplay'
+import { personDisplayDetails, personDisplayLabel, uniquePeopleById } from './personDisplay'
 
 const person: PersonType = {
     id: 'person-1',
@@ -61,5 +61,11 @@ describe('EntryPersonMarker display data', () => {
                 expect.objectContaining({ label: 'Category 2' }),
             ]),
         )
+    })
+
+    it('keeps each person only once when building a case-level row', () => {
+        const secondPerson = { ...person, id: 'person-2', publicName: 'Grace Example' }
+
+        expect(uniquePeopleById([person, secondPerson, { ...person }])).toEqual([person, secondPerson])
     })
 })

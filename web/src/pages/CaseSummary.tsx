@@ -46,6 +46,7 @@ import {
 import { usePhraseSelection } from '../tools/phraseSource'
 import { PhraseSourceControl } from '../components/PhraseSourceControl'
 import { EntryPersonMarker } from '../components/EntryPersonMarker'
+import { uniquePeopleById } from '../components/personDisplay'
 
 const workspace = {
     background: 'var(--mui-palette-background-default)',
@@ -101,6 +102,7 @@ export function CaseSummary() {
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const entriesRes = useGetter<EntryType[]>(['get_entries_by_case_id', caseId])
     const referralSourcesRes = useGetter<CaseReferralSourceType[]>(['get_case_referral_sources', caseId])
+    const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
     const setSnack = useSnack((state) => state.setSnack)
 
     const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
@@ -124,6 +126,7 @@ export function CaseSummary() {
             ),
         [entriesRes.data],
     )
+    const casePeople = React.useMemo(() => uniquePeopleById(casePeopleRes.data ?? []), [casePeopleRes.data])
 
     React.useEffect(() => {
         if (!sortedEntries.length) {
@@ -681,6 +684,49 @@ export function CaseSummary() {
                             >
                                 Manage referral sources
                             </Button>
+                        </Box>
+
+                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
+
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 0.75,
+                                minHeight: 54,
+                            }}
+                        >
+                            <Typography
+                                sx={{
+                                    color: 'var(--mui-palette-app-headerText)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    mr: 0.25,
+                                }}
+                            >
+                                People
+                            </Typography>
+                            {casePeopleRes.isLoading ? (
+                                <CircularProgress
+                                    size={18}
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)' }}
+                                />
+                            ) : casePeople.length ? (
+                                casePeople.map((person) => (
+                                    <EntryPersonMarker
+                                        key={person.id}
+                                        person={person}
+                                    />
+                                ))
+                            ) : (
+                                <Typography
+                                    variant="body2"
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
+                                >
+                                    None recorded
+                                </Typography>
+                            )}
                         </Box>
                     </Box>
                 </Paper>
