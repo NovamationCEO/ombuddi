@@ -113,6 +113,7 @@ case_model = {
     'organizationId': 'organization_id',
     'caseKind': 'case_kind',
     'ownerOmbudsId': 'owner_ombuds_id',
+    'createdByOmbudsId': 'created_by_ombuds_id',
     'name': 'name',
     'description': 'description',
     'codes': 'codes',
@@ -250,11 +251,14 @@ def create_case():
                     raise _ReferralTransactionAbort(error)
                 cur.execute(
                     """
-                    INSERT INTO cases (id, organization_id, name, description, codes, status)
-                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s::uuid[], %s)
+                    INSERT INTO cases (
+                        id, organization_id, created_by_ombuds_id,
+                        name, description, codes, status
+                    )
+                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s, %s::uuid[], %s)
                     RETURNING id
                     """,
-                    (case_id, g.organization_id, name.strip(), description, codes, status),
+                    (case_id, g.organization_id, g.ombuds_id, name.strip(), description, codes, status),
                 )
                 new_id = cur.fetchone()[0]
                 _insert_referral_sources(cur, new_id, referral_sources)
@@ -402,14 +406,14 @@ def ensure_general_activity_case():
                 cur.execute(
                     """
                     INSERT INTO cases (
-                        organization_id, case_kind, owner_ombuds_id,
+                        organization_id, case_kind, owner_ombuds_id, created_by_ombuds_id,
                         name, description, codes, status
-                    ) VALUES (%s, 'general', %s, 'General activity', '', '{}', 'active')
+                    ) VALUES (%s, 'general', %s, %s, 'General activity', '', '{}', 'active')
                     ON CONFLICT (owner_ombuds_id) WHERE case_kind = 'general'
                     DO NOTHING
                     RETURNING id
                     """,
-                    (g.organization_id, g.ombuds_id),
+                    (g.organization_id, g.ombuds_id, g.ombuds_id),
                 )
                 row = cur.fetchone()
                 if row is None:
@@ -461,7 +465,7 @@ def update_case():
         case_model,
         request,
         owner_constraint={**_org(), 'case_kind': 'standard'},
-        immutable_columns={'case_kind', 'owner_ombuds_id'},
+        immutable_columns={'case_kind', 'owner_ombuds_id', 'created_by_ombuds_id'},
     )
 
 

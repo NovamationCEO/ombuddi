@@ -75,15 +75,14 @@ Working / wired:
 - System administrators can create and manage organizations and organization administrators, change seat limits, and deactivate/reactivate organizations. Status changes are written to an immutable audit trail.
 - Invitations are bound to the intended normalized email, expire, are single-use, and store only a token hash. Auth0 supplies signed verified-email claims through the Post-Login Action chain.
 - Tenant ownership is enforced in API writes and by database relationships/triggers for cross-table associations. Local identity and organization fields are force-stamped from the authenticated principal rather than accepted from request data.
-- Cases, entries, entry-person links, encrypted notes, codes/categories, primary roles, public persons, demographic picklists, and report aggregation are implemented.
+- Cases, per-ombuds General activity containers, entries, entry-person links, encrypted notes, codes/categories, primary roles, public persons, demographic picklists, and individual/organization report aggregation are implemented.
 - Database errors return stable client-safe messages while detailed exceptions remain in server logs. Shared CRUD/report/person paths use a common commit/rollback/close lifecycle helper.
-- Backend and frontend regression suites are active. As of this update: 48 backend tests and 4 frontend tests pass; frontend lint and production build also pass.
+- Backend and frontend regression suites are active. As of this update: 82 backend tests and 80 frontend tests pass; frontend lint and type-checking also pass.
 - Frontend dependency management is standardized on npm. Generated Python bytecode and Yarn runtime files are no longer tracked.
 
 Still incomplete:
 
 - Automated record retention/purge, subscription billing, invitation email delivery, and a self-service organization onboarding flow.
-- `/log_without_case` remains unresolved.
 - Production schema migrations are still applied manually in order; see `docs/ADMIN_USERS.md`.
 
 ## Deferred engineering cleanup

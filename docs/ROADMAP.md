@@ -83,6 +83,7 @@ Goal: aggregate trend reports that an org leader can act on, with no identity le
 - [x] Initial report UI under `/report` with date range, trend/category charts, bar/pie toggles, and offline export support.
 - [ ] Add report filters for code, code category, primary role, demographic axis, medium, and ombuds.
 - [x] Backend report aggregation endpoint using tenant-scoped `GROUP BY` queries across entries, cases, codes, and persons.
+- [x] Report scope toggle between the signed-in ombuds's activity and organization-wide office trends. Entry measures use entry authorship; case-opening measures use immutable case-creator attribution.
 - [x] **Dual-mode rendering toggle** (see CONTEXT.md "Settled decisions"):
   - *Full mode* — every bucket as-is. Ombuds-only, not exportable, no share affordance in the UI.
   - *Shareable mode* — enforce minimum cell size (default 5, org-configurable). Below-threshold buckets merge into "Other" or are suppressed. Exports and external-sharing flows are gated to this mode.

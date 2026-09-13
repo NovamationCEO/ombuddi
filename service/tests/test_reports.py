@@ -17,6 +17,7 @@ from src.report_views import _report_date_range, get_reports
 
 
 ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+OMBUDS_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 
 
 class EmptyReportCursor:
@@ -83,10 +84,23 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(response.get_json()["error"], "Input error")
         get_connection.assert_not_called()
 
+    def test_invalid_scope_returns_400_without_opening_database(self):
+        with app.test_request_context(
+            "/api/v1/reports?scope=team&start=2026-01-02&end=2026-03-04",
+        ):
+            g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
+            with patch("src.report_views.get_db_connection") as get_connection:
+                response, status = get_reports()
+
+        self.assertEqual(status, 400)
+        self.assertIn("scope", response.get_json()["message"])
+        get_connection.assert_not_called()
+
     def test_timestamp_reports_include_the_entire_end_date_in_utc(self):
         connection = EmptyReportConnection()
         with app.test_request_context(
-            "/api/v1/reports?start=2026-01-02&end=2026-03-04",
+            "/api/v1/reports?scope=organization&start=2026-01-02&end=2026-03-04",
         ):
             g.organization_id = ORGANIZATION_ID
             with patch("src.report_views.get_db_connection", return_value=connection):
@@ -107,7 +121,7 @@ class ReportTests(unittest.TestCase):
     def test_general_containers_are_excluded_only_from_case_and_code_reports(self):
         connection = EmptyReportConnection()
         with app.test_request_context(
-            "/api/v1/reports?start=2026-01-02&end=2026-03-04",
+            "/api/v1/reports?scope=organization&start=2026-01-02&end=2026-03-04",
         ):
             g.organization_id = ORGANIZATION_ID
             with patch("src.report_views.get_db_connection", return_value=connection):
@@ -129,6 +143,40 @@ class ReportTests(unittest.TestCase):
         ]
         self.assertGreater(len(entry_only_queries), 0)
         self.assertTrue(all("case_kind" not in sql for sql in entry_only_queries))
+
+    def test_my_scope_filters_every_aggregation_to_the_current_ombuds(self):
+        connection = EmptyReportConnection()
+        with app.test_request_context(
+            "/api/v1/reports?scope=my&start=2026-01-02&end=2026-03-04",
+        ):
+            g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
+            with patch("src.report_views.get_db_connection", return_value=connection):
+                response = get_reports()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["scope"], "my")
+        self.assertTrue(connection.fake_cursor.executions)
+        for sql, params in connection.fake_cursor.executions:
+            self.assertEqual(params[-1], OMBUDS_ID)
+            self.assertTrue(
+                "ombuds_id = %s" in sql or "created_by_ombuds_id = %s" in sql,
+                sql,
+            )
+
+    def test_organization_scope_does_not_add_an_ombuds_filter(self):
+        connection = EmptyReportConnection()
+        with app.test_request_context(
+            "/api/v1/reports?scope=organization&start=2026-01-02&end=2026-03-04",
+        ):
+            g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
+            with patch("src.report_views.get_db_connection", return_value=connection):
+                response = get_reports()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["scope"], "organization")
+        self.assertTrue(all(OMBUDS_ID not in params for _sql, params in connection.fake_cursor.executions))
 
 
 if __name__ == "__main__":

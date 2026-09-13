@@ -120,6 +120,7 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/011_add_person_monsters.sql
 \i /Users/nova/Code/ombuddi/service/migrations/012_add_person_avatar_preference.sql
 \i /Users/nova/Code/ombuddi/service/migrations/013_add_general_activity_cases.sql
+\i /Users/nova/Code/ombuddi/service/migrations/014_add_case_creator.sql
 ```
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys

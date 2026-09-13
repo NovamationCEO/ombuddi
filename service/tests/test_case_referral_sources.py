@@ -16,6 +16,7 @@ from src.ombuddi_views import create_case, get_case_referral_sources, update_cas
 
 
 ORGANIZATION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+OMBUDS_ID = "aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa"
 CASE_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 HR_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 OTHER_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
@@ -82,6 +83,7 @@ class CaseReferralSourceTests(unittest.TestCase):
             },
         ):
             g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
             with patch("src.ombuddi_views.get_db_connection", return_value=connection):
                 response, status = create_case()
 
@@ -89,6 +91,12 @@ class CaseReferralSourceTests(unittest.TestCase):
         self.assertEqual(response.get_json()["id"], CASE_ID)
         self.assertTrue(connection.committed)
         self.assertTrue(connection.closed)
+        case_insert = next(
+            execution
+            for execution in connection.fake_cursor.executions
+            if "INSERT INTO cases" in execution[0]
+        )
+        self.assertEqual(case_insert[1][2], OMBUDS_ID)
         relationship_inserts = [
             execution for execution in connection.fake_cursor.executions
             if "INSERT INTO case_referral_sources" in execution[0]

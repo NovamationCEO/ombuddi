@@ -1,3 +1,10 @@
+export type ReportScope = 'my' | 'organization'
+
+export function reportRequestPath(start: string, end: string, scope: ReportScope): string {
+    const params = new URLSearchParams({ start, end, scope })
+    return `reports?${params.toString()}`
+}
+
 export function normalizeMinCellSize(value: string | number): number {
     const parsed = Number(value)
     if (!Number.isFinite(parsed)) return 1
@@ -24,7 +31,7 @@ export function suppressSmallBuckets(
     })
 
     if (otherTotal > 0) {
-        const existingOther = kept.find(bucket => bucket.label === 'Other')
+        const existingOther = kept.find((bucket) => bucket.label === 'Other')
         if (existingOther) {
             existingOther.value += otherTotal
         } else {
@@ -33,7 +40,7 @@ export function suppressSmallBuckets(
     }
 
     return {
-        categories: kept.map(bucket => bucket.label),
-        data: kept.map(bucket => bucket.value),
+        categories: kept.map((bucket) => bucket.label),
+        data: kept.map((bucket) => bucket.value),
     }
 }

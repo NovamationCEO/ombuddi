@@ -329,6 +329,7 @@ CREATE TABLE cases (
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     case_kind       TEXT NOT NULL DEFAULT 'standard',
     owner_ombuds_id UUID,
+    created_by_ombuds_id UUID,
     name            TEXT NOT NULL,
     description     TEXT NOT NULL DEFAULT '',
     codes           UUID[] NOT NULL DEFAULT '{}',   -- references codes.id; not enforced by FK because arrays
@@ -345,6 +346,10 @@ CREATE TABLE cases (
     CONSTRAINT cases_owner_ombuds_organization_fk
         FOREIGN KEY (owner_ombuds_id, organization_id)
         REFERENCES ombuds (id, organization_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT cases_creator_ombuds_organization_fk
+        FOREIGN KEY (created_by_ombuds_id, organization_id)
+        REFERENCES ombuds (id, organization_id)
         ON DELETE RESTRICT
 );
 
@@ -355,6 +360,7 @@ CREATE UNIQUE INDEX cases_general_owner_uidx
     ON cases (owner_ombuds_id)
     WHERE case_kind = 'general';
 CREATE INDEX cases_kind_idx ON cases (case_kind);
+CREATE INDEX cases_created_by_ombuds_idx ON cases (created_by_ombuds_id);
 
 CREATE TRIGGER cases_set_updated_at
     BEFORE UPDATE ON cases

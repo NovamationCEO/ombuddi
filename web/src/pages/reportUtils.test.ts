@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeMinCellSize, suppressSmallBuckets } from './reportUtils'
-
+import { normalizeMinCellSize, reportRequestPath, suppressSmallBuckets } from './reportUtils'
 
 describe('normalizeMinCellSize', () => {
     it('enforces a whole-number minimum of one', () => {
@@ -8,6 +7,15 @@ describe('normalizeMinCellSize', () => {
         expect(normalizeMinCellSize(-10)).toBe(1)
         expect(normalizeMinCellSize(3.9)).toBe(3)
         expect(normalizeMinCellSize('not-a-number')).toBe(1)
+    })
+})
+
+describe('reportRequestPath', () => {
+    it('includes the selected reporting scope', () => {
+        expect(reportRequestPath('2026-01-01', '2026-12-31', 'my')).toBe(
+            'reports?start=2026-01-01&end=2026-12-31&scope=my',
+        )
+        expect(reportRequestPath('2026-01-01', '2026-12-31', 'organization')).toContain('scope=organization')
     })
 })
 

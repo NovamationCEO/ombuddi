@@ -18,9 +18,9 @@ import HighchartsReactOfficial from 'highcharts-react-official'
 import { useQuery } from '@tanstack/react-query'
 import { useOrganization } from '../tools/useOrganization'
 import { getter } from '../tools/db_tools/getter'
-import { BarChart, Lock, PieChart, Share } from '@mui/icons-material'
+import { BarChart, Business, Lock, Person, PieChart, Share } from '@mui/icons-material'
 import { ioaCodesById } from '../constants/ioaConstants'
-import { normalizeMinCellSize, suppressSmallBuckets } from './reportUtils'
+import { normalizeMinCellSize, reportRequestPath, type ReportScope, suppressSmallBuckets } from './reportUtils'
 // Side-effect imports: highcharts.js sets window._Highcharts in CJS mode, so
 // these modules self-register against it on evaluation. No function call needed.
 // Offline exporting keeps all chart data in-browser — nothing reaches export.highcharts.com.
@@ -82,6 +82,7 @@ function useChartTheme(): ChartTheme {
 type CodeRow = { codeId: string; codeLabel: string | null; count?: number; totalMinutes?: number }
 
 type ReportData = {
+    scope: ReportScope
     entriesByMonth: { month: string; count: number }[]
     durationByMonth: { month: string; totalMinutes: number }[]
     casesByMonth: { month: string; count: number }[]
@@ -255,14 +256,15 @@ export function ReportPage() {
     const { start: defaultStart, end: defaultEnd } = defaultRange()
     const [start, setStart] = React.useState(defaultStart)
     const [end, setEnd] = React.useState(defaultEnd)
+    const [reportScope, setReportScope] = React.useState<ReportScope>('my')
     const [reportMode, setReportMode] = React.useState<'full' | 'shareable'>('full')
     const [minCellSize, setMinCellSize] = React.useState(5)
     const org = useOrganization()
     const orgId = org.id
 
     const { data } = useQuery<ReportData>({
-        queryKey: ['reports', start, end],
-        queryFn: () => getter(`reports?start=${start}&end=${end}`),
+        queryKey: ['reports', start, end, reportScope],
+        queryFn: () => getter(reportRequestPath(start, end, reportScope)),
         enabled: !!orgId,
     })
 
@@ -325,37 +327,92 @@ export function ReportPage() {
                         size="small"
                         slotProps={{ inputLabel: { shrink: true } }}
                     />
-                    <ToggleButtonGroup
-                        value={reportMode}
-                        exclusive
-                        onChange={(_, v) => {
-                            if (v) setReportMode(v)
-                        }}
-                        size="small"
-                        sx={{
-                            '& .MuiToggleButton-root': { color: 'text.secondary', borderColor: 'divider' },
-                            '& .MuiToggleButton-root.Mui-selected': {
-                                color: 'secondary.contrastText',
-                                bgcolor: 'secondary.main',
-                                '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
-                            },
-                        }}
-                    >
-                        <ToggleButton value="full">
-                            <Lock
-                                fontSize="small"
-                                sx={{ mr: 0.5 }}
-                            />{' '}
-                            Full
-                        </ToggleButton>
-                        <ToggleButton value="shareable">
-                            <Share
-                                fontSize="small"
-                                sx={{ mr: 0.5 }}
-                            />{' '}
-                            Shareable
-                        </ToggleButton>
-                    </ToggleButtonGroup>
+                    <Box>
+                        <Typography
+                            variant="caption"
+                            sx={{ display: 'block', mb: 0.4, color: 'text.secondary', fontWeight: 650 }}
+                        >
+                            Scope
+                        </Typography>
+                        <ToggleButtonGroup
+                            value={reportScope}
+                            exclusive
+                            onChange={(_, value: ReportScope | null) => {
+                                if (value) setReportScope(value)
+                            }}
+                            size="small"
+                            aria-label="Report scope"
+                            sx={{
+                                '& .MuiToggleButton-root': { color: 'text.secondary', borderColor: 'divider' },
+                                '& .MuiToggleButton-root.Mui-selected': {
+                                    color: 'primary.contrastText',
+                                    bgcolor: 'primary.main',
+                                    '&:hover': { color: 'primary.contrastText', bgcolor: 'primary.dark' },
+                                },
+                            }}
+                        >
+                            <ToggleButton
+                                value="my"
+                                aria-label="My activity"
+                            >
+                                <Person
+                                    fontSize="small"
+                                    sx={{ mr: 0.5 }}
+                                />
+                                My activity
+                            </ToggleButton>
+                            <ToggleButton
+                                value="organization"
+                                aria-label="Organization"
+                            >
+                                <Business
+                                    fontSize="small"
+                                    sx={{ mr: 0.5 }}
+                                />
+                                Organization
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
+                    <Box>
+                        <Typography
+                            variant="caption"
+                            sx={{ display: 'block', mb: 0.4, color: 'text.secondary', fontWeight: 650 }}
+                        >
+                            Detail
+                        </Typography>
+                        <ToggleButtonGroup
+                            value={reportMode}
+                            exclusive
+                            onChange={(_, v) => {
+                                if (v) setReportMode(v)
+                            }}
+                            size="small"
+                            aria-label="Report detail"
+                            sx={{
+                                '& .MuiToggleButton-root': { color: 'text.secondary', borderColor: 'divider' },
+                                '& .MuiToggleButton-root.Mui-selected': {
+                                    color: 'secondary.contrastText',
+                                    bgcolor: 'secondary.main',
+                                    '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
+                                },
+                            }}
+                        >
+                            <ToggleButton value="full">
+                                <Lock
+                                    fontSize="small"
+                                    sx={{ mr: 0.5 }}
+                                />{' '}
+                                Full
+                            </ToggleButton>
+                            <ToggleButton value="shareable">
+                                <Share
+                                    fontSize="small"
+                                    sx={{ mr: 0.5 }}
+                                />{' '}
+                                Shareable
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
                     {shareMode && (
                         <TextField
                             label="Min. cell size"
@@ -372,6 +429,12 @@ export function ReportPage() {
                         />
                     )}
                 </Stack>
+
+                <Typography sx={{ mb: 1.5, color: 'text.secondary', fontSize: '0.82rem' }}>
+                    {reportScope === 'my'
+                        ? 'My activity includes cases you opened and entries you recorded.'
+                        : `Organization activity combines all ombuds work${org.name ? ` at ${org.name}` : ''}.`}
+                </Typography>
 
                 {/* Mode banner */}
                 <Box

@@ -39,6 +39,7 @@
 - `PersonForm` is the reusable form body extracted from `AddPerson` — same fields, hash pipeline, salt-phrase tooltip, and save flow, but parameterized with `initialName`, `onSaved(person)`, `onCancel`. Two consumers: the `/add_person` page route (thin wrapper) and the inline dialog inside `AddEntry`. The page wrapper passes `onSaved={() => null}` and skips `onCancel` — the inline dialog passes both to close itself and stage the new person.
 - Stacked MUI dialogs work: AddEntry's PersonForm dialog sits on top of the People dialog with no special z-index handling. Snacks from `useSnack` render globally so they appear above both.
 - "Log general activity" creates or reuses one system-managed General activity container per ombuds, then opens Add Entry against it. General containers have no codes and are omitted from case/status/code reports; their entries remain in activity, time, method, and person reports. The legacy `/select_case` screen redirects to `/cases`.
+- Reports default to "My activity" and can toggle to organization-wide activity. Personal entry/person/time measures filter by `entries.ombuds_id`; personal case-opening measures filter by immutable `cases.created_by_ombuds_id`. Migration 014 backfills that field from each historical case's earliest dated entry where possible.
 
 ## Security pitfalls to keep top of mind
 

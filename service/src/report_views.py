@@ -7,6 +7,7 @@ from src.connection import get_db_connection, managed_connection
 
 report_views = Blueprint('report_views', __name__)
 logger = logging.getLogger(__name__)
+REPORT_SCOPES = {'my', 'organization'}
 
 
 def _report_date_range(args, today=None):
@@ -28,6 +29,12 @@ def _report_date_range(args, today=None):
 @report_views.route('/api/v1/reports')
 def get_reports():
     organization_id = g.organization_id
+    scope = request.args.get('scope', 'my')
+    if scope not in REPORT_SCOPES:
+        return jsonify({
+            'error': 'Input error',
+            'message': 'scope must be my or organization',
+        }), 400
     try:
         start, end = _report_date_range(request.args)
     except ValueError as exc:
@@ -36,7 +43,13 @@ def get_reports():
     try:
         with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
-                return _execute_reports(cur, organization_id, start, end)
+                return _execute_reports(
+                    cur,
+                    organization_id,
+                    start,
+                    end,
+                    ombuds_id=g.ombuds_id if scope == 'my' else None,
+                )
     except Exception:
         logger.exception('Failed to generate reports')
         return jsonify({
@@ -45,26 +58,38 @@ def get_reports():
         }), 500
 
 
-def _execute_reports(cur, organization_id, start, end):
+def _scope_filter(ombuds_id, column):
+    if ombuds_id is None:
+        return '', ()
+    return f' AND {column} = %s', (ombuds_id,)
 
-    cur.execute("""
+
+def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
+    entry_scope, entry_scope_params = _scope_filter(ombuds_id, 'ombuds_id')
+    aliased_entry_scope, aliased_entry_scope_params = _scope_filter(ombuds_id, 'e.ombuds_id')
+    case_scope, case_scope_params = _scope_filter(ombuds_id, 'created_by_ombuds_id')
+    aliased_case_scope, aliased_case_scope_params = _scope_filter(ombuds_id, 'c.created_by_ombuds_id')
+
+    cur.execute(f"""
         SELECT TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month, COUNT(*) AS count
         FROM entries
         WHERE organization_id = %s AND date >= %s AND date <= %s
+        {entry_scope}
         GROUP BY month ORDER BY month
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *entry_scope_params))
     entries_by_month = [{'month': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS month,
                COALESCE(SUM(duration), 0) AS total_minutes
         FROM entries
         WHERE organization_id = %s AND date >= %s AND date <= %s
+        {entry_scope}
         GROUP BY month ORDER BY month
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *entry_scope_params))
     duration_by_month = [{'month': r[0], 'totalMinutes': int(r[1])} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT TO_CHAR(DATE_TRUNC('month', created_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
                COUNT(*) AS count
         FROM cases
@@ -72,87 +97,95 @@ def _execute_reports(cur, organization_id, start, end):
           AND case_kind = 'standard'
           AND created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
           AND created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
+          {case_scope}
         GROUP BY month ORDER BY month
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *case_scope_params))
     cases_by_month = [{'month': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT TO_CHAR(DATE_TRUNC('month', e.date), 'YYYY-MM') AS month,
                COUNT(DISTINCT ep.person_id) AS unique_persons,
                COUNT(ep.person_id) AS total_appearances
         FROM entries e
         JOIN entry_person ep ON ep.entry_id = e.id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        {aliased_entry_scope}
         GROUP BY month ORDER BY month
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     persons_by_month = [
         {'month': r[0], 'uniquePersons': r[1], 'totalAppearances': r[2]}
         for r in cur.fetchall()
     ]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(p.race), ''), 'Not specified') AS race,
                COUNT(DISTINCT ep.person_id) AS count
         FROM entry_person ep
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        {aliased_entry_scope}
         GROUP BY race ORDER BY count DESC
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     persons_by_race = [{'race': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(medium), ''), 'Not specified') AS medium,
                COUNT(*) AS count
         FROM entries
         WHERE organization_id = %s AND date >= %s AND date <= %s
+        {entry_scope}
         GROUP BY medium ORDER BY count DESC
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *entry_scope_params))
     entries_by_medium = [{'medium': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(medium), ''), 'Not specified') AS medium,
                ROUND(AVG(duration)::numeric, 1) AS avg_minutes
         FROM entries
         WHERE organization_id = %s AND date >= %s AND date <= %s AND duration IS NOT NULL
+        {entry_scope}
         GROUP BY medium ORDER BY avg_minutes DESC
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *entry_scope_params))
     avg_duration_by_medium = [{'medium': r[0], 'avgMinutes': float(r[1])} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(p.primary_role), ''), 'Not specified') AS role,
                COUNT(DISTINCT ep.person_id) AS count
         FROM entry_person ep
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        {aliased_entry_scope}
         GROUP BY role ORDER BY count DESC
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     persons_by_role = [{'role': r[0], 'count': r[1]} for r in cur.fetchall()]
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(p.generation), ''), 'Not specified') AS generation,
                COUNT(DISTINCT ep.person_id) AS count
         FROM entry_person ep
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+        {aliased_entry_scope}
         GROUP BY generation ORDER BY count DESC
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     persons_by_generation = [{'generation': r[0], 'count': r[1]} for r in cur.fetchall()]
 
     # Cases by current status — a snapshot, not date-filtered
-    cur.execute("""
+    cur.execute(f"""
         SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
         FROM cases
         WHERE organization_id = %s
           AND case_kind = 'standard'
+          {case_scope}
         GROUP BY status ORDER BY count DESC
-    """, (organization_id,))
+    """, (organization_id, *case_scope_params))
     cases_by_status = [{'status': r[0], 'count': r[1]} for r in cur.fetchall()]
 
     # Most common codes across cases (by number of cases carrying each code)
-    cur.execute("""
+    cur.execute(f"""
         SELECT code_id::text,
                org_code.code AS code_label,
                COUNT(DISTINCT c.id) AS case_count
@@ -163,17 +196,18 @@ def _execute_reports(cur, organization_id, start, end):
           AND c.case_kind = 'standard'
           AND c.created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
           AND c.created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
+          {aliased_case_scope}
         GROUP BY code_id, org_code.code
         ORDER BY case_count DESC
         LIMIT 20
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_case_scope_params))
     codes_by_case_count = [
         {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
         for r in cur.fetchall()
     ]
 
     # Total contact time attributed to each code (sum of entry durations for cases carrying that code)
-    cur.execute("""
+    cur.execute(f"""
         SELECT code_id::text,
                org_code.code AS code_label,
                COALESCE(SUM(e.duration), 0) AS total_minutes
@@ -184,17 +218,18 @@ def _execute_reports(cur, organization_id, start, end):
         WHERE c.organization_id = %s
           AND c.case_kind = 'standard'
           AND e.date >= %s AND e.date <= %s
+          {aliased_entry_scope}
         GROUP BY code_id, org_code.code
         ORDER BY total_minutes DESC
         LIMIT 20
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     codes_by_duration = [
         {'codeId': r[0], 'codeLabel': r[1], 'totalMinutes': int(r[2])}
         for r in cur.fetchall()
     ]
 
     # Codes with the most individual entries
-    cur.execute("""
+    cur.execute(f"""
         SELECT code_id::text,
                org_code.code AS code_label,
                COUNT(e.id) AS entry_count
@@ -205,16 +240,18 @@ def _execute_reports(cur, organization_id, start, end):
         WHERE c.organization_id = %s
           AND c.case_kind = 'standard'
           AND e.date >= %s AND e.date <= %s
+          {aliased_entry_scope}
         GROUP BY code_id, org_code.code
         ORDER BY entry_count DESC
         LIMIT 20
-    """, (organization_id, start, end))
+    """, (organization_id, start, end, *aliased_entry_scope_params))
     codes_by_entry_count = [
         {'codeId': r[0], 'codeLabel': r[1], 'count': r[2]}
         for r in cur.fetchall()
     ]
 
     return jsonify({
+        'scope': 'my' if ombuds_id is not None else 'organization',
         'entriesByMonth': entries_by_month,
         'durationByMonth': duration_by_month,
         'casesByMonth': cases_by_month,

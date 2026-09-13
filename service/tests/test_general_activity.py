@@ -92,7 +92,7 @@ class GeneralActivityTests(unittest.TestCase):
         sql, params = connection.fake_cursor.executions[0]
         self.assertIn("'general'", sql)
         self.assertIn("'{}'", sql)
-        self.assertEqual(params, (ORGANIZATION_ID, OMBUDS_ID))
+        self.assertEqual(params, (ORGANIZATION_ID, OMBUDS_ID, OMBUDS_ID))
         self.assertTrue(connection.committed)
         self.assertTrue(connection.closed)
 
