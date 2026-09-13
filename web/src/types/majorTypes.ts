@@ -1,6 +1,8 @@
 export type CaseType = {
     id: string
     organizationId: string
+    caseKind?: 'standard' | 'general'
+    ownerOmbudsId?: string | null
     name: string
     description: string
     codes: string[]

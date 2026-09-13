@@ -71,6 +71,7 @@ def get_metrics():
                         COUNT(*)                                   AS total_cases
                     FROM cases
                     WHERE organization_id = %s
+                      AND case_kind = 'standard'
                 )
                 SELECT e.last_30, e.ytd, e.active_seats, c.open_cases, c.total_cases
                 FROM entry_stats e, case_stats c

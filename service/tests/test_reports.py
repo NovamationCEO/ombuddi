@@ -104,6 +104,32 @@ class ReportTests(unittest.TestCase):
         self.assertTrue(connection.fake_cursor.closed)
         self.assertTrue(connection.closed)
 
+    def test_general_containers_are_excluded_only_from_case_and_code_reports(self):
+        connection = EmptyReportConnection()
+        with app.test_request_context(
+            "/api/v1/reports?start=2026-01-02&end=2026-03-04",
+        ):
+            g.organization_id = ORGANIZATION_ID
+            with patch("src.report_views.get_db_connection", return_value=connection):
+                response = get_reports()
+
+        self.assertEqual(response.status_code, 200)
+        case_queries = [
+            sql
+            for sql, _params in connection.fake_cursor.executions
+            if "FROM cases" in sql
+        ]
+        self.assertEqual(len(case_queries), 5)
+        self.assertTrue(all("case_kind = 'standard'" in sql for sql in case_queries))
+
+        entry_only_queries = [
+            sql
+            for sql, _params in connection.fake_cursor.executions
+            if "FROM entries" in sql and "JOIN cases" not in sql
+        ]
+        self.assertGreater(len(entry_only_queries), 0)
+        self.assertTrue(all("case_kind" not in sql for sql in entry_only_queries))
+
 
 if __name__ == "__main__":
     unittest.main()

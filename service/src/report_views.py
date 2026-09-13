@@ -69,6 +69,7 @@ def _execute_reports(cur, organization_id, start, end):
                COUNT(*) AS count
         FROM cases
         WHERE organization_id = %s
+          AND case_kind = 'standard'
           AND created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
           AND created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
         GROUP BY month ORDER BY month
@@ -145,6 +146,7 @@ def _execute_reports(cur, organization_id, start, end):
         SELECT COALESCE(NULLIF(TRIM(status), ''), 'unknown') AS status, COUNT(*) AS count
         FROM cases
         WHERE organization_id = %s
+          AND case_kind = 'standard'
         GROUP BY status ORDER BY count DESC
     """, (organization_id,))
     cases_by_status = [{'status': r[0], 'count': r[1]} for r in cur.fetchall()]
@@ -158,6 +160,7 @@ def _execute_reports(cur, organization_id, start, end):
         CROSS JOIN unnest(c.codes) AS code_id
         LEFT JOIN codes org_code ON org_code.id = code_id
         WHERE c.organization_id = %s
+          AND c.case_kind = 'standard'
           AND c.created_at >= (%s::date::timestamp AT TIME ZONE 'UTC')
           AND c.created_at < ((%s::date + 1)::timestamp AT TIME ZONE 'UTC')
         GROUP BY code_id, org_code.code
@@ -178,7 +181,9 @@ def _execute_reports(cur, organization_id, start, end):
         CROSS JOIN unnest(c.codes) AS code_id
         JOIN entries e ON e.case_id = c.id
         LEFT JOIN codes org_code ON org_code.id = code_id
-        WHERE c.organization_id = %s AND e.date >= %s AND e.date <= %s
+        WHERE c.organization_id = %s
+          AND c.case_kind = 'standard'
+          AND e.date >= %s AND e.date <= %s
         GROUP BY code_id, org_code.code
         ORDER BY total_minutes DESC
         LIMIT 20
@@ -197,7 +202,9 @@ def _execute_reports(cur, organization_id, start, end):
         CROSS JOIN unnest(c.codes) AS code_id
         JOIN entries e ON e.case_id = c.id
         LEFT JOIN codes org_code ON org_code.id = code_id
-        WHERE c.organization_id = %s AND e.date >= %s AND e.date <= %s
+        WHERE c.organization_id = %s
+          AND c.case_kind = 'standard'
+          AND e.date >= %s AND e.date <= %s
         GROUP BY code_id, org_code.code
         ORDER BY entry_count DESC
         LIMIT 20

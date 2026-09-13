@@ -253,7 +253,15 @@ export function CaseSummary() {
     }
 
     const normalizedStatus = caseItem.status?.toLowerCase() as keyof typeof statusStyles
-    const status = statusStyles[normalizedStatus] ?? statusStyles.active
+    const isGeneral = caseItem.caseKind === 'general'
+    const status = isGeneral
+        ? {
+              label: 'General',
+              color: 'var(--mui-palette-primary-light)',
+              background: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',
+              border: 'rgba(var(--mui-palette-primary-mainChannel) / 0.42)',
+          }
+        : (statusStyles[normalizedStatus] ?? statusStyles.active)
 
     return (
         <Box
@@ -521,29 +529,31 @@ export function CaseSummary() {
                                 </Stack>
                             </Box>
 
-                            <Button
-                                variant="outlined"
-                                startIcon={<EditOutlined />}
-                                onClick={openEdit}
-                                sx={{
-                                    gridColumn: { xs: '1 / -1', sm: 'auto' },
-                                    justifySelf: { xs: 'stretch', sm: 'end' },
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    borderColor: 'var(--mui-palette-secondary-main)',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    fontSize: '0.78rem',
-                                    py: 0.6,
-                                    whiteSpace: 'nowrap',
-                                    '&:hover': {
+                            {!isGeneral && (
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<EditOutlined />}
+                                    onClick={openEdit}
+                                    sx={{
+                                        gridColumn: { xs: '1 / -1', sm: 'auto' },
+                                        justifySelf: { xs: 'stretch', sm: 'end' },
                                         color: 'var(--mui-palette-app-headerText)',
-                                        borderColor: 'var(--mui-palette-app-headerMuted)',
-                                        bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    },
-                                }}
-                            >
-                                Edit case details
-                            </Button>
+                                        borderColor: 'var(--mui-palette-secondary-main)',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        fontSize: '0.78rem',
+                                        py: 0.6,
+                                        whiteSpace: 'nowrap',
+                                        '&:hover': {
+                                            color: 'var(--mui-palette-app-headerText)',
+                                            borderColor: 'var(--mui-palette-app-headerMuted)',
+                                            bgcolor: 'var(--mui-palette-app-headerHover)',
+                                        },
+                                    }}
+                                >
+                                    Edit case details
+                                </Button>
+                            )}
                         </Box>
 
                         <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
@@ -575,11 +585,24 @@ export function CaseSummary() {
                             >
                                 Codes
                             </Typography>
-                            {caseItem.codes?.length ? (
-                                <CaseCodeTooltip codes={resolvedCaseCodes} placement="top-start">
+                            {isGeneral ? (
+                                <Typography
+                                    variant="body2"
+                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
+                                >
+                                    Not used for general activity
+                                </Typography>
+                            ) : caseItem.codes?.length ? (
+                                <CaseCodeTooltip
+                                    codes={resolvedCaseCodes}
+                                    placement="top-start"
+                                >
                                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                                         {resolvedCaseCodes.map((code) => (
-                                            <Chip key={code.id} label={code.shortName} />
+                                            <Chip
+                                                key={code.id}
+                                                label={code.shortName}
+                                            />
                                         ))}
                                     </Box>
                                 </CaseCodeTooltip>
@@ -591,26 +614,28 @@ export function CaseSummary() {
                                     No codes assigned
                                 </Typography>
                             )}
-                            <Button
-                                startIcon={<EditOutlined />}
-                                onClick={() => setShowEditCodes(true)}
-                                sx={{
-                                    ml: { xs: 0, sm: 'auto' },
-                                    px: 0.75,
-                                    py: 0.35,
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    textTransform: 'none',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                    '&:hover': {
+                            {!isGeneral && (
+                                <Button
+                                    startIcon={<EditOutlined />}
+                                    onClick={() => setShowEditCodes(true)}
+                                    sx={{
+                                        ml: { xs: 0, sm: 'auto' },
+                                        px: 0.75,
+                                        py: 0.35,
                                         color: 'var(--mui-palette-app-headerText)',
-                                        bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    },
-                                }}
-                            >
-                                Manage codes
-                            </Button>
+                                        textTransform: 'none',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap',
+                                        '&:hover': {
+                                            color: 'var(--mui-palette-app-headerText)',
+                                            bgcolor: 'var(--mui-palette-app-headerHover)',
+                                        },
+                                    }}
+                                >
+                                    Manage codes
+                                </Button>
+                            )}
                         </Box>
 
                         <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from flask import Blueprint, request, g, jsonify
 from connection import get_db_connection, managed_connection
-from utils import add_one, get_many, get_one, update_one
+from utils import add_one, get_many, get_one, return_one, update_one
 
 ombuddi_views = Blueprint('ombuddi_views', __name__)
 logger = logging.getLogger(__name__)
@@ -111,6 +111,8 @@ def _reject_foreign_code_references(code_ids):
 case_model = {
     'id': 'id',
     'organizationId': 'organization_id',
+    'caseKind': 'case_kind',
+    'ownerOmbudsId': 'owner_ombuds_id',
     'name': 'name',
     'description': 'description',
     'codes': 'codes',
@@ -118,6 +120,8 @@ case_model = {
     'createdAt': 'created_at',
     'updatedAt': 'updated_at',
 }
+
+CASE_SELECT_COLUMNS = ', '.join(case_model.values())
 
 
 def _referral_input_error(message):
@@ -364,13 +368,86 @@ def update_case_referral_sources():
 def get_case_by_id(id):
     return get_one('cases', case_model, {'id': id}, owner_constraint=_org())
 
+
+@ombuddi_views.route('/api/v1/get_general_activity_case')
+def get_general_activity_case():
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT {CASE_SELECT_COLUMNS}
+                    FROM cases
+                    WHERE organization_id = %s
+                      AND owner_ombuds_id = %s
+                      AND case_kind = 'general'
+                    """,
+                    (g.organization_id, g.ombuds_id),
+                )
+                row = cur.fetchone()
+        return jsonify(None) if row is None else return_one(case_model, row)
+    except Exception:
+        logger.exception('Failed to load General activity case')
+        return jsonify({
+            'error': 'Database error',
+            'message': 'Unable to load General activity',
+        }), 500
+
+
+@ombuddi_views.route('/api/v1/general_activity_case', methods=['POST'])
+def ensure_general_activity_case():
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO cases (
+                        organization_id, case_kind, owner_ombuds_id,
+                        name, description, codes, status
+                    ) VALUES (%s, 'general', %s, 'General activity', '', '{}', 'active')
+                    ON CONFLICT (owner_ombuds_id) WHERE case_kind = 'general'
+                    DO NOTHING
+                    RETURNING id
+                    """,
+                    (g.organization_id, g.ombuds_id),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    cur.execute(
+                        """
+                        SELECT id FROM cases
+                        WHERE organization_id = %s
+                          AND owner_ombuds_id = %s
+                          AND case_kind = 'general'
+                        """,
+                        (g.organization_id, g.ombuds_id),
+                    )
+                    row = cur.fetchone()
+        return jsonify({'success': True, 'status': 'success', 'id': row[0]}), 200
+    except Exception:
+        logger.exception('Failed to create General activity case')
+        return jsonify({
+            'error': 'Database error',
+            'message': 'Unable to open General activity',
+        }), 500
+
 @ombuddi_views.route('/api/v1/get_all_cases')
 def get_all_cases():
-    return get_many('cases', case_model, {'status': 'active'}, owner_constraint=_org())
+    return get_many(
+        'cases',
+        case_model,
+        {'status': 'active', 'case_kind': 'standard'},
+        owner_constraint=_org(),
+    )
 
 @ombuddi_views.route('/api/v1/get_cases_by_status/<status>')
 def get_cases_by_status(status):
-    return get_many('cases', case_model, {'status': status}, owner_constraint=_org())
+    return get_many(
+        'cases',
+        case_model,
+        {'status': status, 'case_kind': 'standard'},
+        owner_constraint=_org(),
+    )
 
 @ombuddi_views.route('/api/v1/update_case', methods=['PUT'])
 def update_case():
@@ -379,7 +456,13 @@ def update_case():
         error = _reject_foreign_code_references(payload.get('codes'))
         if error:
             return error
-    return update_one('cases', case_model, request, owner_constraint=_org())
+    return update_one(
+        'cases',
+        case_model,
+        request,
+        owner_constraint={**_org(), 'case_kind': 'standard'},
+        immutable_columns={'case_kind', 'owner_ombuds_id'},
+    )
 
 
 organization_model = {

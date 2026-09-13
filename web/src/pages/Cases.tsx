@@ -1,17 +1,43 @@
 import { Add, Commit } from '@mui/icons-material'
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CaseCard } from '../components/LoadAllCases/CaseCard'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useGetter } from '../tools/db_tools/useGetter'
 import { CaseType } from '../types/majorTypes'
+import { creator } from '../tools/db_tools/creator'
+import { useSnack } from '../libraries/useSnack'
 
 export function Cases() {
     const navigate = useNavigate()
     const activeRes = useGetter<CaseType[]>(['get_cases_by_status', 'active'])
+    const generalRes = useGetter<CaseType | null>(['get_general_activity_case'])
     const monitoringRes = useGetter<CaseType[]>(['get_cases_by_status', 'monitoring'])
     const closedRes = useGetter<CaseType[]>(['get_cases_by_status', 'closed'])
-    const cases = [...(activeRes.data ?? []), ...(monitoringRes.data ?? []), ...(closedRes.data ?? [])]
+    const setSnack = useSnack((state) => state.setSnack)
+    const [openingGeneral, setOpeningGeneral] = React.useState(false)
+    const cases = [
+        ...(activeRes.data ?? []),
+        ...(generalRes.data ? [generalRes.data] : []),
+        ...(monitoringRes.data ?? []),
+        ...(closedRes.data ?? []),
+    ]
+
+    async function logGeneralActivity() {
+        if (openingGeneral) return
+        setOpeningGeneral(true)
+        try {
+            const general = await creator<{ id: string }>('general_activity_case', {})
+            navigate(`/case/${general.id}/add_entry`)
+        } catch (error) {
+            setSnack({
+                message: error instanceof Error ? error.message : 'Unable to open General activity.',
+                severity: 'error',
+            })
+            setOpeningGeneral(false)
+        }
+    }
 
     return (
         <Box
@@ -61,7 +87,8 @@ export function Cases() {
                         <Button
                             variant="outlined"
                             startIcon={<Commit />}
-                            onClick={() => navigate('/log_without_case')}
+                            onClick={() => void logGeneralActivity()}
+                            disabled={openingGeneral}
                             sx={{
                                 color: palette.purpleLight,
                                 borderColor: 'primary.light',
@@ -71,7 +98,18 @@ export function Cases() {
                                 },
                             }}
                         >
-                            Log without case
+                            {openingGeneral ? (
+                                <>
+                                    <CircularProgress
+                                        size={15}
+                                        color="inherit"
+                                        sx={{ mr: 0.75 }}
+                                    />
+                                    Opening…
+                                </>
+                            ) : (
+                                'Log general activity'
+                            )}
                         </Button>
                         <Button
                             variant="contained"
@@ -103,26 +141,30 @@ export function Cases() {
                     ))}
                 </Box>
 
-                {!cases.length && activeRes.data && monitoringRes.data && closedRes.data && (
-                    <Box
-                        sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            color: palette.muted,
-                            bgcolor: palette.surface,
-                            border: `1px solid ${palette.border}`,
-                            borderRadius: 3,
-                        }}
-                    >
-                        <Typography
-                            variant="h6"
-                            sx={{ color: palette.text, mb: 0.75 }}
+                {!cases.length &&
+                    activeRes.data &&
+                    generalRes.data !== undefined &&
+                    monitoringRes.data &&
+                    closedRes.data && (
+                        <Box
+                            sx={{
+                                p: 4,
+                                textAlign: 'center',
+                                color: palette.muted,
+                                bgcolor: palette.surface,
+                                border: `1px solid ${palette.border}`,
+                                borderRadius: 3,
+                            }}
                         >
-                            No cases yet
-                        </Typography>
-                        <Typography>Create a case when you are ready to begin recording work.</Typography>
-                    </Box>
-                )}
+                            <Typography
+                                variant="h6"
+                                sx={{ color: palette.text, mb: 0.75 }}
+                            >
+                                No cases yet
+                            </Typography>
+                            <Typography>Create a case when you are ready to begin recording work.</Typography>
+                        </Box>
+                    )}
             </Box>
         </Box>
     )

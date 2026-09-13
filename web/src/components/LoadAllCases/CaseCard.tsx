@@ -61,8 +61,16 @@ function CaseDescriptionPreview({ caseItem }: { caseItem: CaseType }) {
 
 export function CaseCard({ caseItem }: { caseItem: CaseType }) {
     const navigate = useNavigate()
+    const isGeneral = caseItem.caseKind === 'general'
     const normalizedStatus = caseItem.status?.toLowerCase() as keyof typeof statusStyles
-    const status = statusStyles[normalizedStatus] ?? statusStyles.active
+    const status = isGeneral
+        ? {
+              label: 'General',
+              accent: palette.purpleLight,
+              color: palette.purpleLight,
+              background: 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)',
+          }
+        : (statusStyles[normalizedStatus] ?? statusStyles.active)
 
     return (
         <CaseCardWrapper
@@ -124,9 +132,18 @@ export function CaseCard({ caseItem }: { caseItem: CaseType }) {
                     >
                         {caseItem.name}
                     </Typography>
-                    {caseItem.description && <CaseDescriptionPreview caseItem={caseItem} />}
+                    {isGeneral ? (
+                        <Typography
+                            variant="body2"
+                            sx={{ color: palette.muted }}
+                        >
+                            One-off and cross-cutting activity not assigned to a case.
+                        </Typography>
+                    ) : (
+                        caseItem.description && <CaseDescriptionPreview caseItem={caseItem} />
+                    )}
 
-                    {!!caseItem.codes?.length && <CaseCodeRow codeIds={caseItem.codes} />}
+                    {!isGeneral && !!caseItem.codes?.length && <CaseCodeRow codeIds={caseItem.codes} />}
                 </Box>
 
                 <Box

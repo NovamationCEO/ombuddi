@@ -327,17 +327,34 @@ FOR EACH ROW EXECUTE FUNCTION seed_universal_referral_sources();
 CREATE TABLE cases (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    case_kind       TEXT NOT NULL DEFAULT 'standard',
+    owner_ombuds_id UUID,
     name            TEXT NOT NULL,
     description     TEXT NOT NULL DEFAULT '',
     codes           UUID[] NOT NULL DEFAULT '{}',   -- references codes.id; not enforced by FK because arrays
     status          TEXT NOT NULL DEFAULT 'active',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT cases_kind_owner_check CHECK (
+        (case_kind = 'standard' AND owner_ombuds_id IS NULL)
+        OR (case_kind = 'general' AND owner_ombuds_id IS NOT NULL)
+    ),
+    CONSTRAINT cases_general_codes_empty_check CHECK (
+        case_kind <> 'general' OR cardinality(codes) = 0
+    ),
+    CONSTRAINT cases_owner_ombuds_organization_fk
+        FOREIGN KEY (owner_ombuds_id, organization_id)
+        REFERENCES ombuds (id, organization_id)
+        ON DELETE RESTRICT
 );
 
 CREATE INDEX cases_organization_id_idx ON cases (organization_id);
 CREATE UNIQUE INDEX cases_id_organization_id_uidx
     ON cases (id, organization_id);
+CREATE UNIQUE INDEX cases_general_owner_uidx
+    ON cases (owner_ombuds_id)
+    WHERE case_kind = 'general';
+CREATE INDEX cases_kind_idx ON cases (case_kind);
 
 CREATE TRIGGER cases_set_updated_at
     BEFORE UPDATE ON cases
