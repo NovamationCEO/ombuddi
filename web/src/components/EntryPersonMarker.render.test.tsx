@@ -118,6 +118,7 @@ describe('EntryPersonMarker interaction', () => {
         expect(inputs.every((input) => input.hasAttribute('data-1p-ignore'))).toBe(true)
         expect(inputs.every((input) => input.hasAttribute('data-op-ignore'))).toBe(true)
         expect(inputs[1].value).toBe('shared phrase')
+        expect(document.body.textContent).not.toContain('Change this person’s phrase')
 
         await act(async () => {
             const valueSetter = Object.getOwnPropertyDescriptor(
@@ -144,6 +145,8 @@ describe('EntryPersonMarker interaction', () => {
     })
 
     it('changes a private phrase only through the verification endpoint', async () => {
+        useSessionSalt.getState().setSessionSalt('old phrase')
+        useVerifiedPersonNames.getState().setVerifiedName(person.id, 'Jordan Lee')
         updaterMock.mockResolvedValue({ success: true })
 
         const container = document.createElement('div')
@@ -164,16 +167,11 @@ describe('EntryPersonMarker interaction', () => {
             })
         }
 
-        let textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')]
-        await setValue(textInputs[0], 'Jordan Lee')
-        await setValue(textInputs[1], 'old phrase')
-
-        const checkbox = document.body.querySelector<HTMLInputElement>('input[type="checkbox"]')
-        await act(async () => checkbox?.click())
-
-        textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])')]
+        const textInputs = [...document.body.querySelectorAll<HTMLInputElement>('input')]
+        expect(textInputs).toHaveLength(3)
+        expect(textInputs[0].value).toBe('old phrase')
+        await setValue(textInputs[1], 'new phrase')
         await setValue(textInputs[2], 'new phrase')
-        await setValue(textInputs[3], 'new phrase')
 
         const form = document.body.querySelector('form')
         await act(async () => {
@@ -188,6 +186,28 @@ describe('EntryPersonMarker interaction', () => {
             newHashedName: hashPersonName('Jordan Lee', 'new phrase', person.organizationId),
         })
         expect(container.textContent).toContain('Jordan Lee')
+
+        await act(async () => root.unmount())
+    })
+
+    it('does nothing when a public avatar is double-clicked', async () => {
+        const container = document.createElement('div')
+        document.body.append(container)
+        const root = createRoot(container)
+        await act(async () =>
+            root.render(
+                <EntryPersonMarker
+                    person={{ ...person, id: 'public-1', isPublic: true, publicName: 'Public Person' }}
+                />,
+            ),
+        )
+
+        const marker = container.querySelector('[tabindex="0"]')
+        await act(async () => {
+            marker?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))
+        })
+
+        expect(document.body.querySelector('[role="dialog"]')).toBeNull()
 
         await act(async () => root.unmount())
     })

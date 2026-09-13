@@ -2,12 +2,10 @@ import {
     Box,
     Button,
     CircularProgress,
-    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
-    FormControlLabel,
     Stack,
     TextField,
     Tooltip,
@@ -68,7 +66,9 @@ function PersonDetails({ person, displayName }: { person: PersonType; displayNam
                     variant="caption"
                     sx={{ display: 'block', color: 'text.secondary', mt: 1 }}
                 >
-                    Double-click the avatar to verify its name.
+                    {displayName
+                        ? 'Name verified for this browser session. Double-click the avatar to change its phrase.'
+                        : 'Double-click the avatar to verify its name.'}
                 </Typography>
             )}
         </Box>
@@ -85,9 +85,12 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
     const [phraseDraft, setPhraseDraft] = React.useState('')
     const [error, setError] = React.useState('')
     const [isVerifying, setIsVerifying] = React.useState(false)
-    const [changePhrase, setChangePhrase] = React.useState(false)
+    const [phraseChangeOpen, setPhraseChangeOpen] = React.useState(false)
+    const [currentPhraseDraft, setCurrentPhraseDraft] = React.useState('')
     const [newPhraseDraft, setNewPhraseDraft] = React.useState('')
     const [confirmPhraseDraft, setConfirmPhraseDraft] = React.useState('')
+    const [phraseChangeError, setPhraseChangeError] = React.useState('')
+    const [isChangingPhrase, setIsChangingPhrase] = React.useState(false)
 
     const publicName = person.isPublic ? personDisplayLabel(person) : undefined
     const displayName = publicName === 'Person details' ? undefined : publicName || verifiedName
@@ -95,12 +98,17 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
 
     function openVerification() {
         if (person.isPublic) return
+        if (verifiedName) {
+            setCurrentPhraseDraft(sessionSalt || '')
+            setNewPhraseDraft('')
+            setConfirmPhraseDraft('')
+            setPhraseChangeError('')
+            setPhraseChangeOpen(true)
+            return
+        }
         setNameDraft(verifiedName || '')
         setPhraseDraft(sessionSalt || '')
         setError('')
-        setChangePhrase(false)
-        setNewPhraseDraft('')
-        setConfirmPhraseDraft('')
         setVerifyOpen(true)
     }
 
@@ -110,9 +118,15 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
         setNameDraft('')
         setPhraseDraft('')
         setError('')
-        setChangePhrase(false)
+    }
+
+    function closePhraseChange() {
+        if (isChangingPhrase) return
+        setPhraseChangeOpen(false)
+        setCurrentPhraseDraft('')
         setNewPhraseDraft('')
         setConfirmPhraseDraft('')
+        setPhraseChangeError('')
     }
 
     async function verifyPerson(event: React.FormEvent) {
@@ -122,45 +136,57 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
             setError('Enter the name you want to verify.')
             return
         }
-        if (changePhrase && !newPhraseDraft) {
-            setError('Enter a new phrase.')
-            return
-        }
-        if (changePhrase && newPhraseDraft !== confirmPhraseDraft) {
-            setError('The new phrases do not match.')
-            return
-        }
-
         setIsVerifying(true)
         setError('')
         try {
             const hash = hashPersonName(nameDraft, phraseDraft, person.organizationId)
-            if (changePhrase) {
-                const newHash = hashPersonName(nameDraft, newPhraseDraft, person.organizationId)
-                await updater('change_person_name_phrase', {
-                    id: person.id,
-                    currentHashedName: hash,
-                    newHashedName: newHash,
-                })
-                setSnack({ message: 'The person phrase was changed.', severity: 'success' })
-            } else {
-                const matches = await getter<PersonType[]>(`get_persons_by_hashed_name/${hash}`)
-                if (!matches.some((match) => match.id === person.id)) {
-                    setError('That name and phrase do not match this person.')
-                    return
-                }
+            const matches = await getter<PersonType[]>(`get_persons_by_hashed_name/${hash}`)
+            if (!matches.some((match) => match.id === person.id)) {
+                setError('That name and phrase do not match this person.')
+                return
             }
             setVerifiedName(person.id, candidateName)
             setVerifyOpen(false)
             setNameDraft('')
             setPhraseDraft('')
-            setChangePhrase(false)
-            setNewPhraseDraft('')
-            setConfirmPhraseDraft('')
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : 'The name could not be verified. Please try again.')
         } finally {
             setIsVerifying(false)
+        }
+    }
+
+    async function changePersonPhrase(event: React.FormEvent) {
+        event.preventDefault()
+        if (!verifiedName) return
+        if (!newPhraseDraft) {
+            setPhraseChangeError('Enter a new phrase.')
+            return
+        }
+        if (newPhraseDraft !== confirmPhraseDraft) {
+            setPhraseChangeError('The new phrases do not match.')
+            return
+        }
+
+        setIsChangingPhrase(true)
+        setPhraseChangeError('')
+        try {
+            await updater('change_person_name_phrase', {
+                id: person.id,
+                currentHashedName: hashPersonName(verifiedName, currentPhraseDraft, person.organizationId),
+                newHashedName: hashPersonName(verifiedName, newPhraseDraft, person.organizationId),
+            })
+            setPhraseChangeOpen(false)
+            setCurrentPhraseDraft('')
+            setNewPhraseDraft('')
+            setConfirmPhraseDraft('')
+            setSnack({ message: 'The person phrase was changed.', severity: 'success' })
+        } catch (caught) {
+            setPhraseChangeError(
+                caught instanceof Error ? caught.message : 'The person phrase could not be changed. Please try again.',
+            )
+        } finally {
+            setIsChangingPhrase(false)
         }
     }
 
@@ -181,7 +207,7 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                     arrow
                     enterDelay={250}
                     describeChild
-                    disableHoverListener={verifyOpen}
+                    disableHoverListener={verifyOpen || phraseChangeOpen}
                     slotProps={{
                         tooltip: {
                             sx: {
@@ -199,7 +225,11 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                         component="span"
                         tabIndex={0}
                         aria-label={`${label}. Hover or focus for person details.${
-                            person.isPublic ? '' : ' Double-click or press Enter to verify the name.'
+                            person.isPublic
+                                ? ''
+                                : verifiedName
+                                  ? ' Double-click or press Enter to change the phrase.'
+                                  : ' Double-click or press Enter to verify the name.'
                         }`}
                         onDoubleClick={(event) => {
                             event.stopPropagation()
@@ -239,20 +269,29 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                     </Box>
                 </Tooltip>
                 {displayName && (
-                    <Typography
-                        variant="caption"
+                    <Box
                         sx={{
-                            maxWidth: 104,
                             mt: 0.3,
                             color: 'inherit',
-                            fontSize: '0.64rem',
-                            lineHeight: 1.1,
-                            textAlign: 'center',
-                            overflowWrap: 'anywhere',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'center',
+                            maxWidth: 124,
                         }}
                     >
-                        {displayName}
-                    </Typography>
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: 'inherit',
+                                fontSize: '0.64rem',
+                                lineHeight: 1.1,
+                                textAlign: 'center',
+                                overflowWrap: 'anywhere',
+                            }}
+                        >
+                            {displayName}
+                        </Typography>
+                    </Box>
                 )}
             </Box>
 
@@ -289,7 +328,7 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                                 }}
                             />
                             <TextField
-                                label={changePhrase ? 'Current phrase' : 'Phrase'}
+                                label="Phrase"
                                 type="password"
                                 value={phraseDraft}
                                 onChange={(event) => {
@@ -306,56 +345,6 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                                     },
                                 }}
                             />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={changePhrase}
-                                        onChange={(event) => {
-                                            setChangePhrase(event.target.checked)
-                                            setError('')
-                                        }}
-                                    />
-                                }
-                                label="Change this person’s phrase after verification"
-                            />
-                            {changePhrase && (
-                                <Stack spacing={1.5}>
-                                    <TextField
-                                        label="New phrase"
-                                        type="password"
-                                        value={newPhraseDraft}
-                                        onChange={(event) => {
-                                            setNewPhraseDraft(event.target.value)
-                                            setError('')
-                                        }}
-                                        autoComplete="off"
-                                        fullWidth
-                                        slotProps={{
-                                            htmlInput: {
-                                                'data-1p-ignore': '',
-                                                'data-op-ignore': '',
-                                            },
-                                        }}
-                                    />
-                                    <TextField
-                                        label="Confirm new phrase"
-                                        type="password"
-                                        value={confirmPhraseDraft}
-                                        onChange={(event) => {
-                                            setConfirmPhraseDraft(event.target.value)
-                                            setError('')
-                                        }}
-                                        autoComplete="off"
-                                        fullWidth
-                                        slotProps={{
-                                            htmlInput: {
-                                                'data-1p-ignore': '',
-                                                'data-op-ignore': '',
-                                            },
-                                        }}
-                                    />
-                                </Stack>
-                            )}
                             {error && (
                                 <Typography role="alert" variant="body2" color="error">
                                     {error}
@@ -368,13 +357,97 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                             Cancel
                         </Button>
                         <Button type="submit" variant="contained" disabled={isVerifying || !nameDraft.trim()}>
-                            {isVerifying ? (
-                                <CircularProgress size={20} />
-                            ) : changePhrase ? (
-                                'Verify and change phrase'
-                            ) : (
-                                'Verify'
+                            {isVerifying ? <CircularProgress size={20} /> : 'Verify'}
+                        </Button>
+                    </DialogActions>
+                </Box>
+            </Dialog>
+
+            <Dialog
+                open={phraseChangeOpen}
+                onClose={closePhraseChange}
+                fullWidth
+                maxWidth="xs"
+                aria-labelledby={`change-person-phrase-${person.id}`}
+            >
+                <Box component="form" onSubmit={changePersonPhrase}>
+                    <DialogTitle id={`change-person-phrase-${person.id}`}>Change person phrase</DialogTitle>
+                    <DialogContent>
+                        <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                                Enter the current phrase for {verifiedName}. The stored lookup hash
+                                changes only if the current name and phrase match.
+                            </Typography>
+                            <TextField
+                                label="Current phrase"
+                                type="password"
+                                value={currentPhraseDraft}
+                                onChange={(event) => {
+                                    setCurrentPhraseDraft(event.target.value)
+                                    setPhraseChangeError('')
+                                }}
+                                autoComplete="off"
+                                helperText="Leave blank only if no phrase was used."
+                                autoFocus
+                                fullWidth
+                                slotProps={{
+                                    htmlInput: {
+                                        'data-1p-ignore': '',
+                                        'data-op-ignore': '',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                label="New phrase"
+                                type="password"
+                                value={newPhraseDraft}
+                                onChange={(event) => {
+                                    setNewPhraseDraft(event.target.value)
+                                    setPhraseChangeError('')
+                                }}
+                                autoComplete="off"
+                                fullWidth
+                                slotProps={{
+                                    htmlInput: {
+                                        'data-1p-ignore': '',
+                                        'data-op-ignore': '',
+                                    },
+                                }}
+                            />
+                            <TextField
+                                label="Confirm new phrase"
+                                type="password"
+                                value={confirmPhraseDraft}
+                                onChange={(event) => {
+                                    setConfirmPhraseDraft(event.target.value)
+                                    setPhraseChangeError('')
+                                }}
+                                autoComplete="off"
+                                fullWidth
+                                slotProps={{
+                                    htmlInput: {
+                                        'data-1p-ignore': '',
+                                        'data-op-ignore': '',
+                                    },
+                                }}
+                            />
+                            {phraseChangeError && (
+                                <Typography role="alert" variant="body2" color="error">
+                                    {phraseChangeError}
+                                </Typography>
                             )}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                        <Button onClick={closePhraseChange} disabled={isChangingPhrase}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={isChangingPhrase || !newPhraseDraft || !confirmPhraseDraft}
+                        >
+                            {isChangingPhrase ? <CircularProgress size={20} /> : 'Change phrase'}
                         </Button>
                     </DialogActions>
                 </Box>

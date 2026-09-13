@@ -1,5 +1,5 @@
 import { Person } from '@mui/icons-material'
-import { Popper, Grow, Paper, ClickAwayListener, MenuList, MenuItem } from '@mui/material'
+import { ClickAwayListener, Divider, Grow, MenuItem, MenuList, Paper, Popper, Typography } from '@mui/material'
 import type { PopperPlacementType } from '@mui/material'
 import { Box } from '@mui/system'
 import { useAuth0 } from '@auth0/auth0-react'
@@ -8,6 +8,7 @@ import { RoundButton } from '../trusted-components/RoundButton'
 import { zIndex } from '../constants/zIndex'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { useVerifiedPersonNames } from '../libraries/useVerifiedPersonNames'
+import { versionNumber } from '../../versionNumber'
 
 export function AccountButton({ placement = 'bottom-end' }: { placement?: PopperPlacementType }) {
     const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null)
@@ -74,6 +75,19 @@ export function AccountButton({ placement = 'bottom-end' }: { placement?: Popper
                                             </>
                                         )}
                                     </MenuList>
+                                    <Divider />
+                                    <Box
+                                        aria-label={`Ombuddi version ${versionNumber}`}
+                                        onClick={(event) => event.stopPropagation()}
+                                        sx={{ px: 2, py: 0.75, userSelect: 'none' }}
+                                    >
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ display: 'block', color: 'text.disabled', fontSize: '0.66rem' }}
+                                        >
+                                            Ombuddi v{versionNumber}
+                                        </Typography>
+                                    </Box>
                                 </Box>
                             </ClickAwayListener>
                         </Paper>
