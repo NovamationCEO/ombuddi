@@ -1,4 +1,4 @@
-import { pageLayoutStyle, pageTitleStyle } from '../../theme/pageLayout'
+import { pageLayoutStyle, pageTitleStyle, pageContentStyle } from '../../theme/pageLayout'
 import { Box, Stack, Typography } from '@mui/material'
 import { PersonForm } from './PersonForm'
 
@@ -18,7 +18,9 @@ export function AddPerson() {
                 >
                     Add Person
                 </Typography>
-                <PersonForm onSaved={() => null} />
+                <Box sx={pageContentStyle}>
+                    <PersonForm onSaved={() => null} />
+                </Box>
             </Stack>
         </Box>
     )

@@ -2,12 +2,17 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
-import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
+import { InvitationDelivery } from './InvitationDelivery'
+import { invitationSeverity, type EmailDelivery } from './invitationDeliveryUtils'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('Invitation delivery feedback', () => {
     it.each([
-        [{ status: 'failed', reason: 'token_refresh_busy' }, 'creating a replacement revokes the previous link', 'warning'],
+        [
+            { status: 'failed', reason: 'token_refresh_busy' },
+            'creating a replacement revokes the previous link',
+            'warning',
+        ],
         [undefined, 'status unavailable', 'warning'],
         [{ status: 'not_configured' }, 'sending is disabled', 'warning'],
         [{ status: 'started' }, 'If no later outcome appears', 'warning'],
@@ -19,7 +24,7 @@ describe('Invitation delivery feedback', () => {
         [{ status: 'rejected', reason: 'provider_rejected', httpStatus: 403 }, 'HTTP 403', 'warning'],
         [{ status: 'accepted', auditWarning: 'outcome_not_saved' }, 'final email status could not be saved', 'warning'],
     ] as const)('shows accurate feedback for %j', async (input, expected, severity) => {
-        const delivery = input ? { sender: 'admin@ombuddi.com', ...input } as EmailDelivery : undefined
+        const delivery = input ? ({ sender: 'admin@ombuddi.com', ...input } as EmailDelivery) : undefined
         const container = document.createElement('div')
         const root = createRoot(container)
         await act(async () => root.render(<InvitationDelivery delivery={delivery} />))

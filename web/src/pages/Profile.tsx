@@ -1,4 +1,4 @@
-import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
+import { pageLayoutStyle, pageTitleStyle, pageContentStyle } from '../theme/pageLayout'
 import { DarkModeOutlined, LightModeOutlined, LockOutlined } from '@mui/icons-material'
 import {
     Alert,
@@ -101,201 +101,206 @@ export function Profile() {
                     </Typography>
                 </Box>
 
-                <RoundedContainer title="Personal information">
-                    <Stack spacing={2}>
-                        {profileLoadError && (
-                            <Alert
-                                severity="error"
-                                action={
-                                    <Button
-                                        color="inherit"
-                                        size="small"
-                                        onClick={() => {
-                                            void ombudsRes.refetch()
-                                            void organizationRes.refetch()
-                                        }}
-                                    >
-                                        Retry
-                                    </Button>
+                <Stack
+                    spacing={2.5}
+                    sx={pageContentStyle}
+                >
+                    <RoundedContainer title="Personal information">
+                        <Stack spacing={2}>
+                            {profileLoadError && (
+                                <Alert
+                                    severity="error"
+                                    action={
+                                        <Button
+                                            color="inherit"
+                                            size="small"
+                                            onClick={() => {
+                                                void ombudsRes.refetch()
+                                                void organizationRes.refetch()
+                                            }}
+                                        >
+                                            Retry
+                                        </Button>
+                                    }
+                                >
+                                    Ombuddi could not load your linked user or organization. Check Account Diagnostics
+                                    for the specific account status.
+                                </Alert>
+                            )}
+                            <TextField
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                                label="Name"
+                                helperText="Initially set by your administrator; you can update it here."
+                                fullWidth
+                                disabled={ombudsRes.isLoading || !ombudsRes.data}
+                                slotProps={{ htmlInput: { maxLength: 200 } }}
+                                sx={{
+                                    '& .MuiInputLabel-root': { color: 'text.secondary' },
+                                    '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
+                                }}
+                            />
+                            <Button
+                                variant="contained"
+                                onClick={() => void saveName()}
+                                disabled={
+                                    savingName || !ombudsRes.data || !name.trim() || name.trim() === ombudsRes.data.name
                                 }
+                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
                             >
-                                Ombuddi could not load your linked user or organization. Check Account Diagnostics for
-                                the specific account status.
-                            </Alert>
-                        )}
-                        <TextField
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            label="Name"
-                            helperText="Initially set by your administrator; you can update it here."
-                            fullWidth
-                            disabled={ombudsRes.isLoading || !ombudsRes.data}
-                            slotProps={{ htmlInput: { maxLength: 200 } }}
-                            sx={{
-                                '& .MuiInputLabel-root': { color: 'text.secondary' },
-                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
-                            }}
-                        />
-                        <Button
-                            variant="contained"
-                            onClick={() => void saveName()}
-                            disabled={
-                                savingName || !ombudsRes.data || !name.trim() || name.trim() === ombudsRes.data.name
-                            }
-                            sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
-                        >
-                            {savingName ? 'Saving…' : 'Save name'}
-                        </Button>
+                                {savingName ? 'Saving…' : 'Save name'}
+                            </Button>
 
+                            <Box
+                                sx={{
+                                    p: 1.75,
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 2,
+                                    bgcolor: 'background.default',
+                                }}
+                            >
+                                <Typography
+                                    component="h3"
+                                    sx={{ color: 'text.secondary', fontSize: '0.78rem', fontWeight: 600, mb: 0.5 }}
+                                >
+                                    Organization
+                                </Typography>
+                                {organizationRes.isLoading ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CircularProgress size={16} />
+                                        <Typography sx={{ color: 'text.secondary' }}>Loading organization…</Typography>
+                                    </Box>
+                                ) : (
+                                    <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
+                                        {organizationRes.data?.name || 'Organization unavailable'}
+                                    </Typography>
+                                )}
+                                <Typography sx={{ mt: 0.5, color: 'text.secondary', fontSize: '0.78rem' }}>
+                                    Your invitation determines which organization you can access.
+                                </Typography>
+                            </Box>
+                        </Stack>
+                    </RoundedContainer>
+
+                    <RoundedContainer title="Appearance">
                         <Box
                             sx={{
-                                p: 1.75,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 2,
-                                bgcolor: 'background.default',
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 3,
+                                '& > .MuiStack-root': { flex: '1 1 320px', minWidth: 0 },
+                                '& .MuiToggleButtonGroup-root': { width: '100%', mt: 'auto' },
+                                '& .MuiToggleButton-root': { flex: 1, minWidth: 0, minHeight: 58, gap: 1, px: 1 },
                             }}
                         >
-                            <Typography
-                                component="h3"
-                                sx={{ color: 'text.secondary', fontSize: '0.78rem', fontWeight: 600, mb: 0.5 }}
-                            >
-                                Organization
-                            </Typography>
-                            {organizationRes.isLoading ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CircularProgress size={16} />
-                                    <Typography sx={{ color: 'text.secondary' }}>Loading organization…</Typography>
-                                </Box>
-                            ) : (
-                                <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
-                                    {organizationRes.data?.name || 'Organization unavailable'}
+                            <Stack spacing={1.25}>
+                                <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>Color theme</Typography>
+                                <Typography sx={{ color: 'text.secondary' }}>
+                                    Choose the color theme used on signed-in pages.
                                 </Typography>
-                            )}
-                            <Typography sx={{ mt: 0.5, color: 'text.secondary', fontSize: '0.78rem' }}>
-                                Your invitation determines which organization you can access.
-                            </Typography>
+                                <ToggleButtonGroup
+                                    exclusive
+                                    value={colorScheme ?? 'dark'}
+                                    onChange={(_event, mode: 'light' | 'dark' | null) => {
+                                        if (mode) setMode(mode)
+                                    }}
+                                    aria-label="Color theme"
+                                >
+                                    <ToggleButton
+                                        value="dark"
+                                        aria-label="Dark mode"
+                                    >
+                                        <DarkModeOutlined />
+                                        Dark
+                                    </ToggleButton>
+                                    <ToggleButton
+                                        value="light"
+                                        aria-label="Light mode"
+                                    >
+                                        <LightModeOutlined />
+                                        Light
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
+                            </Stack>
+                            <Stack spacing={1.25}>
+                                <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>
+                                    Person identity markers
+                                </Typography>
+                                <Typography sx={{ color: 'text.secondary' }}>
+                                    Choose how people are represented to you. This changes only their appearance; the
+                                    same private person keeps the same underlying identity marker.
+                                </Typography>
+                                <ToggleButtonGroup
+                                    exclusive
+                                    value={avatarStyle}
+                                    onChange={(_event, nextStyle: PersonAvatarStyle | null) => {
+                                        if (nextStyle && nextStyle !== avatarStyle) void saveAvatarStyle(nextStyle)
+                                    }}
+                                    aria-label="Person identity marker style"
+                                    disabled={savingAvatarStyle || !ombudsRes.data}
+                                >
+                                    <ToggleButton
+                                        value="monster"
+                                        aria-label="Monster person markers"
+                                        sx={{ gap: 1 }}
+                                    >
+                                        <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
+                                            <PersonMonster seed={avatarPreviewSeed} />
+                                        </Box>
+                                        Avatars
+                                    </ToggleButton>
+                                    <ToggleButton
+                                        value="geometric"
+                                        aria-label="Neutral geometric person markers"
+                                        sx={{ gap: 1 }}
+                                    >
+                                        <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
+                                            <PersonGeometricPortrait seed={avatarPreviewSeed} />
+                                        </Box>
+                                        Geometry
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
+                            </Stack>
                         </Box>
-                    </Stack>
-                </RoundedContainer>
+                    </RoundedContainer>
 
-                <RoundedContainer title="Appearance">
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 3,
-                            '& > .MuiStack-root': { flex: '1 1 320px', minWidth: 0 },
-                            '& .MuiToggleButtonGroup-root': { width: '100%', mt: 'auto' },
-                            '& .MuiToggleButton-root': { flex: 1, minWidth: 0, minHeight: 58, gap: 1, px: 1 },
-                        }}
-                    >
-                        <Stack spacing={1.25}>
-                            <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>Color theme</Typography>
-                            <Typography sx={{ color: 'text.secondary' }}>
-                                Choose the color theme used on signed-in pages.
-                            </Typography>
-                            <ToggleButtonGroup
-                                exclusive
-                                value={colorScheme ?? 'dark'}
-                                onChange={(_event, mode: 'light' | 'dark' | null) => {
-                                    if (mode) setMode(mode)
+                    <RoundedContainer title="Session security">
+                        <Stack spacing={1.5}>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
+                                <LockOutlined sx={{ mt: 0.25, color: 'primary.main' }} />
+                                <Typography sx={{ color: 'text.secondary' }}>
+                                    This optional phrase is the session default for protected case descriptions and
+                                    notes, and for private-person lookup. Each protection control can instead use a
+                                    blank phrase or a one-time phrase. The session default exists only in this browser
+                                    session and is cleared on refresh, login, or logout.
+                                </Typography>
+                            </Box>
+                            <TextField
+                                type="password"
+                                label="Session Salt Phrase"
+                                value={sessionSalt ?? ''}
+                                onChange={(event) => setSessionSalt(event.target.value)}
+                                autoComplete="off"
+                                fullWidth
+                                sx={{
+                                    '& .MuiInputLabel-root': { color: 'text.secondary' },
+                                    '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
                                 }}
-                                aria-label="Color theme"
+                            />
+                            <Button
+                                variant="outlined"
+                                onClick={clearSessionSalt}
+                                disabled={!sessionSalt}
+                                sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
                             >
-                                <ToggleButton
-                                    value="dark"
-                                    aria-label="Dark mode"
-                                >
-                                    <DarkModeOutlined />
-                                    Dark
-                                </ToggleButton>
-                                <ToggleButton
-                                    value="light"
-                                    aria-label="Light mode"
-                                >
-                                    <LightModeOutlined />
-                                    Light
-                                </ToggleButton>
-                            </ToggleButtonGroup>
+                                Clear phrase
+                            </Button>
                         </Stack>
-                        <Stack spacing={1.25}>
-                            <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>
-                                Person identity markers
-                            </Typography>
-                            <Typography sx={{ color: 'text.secondary' }}>
-                                Choose how people are represented to you. This changes only their appearance; the same
-                                private person keeps the same underlying identity marker.
-                            </Typography>
-                            <ToggleButtonGroup
-                                exclusive
-                                value={avatarStyle}
-                                onChange={(_event, nextStyle: PersonAvatarStyle | null) => {
-                                    if (nextStyle && nextStyle !== avatarStyle) void saveAvatarStyle(nextStyle)
-                                }}
-                                aria-label="Person identity marker style"
-                                disabled={savingAvatarStyle || !ombudsRes.data}
-                            >
-                                <ToggleButton
-                                    value="monster"
-                                    aria-label="Monster person markers"
-                                    sx={{ gap: 1 }}
-                                >
-                                    <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
-                                        <PersonMonster seed={avatarPreviewSeed} />
-                                    </Box>
-                                    Avatars
-                                </ToggleButton>
-                                <ToggleButton
-                                    value="geometric"
-                                    aria-label="Neutral geometric person markers"
-                                    sx={{ gap: 1 }}
-                                >
-                                    <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
-                                        <PersonGeometricPortrait seed={avatarPreviewSeed} />
-                                    </Box>
-                                    Geometry
-                                </ToggleButton>
-                            </ToggleButtonGroup>
-                        </Stack>
-                    </Box>
-                </RoundedContainer>
+                    </RoundedContainer>
 
-                <RoundedContainer title="Session security">
-                    <Stack spacing={1.5}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.25 }}>
-                            <LockOutlined sx={{ mt: 0.25, color: 'primary.main' }} />
-                            <Typography sx={{ color: 'text.secondary' }}>
-                                This optional phrase is the session default for protected case descriptions and notes,
-                                and for private-person lookup. Each protection control can instead use a blank phrase or
-                                a one-time phrase. The session default exists only in this browser session and is
-                                cleared on refresh, login, or logout.
-                            </Typography>
-                        </Box>
-                        <TextField
-                            type="password"
-                            label="Session Salt Phrase"
-                            value={sessionSalt ?? ''}
-                            onChange={(event) => setSessionSalt(event.target.value)}
-                            autoComplete="off"
-                            fullWidth
-                            sx={{
-                                '& .MuiInputLabel-root': { color: 'text.secondary' },
-                                '& .MuiOutlinedInput-root': { color: 'text.primary', bgcolor: 'background.paper' },
-                            }}
-                        />
-                        <Button
-                            variant="outlined"
-                            onClick={clearSessionSalt}
-                            disabled={!sessionSalt}
-                            sx={{ alignSelf: 'flex-start', textTransform: 'none' }}
-                        >
-                            Clear phrase
-                        </Button>
-                    </Stack>
-                </RoundedContainer>
-
-                <AccountDiagnostics />
+                    <AccountDiagnostics />
+                </Stack>
             </Stack>
         </Box>
     )

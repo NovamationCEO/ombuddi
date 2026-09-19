@@ -1,4 +1,4 @@
-import { pageLayoutStyle, pageTitleStyle } from '../../theme/pageLayout'
+import { pageLayoutStyle, pageTitleStyle, pageContentStyle } from '../../theme/pageLayout'
 import { Button, TextField, Tooltip, Typography } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
@@ -154,132 +154,136 @@ export function AddNewCase() {
                         Add New Case
                     </Typography>
                 </Box>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                    }}
+                <Stack
+                    spacing={2}
+                    sx={pageContentStyle}
                 >
-                    <TextField
-                        value={caseName}
-                        onChange={(e) => setCaseName(e.target.value)}
-                        label={'Case Name'}
-                        fullWidth
-                        sx={fieldStyle}
-                    />
-                    <Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                        }}
+                    >
+                        <TextField
+                            value={caseName}
+                            onChange={(e) => setCaseName(e.target.value)}
+                            label={'Case Name'}
+                            fullWidth
+                            sx={fieldStyle}
+                        />
+                        <Box>
+                            <Tooltip
+                                title={
+                                    <Box>
+                                        <Box
+                                            sx={{
+                                                fontWeight: 'bold',
+                                            }}
+                                        >
+                                            Choose a name to identify this case.
+                                        </Box>
+                                        <Box>
+                                            Security:{' '}
+                                            <em>
+                                                This name is visible within your organization. It is saved in plaintext.
+                                            </em>
+                                        </Box>
+                                        <Box>Security 0: Choose a descriptive name.</Box>
+                                        <Box>Security +1: Choose a name without sensitive information.</Box>
+                                        <Box>
+                                            Security +2: Randomize the title; it will be recognizable to you but
+                                            meaningless to anyone else.
+                                        </Box>
+                                    </Box>
+                                }
+                            >
+                                <Box>
+                                    <RoundButton bgcolor="background.paper">
+                                        <Lock sx={{ color: 'secondary.main' }} />
+                                    </RoundButton>
+                                </Box>
+                            </Tooltip>
+                        </Box>
+                        <Button
+                            variant={'outlined'}
+                            onClick={getRandomName}
+                        >
+                            Randomize
+                        </Button>
                         <Tooltip
                             title={
-                                <Box>
-                                    <Box
-                                        sx={{
-                                            fontWeight: 'bold',
-                                        }}
-                                    >
-                                        Choose a name to identify this case.
-                                    </Box>
-                                    <Box>
-                                        Security:{' '}
-                                        <em>
-                                            This name is visible within your organization. It is saved in plaintext.
-                                        </em>
-                                    </Box>
-                                    <Box>Security 0: Choose a descriptive name.</Box>
-                                    <Box>Security +1: Choose a name without sensitive information.</Box>
-                                    <Box>
-                                        Security +2: Randomize the title; it will be recognizable to you but meaningless
-                                        to anyone else.
-                                    </Box>
-                                </Box>
+                                'A stable abstract scene that helps visually distinguish this case without describing it.'
                             }
                         >
-                            <Box>
-                                <RoundButton bgcolor="background.paper">
-                                    <Lock sx={{ color: 'secondary.main' }} />
-                                </RoundButton>
+                            <Box
+                                sx={{
+                                    padding: 1,
+                                    width: 60,
+                                    height: 60,
+                                    boxSizing: 'content-box',
+                                    bgcolor: 'background.paper',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    borderRadius: 1,
+                                }}
+                            >
+                                <CaseSceneThumbnail seed={newId} />
                             </Box>
                         </Tooltip>
                     </Box>
-                    <Button
-                        variant={'outlined'}
-                        onClick={getRandomName}
-                    >
-                        Randomize
-                    </Button>
-                    <Tooltip
-                        title={
-                            'A stable abstract scene that helps visually distinguish this case without describing it.'
-                        }
-                    >
-                        <Box
-                            sx={{
-                                padding: 1,
-                                width: 60,
-                                height: 60,
-                                boxSizing: 'content-box',
-                                bgcolor: 'background.paper',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 1,
-                            }}
-                        >
-                            <CaseSceneThumbnail seed={newId} />
+                    <Box>
+                        <TextField
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            label={'Description'}
+                            fullWidth
+                            multiline
+                            rows={3}
+                            sx={fieldStyle}
+                        />
+                        <Box sx={{ mt: 1.5 }}>
+                            <PhraseSourceControl
+                                source={descriptionPhrase.source}
+                                onSourceChange={descriptionPhrase.setSource}
+                                customPhrase={descriptionPhrase.customPhrase}
+                                onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
+                                purpose="encrypt"
+                            />
                         </Box>
-                    </Tooltip>
-                </Box>
-                <Box>
-                    <TextField
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        label={'Description'}
-                        fullWidth
-                        multiline
-                        rows={3}
-                        sx={fieldStyle}
-                    />
-                    <Box sx={{ mt: 1.5 }}>
-                        <PhraseSourceControl
-                            source={descriptionPhrase.source}
-                            onSourceChange={descriptionPhrase.setSource}
-                            customPhrase={descriptionPhrase.customPhrase}
-                            onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
-                            purpose="encrypt"
-                        />
                     </Box>
-                </Box>
-                <Stack
-                    spacing={2}
-                    direction={'row'}
-                    sx={{
-                        display: 'flex',
-                    }}
-                >
-                    <CodeSetterBox
-                        activeCodeIds={activeIoaCodes}
-                        setActiveCodeIds={setActiveIoaCodes}
-                        source={{ kind: 'ioa' }}
-                    />
-                    <CodeSetterBox
-                        activeCodeIds={activeOrgCodes}
-                        setActiveCodeIds={setActiveOrgCodes}
-                        source={{ kind: 'org', organizationId }}
-                    />
-                </Stack>
-                <Stack spacing={2}>
-                    <RoundedContainer title={'Referral Sources'}>
-                        <ReferralSourceSelector
-                            value={referralSources}
-                            onChange={(value) => {
-                                setReferralSources(value)
-                                setShowReferralErrors(false)
-                            }}
-                            showErrors={showReferralErrors}
-                            disabled={isSaving}
+                    <Stack
+                        spacing={2}
+                        direction={'row'}
+                        sx={{
+                            display: 'flex',
+                        }}
+                    >
+                        <CodeSetterBox
+                            activeCodeIds={activeIoaCodes}
+                            setActiveCodeIds={setActiveIoaCodes}
+                            source={{ kind: 'ioa' }}
                         />
-                    </RoundedContainer>
-                </Stack>
-                {/* <RoundedContainer title={'Associated People'}>
+                        <CodeSetterBox
+                            activeCodeIds={activeOrgCodes}
+                            setActiveCodeIds={setActiveOrgCodes}
+                            source={{ kind: 'org', organizationId }}
+                        />
+                    </Stack>
+                    <Stack spacing={2}>
+                        <RoundedContainer title={'Referral Sources'}>
+                            <ReferralSourceSelector
+                                value={referralSources}
+                                onChange={(value) => {
+                                    setReferralSources(value)
+                                    setShowReferralErrors(false)
+                                }}
+                                showErrors={showReferralErrors}
+                                disabled={isSaving}
+                            />
+                        </RoundedContainer>
+                    </Stack>
+                    {/* <RoundedContainer title={'Associated People'}>
                 <Box>
                     <Stack spacing={2}>
                         <TextField
@@ -309,11 +313,12 @@ export function AddNewCase() {
                     </Stack>
                 </Box>
             </RoundedContainer> */}
-                <SaveCancel
-                    onSave={save}
-                    onCancel={cancel}
-                    saving={isSaving}
-                />
+                    <SaveCancel
+                        onSave={save}
+                        onCancel={cancel}
+                        saving={isSaving}
+                    />
+                </Stack>
             </Stack>
         </Box>
     )

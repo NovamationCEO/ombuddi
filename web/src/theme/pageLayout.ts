@@ -11,3 +11,15 @@ export const pageLayoutStyle = {
     color: 'text.primary',
     p: pagePadding,
 } as const
+
+// Content stays on the same left edge as the full-width page heading.
+export const pageContentStyle = {
+    width: '100%',
+    minWidth: 0,
+    maxWidth: 1120,
+    alignSelf: 'flex-start',
+} as const
+export const narrowPageContentStyle = {
+    ...pageContentStyle,
+    maxWidth: 640,
+} as const

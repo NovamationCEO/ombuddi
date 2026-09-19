@@ -1,5 +1,6 @@
 import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
-import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
+import { InvitationDelivery } from '../components/InvitationDelivery'
+import { invitationSeverity, type EmailDelivery } from '../components/invitationDeliveryUtils'
 import React from 'react'
 import { useSnack } from '../libraries/useSnack'
 import { useSearchParams } from 'react-router-dom'

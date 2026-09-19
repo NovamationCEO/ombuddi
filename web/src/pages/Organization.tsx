@@ -1,4 +1,4 @@
-import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
+import { pageLayoutStyle, pageTitleStyle, pageContentStyle } from '../theme/pageLayout'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import React from 'react'
@@ -147,82 +147,87 @@ export function Organization() {
                         .
                     </Typography>
                 </Box>
-                <RoundedContainer title={'Organization - Basic Information'}>
-                    <Stack spacing={2}>
-                        <TextField
-                            value={orgName}
-                            onChange={(e) => setOrgName(e.target.value)}
-                            label={'Name'}
-                            fullWidth
-                        />
-                        <TextField
-                            value={'Active'}
-                            label={'License Status'}
-                            disabled
-                            sx={{
-                                '& .MuiInputBase-input.Mui-disabled': {
-                                    WebkitTextFillColor: 'var(--mui-palette-text-disabled)',
-                                },
-                            }}
-                        />
-                        <Box>
-                            <Button
-                                variant="contained"
-                                onClick={saveOrg}
-                                disabled={saving || !orgName.trim()}
+                <Stack
+                    spacing={2.5}
+                    sx={pageContentStyle}
+                >
+                    <RoundedContainer title={'Organization - Basic Information'}>
+                        <Stack spacing={2}>
+                            <TextField
+                                value={orgName}
+                                onChange={(e) => setOrgName(e.target.value)}
+                                label={'Name'}
+                                fullWidth
+                            />
+                            <TextField
+                                value={'Active'}
+                                label={'License Status'}
+                                disabled
                                 sx={{
-                                    color: 'secondary.contrastText',
-                                    bgcolor: 'secondary.main',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
+                                    '& .MuiInputBase-input.Mui-disabled': {
+                                        WebkitTextFillColor: 'var(--mui-palette-text-disabled)',
+                                    },
                                 }}
-                            >
-                                {saving ? 'Saving…' : 'Save organization'}
-                            </Button>
-                        </Box>
-                    </Stack>
-                </RoundedContainer>
-                <CodeSummary />
-                <PrimaryRoles />
-                <PublicPersons />
-                <PicklistManager
-                    kind={'referral_source'}
-                    title={'Referral Sources'}
-                    singularNoun={'referral source'}
-                    defaultSets={REFERRAL_SOURCE_SETS}
-                    hiddenBehaviors={['other_detail', 'exclusive']}
-                />
-                <PicklistManager
-                    kind={'medium'}
-                    title={'Entry Mediums'}
-                    singularNoun={'medium'}
-                    defaultSets={MEDIUM_SETS}
-                />
-                <PicklistManager
-                    kind={'priority'}
-                    title={'Entry Priorities'}
-                    singularNoun={'priority'}
-                    defaultSets={PRIORITY_SETS}
-                />
-                <PicklistManager
-                    kind={'gender'}
-                    title={'Gender Options'}
-                    singularNoun={'gender option'}
-                    defaultSets={GENDER_SETS}
-                />
-                <PicklistManager
-                    kind={'generation'}
-                    title={'Generation Options'}
-                    singularNoun={'generation option'}
-                    defaultSets={GENERATION_SETS}
-                />
-                <PicklistManager
-                    kind={'race'}
-                    title={'Race / Ethnicity Options'}
-                    singularNoun={'race option'}
-                    defaultSets={RACE_SETS}
-                />
+                            />
+                            <Box>
+                                <Button
+                                    variant="contained"
+                                    onClick={saveOrg}
+                                    disabled={saving || !orgName.trim()}
+                                    sx={{
+                                        color: 'secondary.contrastText',
+                                        bgcolor: 'secondary.main',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        '&:hover': { color: 'secondary.contrastText', bgcolor: 'secondary.dark' },
+                                    }}
+                                >
+                                    {saving ? 'Saving…' : 'Save organization'}
+                                </Button>
+                            </Box>
+                        </Stack>
+                    </RoundedContainer>
+                    <CodeSummary />
+                    <PrimaryRoles />
+                    <PublicPersons />
+                    <PicklistManager
+                        kind={'referral_source'}
+                        title={'Referral Sources'}
+                        singularNoun={'referral source'}
+                        defaultSets={REFERRAL_SOURCE_SETS}
+                        hiddenBehaviors={['other_detail', 'exclusive']}
+                    />
+                    <PicklistManager
+                        kind={'medium'}
+                        title={'Entry Mediums'}
+                        singularNoun={'medium'}
+                        defaultSets={MEDIUM_SETS}
+                    />
+                    <PicklistManager
+                        kind={'priority'}
+                        title={'Entry Priorities'}
+                        singularNoun={'priority'}
+                        defaultSets={PRIORITY_SETS}
+                    />
+                    <PicklistManager
+                        kind={'gender'}
+                        title={'Gender Options'}
+                        singularNoun={'gender option'}
+                        defaultSets={GENDER_SETS}
+                    />
+                    <PicklistManager
+                        kind={'generation'}
+                        title={'Generation Options'}
+                        singularNoun={'generation option'}
+                        defaultSets={GENERATION_SETS}
+                    />
+                    <PicklistManager
+                        kind={'race'}
+                        title={'Race / Ethnicity Options'}
+                        singularNoun={'race option'}
+                        defaultSets={RACE_SETS}
+                    />
+                </Stack>
             </Stack>
         </Box>
     )

@@ -1,5 +1,6 @@
 import { InvitationEmailHistory } from './InvitationEmailHistory'
-import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
+import { InvitationDelivery } from './InvitationDelivery'
+import { invitationSeverity, type EmailDelivery } from './invitationDeliveryUtils'
 import React from 'react'
 import { useAdminAction } from '../libraries/useAdminAction'
 import { useSnack } from '../libraries/useSnack'

@@ -1,6 +1,7 @@
 import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { InvitationEmailHistory } from '../components/InvitationEmailHistory'
-import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
+import { InvitationDelivery } from '../components/InvitationDelivery'
+import { invitationSeverity, type EmailDelivery } from '../components/invitationDeliveryUtils'
 import React from 'react'
 import { useAdminAction } from '../libraries/useAdminAction'
 import { useSnack } from '../libraries/useSnack'
