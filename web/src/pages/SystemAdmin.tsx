@@ -1,5 +1,6 @@
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
+import { useSnack } from '../libraries/useSnack'
 import { useSearchParams } from 'react-router-dom'
 import { SystemOrganizationAudit } from '../components/SystemOrganizationAudit'
 import {
@@ -65,7 +66,7 @@ export function SystemAdmin() {
 
     const [editing, setEditing] = React.useState<EditingOrg | null>(null)
     const [saving, setSaving] = React.useState(false)
-    const [saved, setSaved] = React.useState(false)
+    const setSnack = useSnack((state) => state.setSnack)
     const [editError, setEditError] = React.useState('')
     const [statusTarget, setStatusTarget] = React.useState<SystemOrg | null>(null)
     const [statusReason, setStatusReason] = React.useState('')
@@ -82,7 +83,6 @@ export function SystemAdmin() {
     React.useEffect(() => {
         heading.current?.focus()
         heading.current?.scrollIntoView?.({ block: 'start' })
-        setSaved(false)
         setEditError('')
     }, [organizationId])
     React.useEffect(() => {
@@ -98,8 +98,30 @@ export function SystemAdmin() {
                   },
         )
     }, [managedOrganization])
-    function openOrganization(org: SystemOrg, tab = 'users') {
-        setSearchParams({ org: org.id, tab })
+    const isDirty =
+        !!editing &&
+        !!managedOrganization &&
+        (editing.name !== managedOrganization.name ||
+            editing.subscriptionTier !== managedOrganization.subscriptionTier ||
+            Number(editing.seatLimit) !== managedOrganization.seatLimit)
+    function openOrganization(org: SystemOrg, tab = 'users', replace = false) {
+        setSearchParams(
+            (current) => {
+                const next = new URLSearchParams(current)
+                next.set('org', org.id)
+                next.set('tab', tab)
+                return next
+            },
+            { replace },
+        )
+    }
+    function backToOrganizations() {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current)
+            next.delete('org')
+            next.delete('tab')
+            return next
+        })
     }
     function closeCreate() {
         if (!creationPending.current) setCreateOpen(false)
@@ -145,7 +167,6 @@ export function SystemAdmin() {
             seatLimit: String(org.seatLimit),
         })
         setEditError('')
-        setSaved(false)
     }
 
     async function saveEdit() {
@@ -158,10 +179,12 @@ export function SystemAdmin() {
                 subscriptionTier: editing.subscriptionTier,
                 seatLimit: parseInt(editing.seatLimit, 10),
             })
-            setSaved(true)
+            setSnack({ message: 'Organization settings saved.', severity: 'success' })
             await orgs.refetch()
         } catch (reason) {
-            setEditError(reason instanceof Error ? reason.message : 'Unable to save changes')
+            const message = reason instanceof Error ? reason.message : 'Unable to save changes'
+            setEditError(message)
+            setSnack({ message, severity: 'error' })
         } finally {
             setSaving(false)
         }
@@ -170,6 +193,7 @@ export function SystemAdmin() {
     async function copyInvite() {
         try {
             await navigator.clipboard.writeText(newInviteUrl)
+            setSnack({ message: 'Invitation link copied.', severity: 'success' })
         } catch {
             setCreateError('Unable to copy automatically. Select and copy the invitation link.')
         }
@@ -204,7 +228,7 @@ export function SystemAdmin() {
                 tabIndex={-1}
                 component="h1"
                 variant="h5"
-                sx={{ outline: 'none' }}
+                sx={{ '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 } }}
             >
                 {managedOrganization ? managedOrganization.name : 'System Administration'}
             </Typography>
@@ -216,7 +240,7 @@ export function SystemAdmin() {
                 <>
                     <Button
                         sx={{ alignSelf: 'flex-start' }}
-                        onClick={() => setSearchParams({})}
+                        onClick={backToOrganizations}
                     >
                         Back to organizations
                     </Button>
@@ -236,7 +260,7 @@ export function SystemAdmin() {
                             </Stack>
                             <Tabs
                                 value={selectedTab}
-                                onChange={(_, tab) => openOrganization(managedOrganization, tab)}
+                                onChange={(_, tab) => openOrganization(managedOrganization, tab, true)}
                                 aria-label="Organization management"
                             >
                                 {['users', 'settings', 'audit'].map((tab) => (
@@ -256,9 +280,11 @@ export function SystemAdmin() {
                                 aria-labelledby="org-tab-users"
                                 hidden={selectedTab !== 'users'}
                             >
+                                {/* Keep drafts and pending invitation results across tab switches. */}
                                 <SystemOrganizationSeats
                                     key={managedOrganization.id}
                                     organization={managedOrganization}
+                                    active={selectedTab === 'users'}
                                     onOrganizationChanged={orgs.refetch}
                                 />
                             </Box>
@@ -271,7 +297,7 @@ export function SystemAdmin() {
                             >
                                 {selectedTab === 'settings' && editing && (
                                     <Stack spacing={2}>
-                                        {saved && <Alert severity="success">Organization settings saved.</Alert>}
+                                        {isDirty && <Alert severity="info">Unsaved changes.</Alert>}
                                         <Stack
                                             spacing={1.5}
                                             sx={{ p: 1.5, border: 1, borderColor: 'primary.main', borderRadius: 1 }}
@@ -404,7 +430,9 @@ export function SystemAdmin() {
             )}
             <Dialog
                 open={createOpen}
-                onClose={closeCreate}
+                onClose={() => {
+                    if (!newInviteUrl) closeCreate()
+                }}
                 fullWidth
                 maxWidth="sm"
                 aria-labelledby="create-organization-title"
@@ -514,7 +542,7 @@ export function SystemAdmin() {
             </Dialog>
             <Dialog
                 aria-labelledby="organization-status-title"
-                open={statusTarget !== null}
+                open={statusTarget !== null && statusTarget.id === organizationId && selectedTab === 'settings'}
                 onClose={() => !statusSaving && setStatusTarget(null)}
                 fullWidth
                 maxWidth="sm"

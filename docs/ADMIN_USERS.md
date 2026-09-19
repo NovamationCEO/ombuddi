@@ -17,11 +17,19 @@ they do not expose cases, visitors, entries, or notes.
 
 System Administration opens with the organization list. **Manage organization**
 opens a focused view with **Users**, **Settings**, and **Audit** tabs; the selected
-organization and tab are preserved in the URL for refresh, bookmarks, and browser
-Back. **Create organization** opens a modal and keeps its invitation result there.
+organization and tab are preserved in the URL for refresh and bookmarks. Tab
+changes replace the current history entry, so browser Back returns to the page
+before the organization was opened. **Create organization** opens a modal and keeps its invitation result there.
 User invitation results and invitation history also open in dialogs, so they do
 not appear above or below the current viewport. Settings drafts survive tab
 switches; **Back to organizations** returns to the list.
+
+System administration reports seat-action failures both beside the affected seat
+(or creation form) and in the shared snackbar. Settings show an unsaved-changes
+indicator; successful saves and link copies receive snackbar confirmations.
+Invitation result dialogs require **Done** to dismiss, protecting links from
+accidental backdrop clicks or Escape. Users dialogs hide on other tabs, while
+drafts and pending invitation results remain available when returning to Users.
 
 Invitations use **admin@ombuddi.com** as the official sender. Configure Microsoft
 365 delivery using [Invitation email setup](INVITATION_EMAIL.md). Until enabled,

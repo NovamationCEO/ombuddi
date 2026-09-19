@@ -39,16 +39,17 @@ export function SystemOrganizationAudit({ organizationId }: { organizationId: st
     const audit = useGetter<AuditEvent[]>(['system', 'organizations', organizationId, 'audit'])
     return (
         <Stack spacing={2}>
-            <Button
-                onClick={() => audit.refetch()}
-                disabled={audit.isFetching}
-            >
-                Refresh audit log
-            </Button>
-            {audit.isLoading && <Typography>Loading audit log…</Typography>}
-            {audit.error && <Alert severity="error">Unable to load audit log.</Alert>}
             <RoundedContainer title="Administrative audit log">
                 <Stack spacing={1}>
+                    <Button
+                        onClick={() => audit.refetch()}
+                        disabled={audit.isFetching}
+                    >
+                        Refresh audit log
+                    </Button>
+                    {audit.isLoading && <Typography>Loading audit log…</Typography>}
+                    {audit.error && <Alert severity="error">Unable to load audit log.</Alert>}
+
                     {(audit.data ?? []).map((event) => {
                         const details = detailText(event.details)
                         return (

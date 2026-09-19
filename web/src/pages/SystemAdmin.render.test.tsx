@@ -7,6 +7,8 @@ import { ThemeProvider } from '@mui/material/styles'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { appTheme } from '../theme/appTheme'
 import { SystemAdmin } from './SystemAdmin'
+import { Snack } from '../trusted-components/Snack'
+import { useSnack } from '../libraries/useSnack'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 const mocks = vi.hoisted(() => ({
     creator: vi.fn(),
@@ -55,8 +57,11 @@ let host: HTMLDivElement
 function NavigationProbe() {
     const location = useLocation()
     const navigate = useNavigate()
+    const snack = useSnack((state) => state.snack)
     return (
         <>
+            <Snack snack={snack} />
+            <button onClick={() => navigate('?org=org-1&tab=audit')}>Navigate to audit</button>
             <output data-location>{location.search}</output>
             <button onClick={() => navigate(-1)}>Browser back</button>
         </>
@@ -95,7 +100,10 @@ async function fill(label: string, value: string) {
     })
 }
 beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    mocks.refetch.mockResolvedValue({})
+    mocks.org.name = 'Example Office'
+    useSnack.setState({ snack: { message: '' } })
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
@@ -114,12 +122,14 @@ it('opens URL-backed tabs and supports browser back', async () => {
     expect(document.querySelector('#org-panel-users')?.hasAttribute('hidden')).toBe(true)
     expect(document.querySelector('#org-panel-audit')?.textContent).toContain('No administrative events')
     await click('Browser back')
-    expect(document.querySelector('[aria-selected="true"]')?.textContent).toBe('Users')
-    await click('Back to organizations')
+    expect(document.querySelector('[data-location]')?.textContent).toBe('')
     expect(document.querySelector('[role="tablist"]')).toBeNull()
 })
 it('opens bookmarked settings and saves changes', async () => {
-    mocks.updater.mockResolvedValue({ success: true })
+    mocks.updater.mockImplementation(async (_path, data) => {
+        mocks.org.name = data.name
+        return { success: true }
+    })
     await mount('/system/orgs?org=org-1&tab=settings')
     expect(input('Name').value).toBe('Example Office')
     await fill('Name', 'Renamed Office')
@@ -128,7 +138,14 @@ it('opens bookmarked settings and saves changes', async () => {
         'system/organizations/org-1',
         expect.objectContaining({ name: 'Renamed Office' }),
     )
-    expect(host.textContent).toContain('Organization settings saved')
+    expect(document.querySelector('.MuiSnackbar-root')?.textContent).toContain('Organization settings saved')
+    expect(host.textContent).not.toContain('Unsaved changes')
+    await fill('Name', 'Another draft')
+    expect(host.textContent).toContain('Unsaved changes')
+    await click('Audit')
+    await click('Settings')
+    expect(input('Name').value).toBe('Another draft')
+    expect(host.textContent).toContain('Unsaved changes')
 })
 it('keeps organization creation and its result inside the modal', async () => {
     mocks.creator.mockResolvedValue({
@@ -194,4 +211,117 @@ it('shows a seat invitation result in a dialog', async () => {
     await click('Create invitation')
     expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Microsoft accepted')
     expect(host.textContent).not.toContain('Microsoft accepted')
+})
+
+async function attemptDismissDialog() {
+    await act(async () => {
+        document.querySelector('[role="dialog"]')!.dispatchEvent(
+            new KeyboardEvent('keydown', {
+                key: 'Escape',
+                code: 'Escape',
+                bubbles: true,
+            }),
+        )
+        const container = document.querySelector('.MuiDialog-container')!
+        container.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+        container.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+}
+it('preserves unrelated parameters and replaces tab history', async () => {
+    await mount('/system/orgs?filter=active')
+    await click('Manage organization')
+    await click('Settings')
+    await click('Audit')
+    expect(document.querySelector('[data-location]')?.textContent).toBe('?filter=active&org=org-1&tab=audit')
+    await click('Browser back')
+    expect(document.querySelector('[data-location]')?.textContent).toBe('?filter=active')
+    await click('Manage organization')
+    await click('Back to organizations')
+    expect(document.querySelector('[data-location]')?.textContent).toBe('?filter=active')
+})
+it('shows seat failures beside the seat and in the shared snackbar', async () => {
+    mocks.updater.mockRejectedValue(new Error('Seat could not be deactivated'))
+    await mount('/system/orgs?org=org-1&tab=users')
+    await click('Deactivate seat')
+    const button = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Deactivate seat')!
+    expect(button.parentElement?.parentElement?.textContent).toContain('Seat could not be deactivated')
+    expect(document.querySelector('.MuiSnackbar-root')?.textContent).toContain('Seat could not be deactivated')
+})
+it('requires Done to dismiss a seat invitation and preserves it across tabs', async () => {
+    mocks.creator.mockResolvedValue({ inviteUrl: 'https://example.com/secret' })
+    await mount('/system/orgs?org=org-1&tab=users')
+    await fill('User name', 'Draft user')
+    await click('Create invitation')
+    await attemptDismissDialog()
+    expect(input('Invitation link').value).toBe('https://example.com/secret')
+    await click('Navigate to audit')
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+    })
+    expect(document.querySelector('.MuiDialog-root:not([aria-hidden="true"]) [role="dialog"]')).toBeNull()
+    await click('Users')
+    expect(input('Invitation link').value).toBe('https://example.com/secret')
+    await click('Done')
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+    })
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(input('User name').value).toBe('Draft user')
+})
+it('requires Done to dismiss an organization invitation', async () => {
+    mocks.creator.mockResolvedValue({ inviteUrl: 'https://example.com/new-org-secret' })
+    await mount()
+    await click('Create organization')
+    await fill('Organization name', 'New Office')
+    await fill('First administrator name', 'Admin')
+    await fill('First administrator email', 'admin@example.com')
+    await act(async () =>
+        document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+    )
+    await attemptDismissDialog()
+    expect(input('Invitation link').value).toBe('https://example.com/new-org-secret')
+    await click('Done')
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+    })
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+})
+it('hides history dialogs on other tabs and restores them on return', async () => {
+    await mount('/system/orgs?org=org-1&tab=users')
+    await click('Invitation history')
+    await click('Navigate to audit')
+    await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+    })
+    expect(document.querySelector('.MuiDialog-root:not([aria-hidden="true"]) [role="dialog"]')).toBeNull()
+    await click('Users')
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Invitation history — Test User')
+})
+it('handles clipboard failures inside the invitation dialog', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: vi.fn().mockRejectedValue(new Error('Denied')) },
+    })
+    mocks.creator.mockResolvedValue({ inviteUrl: 'https://example.com/secret' })
+    await mount('/system/orgs?org=org-1&tab=users')
+    await click('Create invitation')
+    await click('Copy invitation link')
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Select and copy the invitation link')
+    expect(input('Invitation link').value).toBe('https://example.com/secret')
+})
+
+it('retains an invitation that completes while another tab is active', async () => {
+    let resolve!: (value: unknown) => void
+    mocks.creator.mockReturnValue(
+        new Promise((result) => {
+            resolve = result
+        }),
+    )
+    await mount('/system/orgs?org=org-1&tab=users')
+    await click('Create invitation')
+    await click('Audit')
+    await act(async () => resolve({ inviteUrl: 'https://example.com/pending' }))
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    await click('Users')
+    expect(input('Invitation link').value).toBe('https://example.com/pending')
 })

@@ -1,6 +1,7 @@
 import { InvitationEmailHistory } from './InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
 import React from 'react'
+import { useSnack } from '../libraries/useSnack'
 import { useQueryClient } from '@tanstack/react-query'
 import {
     Alert,
@@ -79,7 +80,9 @@ function invitationStatus(invitation: InvitationHistory) {
 export function SystemOrganizationSeats({
     organization,
     onOrganizationChanged,
+    active = true,
 }: {
+    active?: boolean
     organization: SystemOrgSummary
     onOrganizationChanged: () => Promise<unknown>
 }) {
@@ -100,6 +103,9 @@ export function SystemOrganizationSeats({
     const queryClient = useQueryClient()
     const [busy, setBusy] = React.useState(false)
     const [error, setError] = React.useState('')
+    const [errorSeatId, setErrorSeatId] = React.useState<string>()
+    const [copyError, setCopyError] = React.useState('')
+    const setSnack = useSnack((state) => state.setSnack)
     const [inviteUrl, setInviteUrl] = React.useState('')
     const [editingEmailFor, setEditingEmailFor] = React.useState<string | null>(null)
     const [editingEmail, setEditingEmail] = React.useState('')
@@ -117,18 +123,22 @@ export function SystemOrganizationSeats({
 
     const actionPending = React.useRef(false)
 
-    async function run(action: () => Promise<unknown>, fallback: string) {
+    async function run(action: () => Promise<unknown>, fallback: string, seatId?: string) {
         if (actionPending.current) return false
         actionPending.current = true
         setBusy(true)
         setError('')
+        setErrorSeatId(seatId)
+        setCopyError('')
         setInviteUrl('')
         try {
             await action()
             await refresh()
             return true
         } catch (reason) {
-            setError(reason instanceof Error ? reason.message : fallback)
+            const message = reason instanceof Error ? reason.message : fallback
+            setError(message)
+            setSnack({ message, severity: 'error' })
             return false
         } finally {
             actionPending.current = false
@@ -153,24 +163,29 @@ export function SystemOrganizationSeats({
     }
 
     async function invite(seat: SystemSeat) {
-        await run(async () => {
-            const result = await creator<InvitationResult>(
-                `system/organizations/${organization.id}/ombuds/${seat.id}/invitation`,
-                {},
-            )
-            setInviteUrl(result.inviteUrl ?? '')
-            setInviteDelivery(result.emailDelivery)
-            await queryClient.invalidateQueries({
-                queryKey: ['system', 'organizations', organization.id, 'ombuds', seat.id, 'email-history'],
-                exact: true,
-            })
-        }, 'Unable to create invitation')
+        await run(
+            async () => {
+                const result = await creator<InvitationResult>(
+                    `system/organizations/${organization.id}/ombuds/${seat.id}/invitation`,
+                    {},
+                )
+                setInviteUrl(result.inviteUrl ?? '')
+                setInviteDelivery(result.emailDelivery)
+                await queryClient.invalidateQueries({
+                    queryKey: ['system', 'organizations', organization.id, 'ombuds', seat.id, 'email-history'],
+                    exact: true,
+                })
+            },
+            'Unable to create invitation',
+            seat.id,
+        )
     }
 
     async function cancelInvitation(seat: SystemSeat) {
         await run(
             () => creator(`system/organizations/${organization.id}/ombuds/${seat.id}/invitation/cancel`, {}),
             'Unable to cancel invitation',
+            seat.id,
         )
     }
 
@@ -181,6 +196,7 @@ export function SystemOrganizationSeats({
                     isAdmin: !seat.isAdmin,
                 }),
             'Unable to update administrator role',
+            seat.id,
         )
     }
 
@@ -191,6 +207,7 @@ export function SystemOrganizationSeats({
                     active: !seat.isActive,
                 }),
             'Unable to update seat status',
+            seat.id,
         )
     }
 
@@ -201,6 +218,7 @@ export function SystemOrganizationSeats({
                     email: editingEmail,
                 }),
             'Unable to update email',
+            seat.id,
         )
         if (saved) {
             setEditingEmailFor(null)
@@ -209,7 +227,13 @@ export function SystemOrganizationSeats({
     }
 
     async function copyInvite() {
-        await navigator.clipboard.writeText(inviteUrl)
+        setCopyError('')
+        try {
+            await navigator.clipboard.writeText(inviteUrl)
+            setSnack({ message: 'Invitation link copied.', severity: 'success' })
+        } catch {
+            setCopyError('Unable to copy automatically. Select and copy the invitation link.')
+        }
     }
 
     return (
@@ -221,20 +245,20 @@ export function SystemOrganizationSeats({
                 System administrators can see seat identity and lifecycle information, but this view does not expose
                 cases, visitors, notes, or other organization records.
             </Typography>
-            {error && <Alert severity="error">{error}</Alert>}
             <Dialog
-                open={!!inviteUrl}
-                onClose={() => setInviteUrl('')}
+                open={active && !!inviteUrl}
                 fullWidth
                 maxWidth="sm"
                 aria-labelledby="invitation-result-title"
             >
                 <DialogTitle id="invitation-result-title">Invitation created</DialogTitle>
                 <DialogContent>
+                    {copyError && <Alert severity="error">{copyError}</Alert>}
                     <Alert severity={invitationSeverity(inviteDelivery)}>
                         <Stack spacing={1}>
                             <InvitationDelivery delivery={inviteDelivery} />
                             <TextField
+                                label="Invitation link"
                                 value={inviteUrl}
                                 fullWidth
                                 slotProps={{ input: { readOnly: true } }}
@@ -254,6 +278,7 @@ export function SystemOrganizationSeats({
             </Dialog>
 
             <RoundedContainer title="Add and invite a user">
+                {error && !errorSeatId && <Alert severity="error">{error}</Alert>}
                 <Stack spacing={1.5}>
                     <TextField
                         label="User name"
@@ -305,6 +330,7 @@ export function SystemOrganizationSeats({
                             sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
                         >
                             <Stack spacing={1}>
+                                {error && errorSeatId === seat.id && <Alert severity="error">{error}</Alert>}
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                     <Typography sx={{ fontWeight: 600 }}>{seat.name}</Typography>
                                     <Chip
@@ -452,7 +478,7 @@ export function SystemOrganizationSeats({
 
             {historySeat && (
                 <Dialog
-                    open
+                    open={active}
                     onClose={() => setHistorySeat(null)}
                     fullWidth
                     maxWidth="md"
