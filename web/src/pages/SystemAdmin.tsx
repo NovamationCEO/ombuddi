@@ -1,3 +1,4 @@
+import { InvitationDelivery, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -32,6 +33,7 @@ type SystemOrg = {
 }
 
 type CreateOrgResult = {
+    emailDelivery?: EmailDelivery
     organizationId: string
     inviteUrl: string
     expiresAt: string
@@ -48,6 +50,7 @@ type EditingOrg = {
 export function SystemAdmin() {
     const orgs = useGetter<SystemOrg[]>(['system', 'organizations'])
 
+    const [inviteDelivery, setInviteDelivery] = React.useState<EmailDelivery>()
     const [orgName, setOrgName] = React.useState('')
     const [adminName, setAdminName] = React.useState('')
     const [adminEmail, setAdminEmail] = React.useState('')
@@ -79,6 +82,7 @@ export function SystemAdmin() {
                 seatLimit: parseInt(seatLimit, 10),
             })
             setNewInviteUrl(result.inviteUrl)
+            setInviteDelivery(result.emailDelivery)
             setOrgName('')
             setAdminName('')
             setAdminEmail('')
@@ -156,9 +160,9 @@ export function SystemAdmin() {
             {statusError && <Alert severity="error">{statusError}</Alert>}
 
             {newInviteUrl && (
-                <Alert severity="success">
+                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
                     <Stack spacing={1}>
-                        <Box>Organization created. Share this invitation with the first administrator — it is shown only once.</Box>
+                        <InvitationDelivery delivery={inviteDelivery} />
                         <TextField
                             value={newInviteUrl}
                             fullWidth

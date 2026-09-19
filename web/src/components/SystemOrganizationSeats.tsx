@@ -1,3 +1,4 @@
+import { InvitationDelivery, type EmailDelivery } from './InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -67,6 +68,7 @@ type AuditEvent = {
 }
 
 type InvitationResult = {
+    emailDelivery?: EmailDelivery
     inviteUrl?: string
     expiresAt?: string
 }
@@ -110,6 +112,7 @@ export function SystemOrganizationSeats({
 }) {
     const seats = useGetter<SystemSeat[]>(['system', 'organizations', organization.id, 'ombuds'])
     const audit = useGetter<AuditEvent[]>(['system', 'organizations', organization.id, 'audit'])
+    const [inviteDelivery, setInviteDelivery] = React.useState<EmailDelivery>()
     const [historySeat, setHistorySeat] = React.useState<SystemSeat | null>(null)
     const invitationHistory = useGetter<InvitationHistory[]>([
         'system',
@@ -155,6 +158,7 @@ export function SystemOrganizationSeats({
                 { name, email, isAdmin, createInvitation: true },
             )
             setInviteUrl(result.inviteUrl ?? '')
+            setInviteDelivery(result.emailDelivery)
             setName('')
             setEmail('')
             setIsAdmin(true)
@@ -168,6 +172,7 @@ export function SystemOrganizationSeats({
                 {},
             )
             setInviteUrl(result.inviteUrl ?? '')
+            setInviteDelivery(result.emailDelivery)
         }, 'Unable to create invitation')
     }
 
@@ -224,9 +229,9 @@ export function SystemOrganizationSeats({
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
             {inviteUrl && (
-                <Alert severity="success">
+                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
                     <Stack spacing={1}>
-                        <Box>Copy this one-time invitation link before leaving the page.</Box>
+                        <InvitationDelivery delivery={inviteDelivery} />
                         <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
                         <Button onClick={copyInvite} variant="outlined">Copy invitation link</Button>
                     </Stack>

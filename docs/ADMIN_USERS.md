@@ -15,8 +15,11 @@ invitations, review invitation history, and inspect the administrative audit
 log. These tools expose user names, emails, roles, and lifecycle state only;
 they do not expose cases, visitors, entries, or notes.
 
-Email delivery is not implemented yet. The administrator copies the generated
-link and sends it through an appropriate channel.
+Invitations use **admin@ombuddi.com** as the official sender. Configure Microsoft
+365 delivery using [Invitation email setup](INVITATION_EMAIL.md). Until enabled,
+the administrator copies the generated link and sends it from that mailbox.
+The invitation UI distinguishes Microsoft acceptance from unconfigured or
+unconfirmed delivery.
 
 That invitation message and Auth0's email-verification message are separate:
 

@@ -88,7 +88,7 @@ Working / wired:
 
 Still incomplete:
 
-- Automated record retention/purge, subscription billing, invitation email delivery, and a self-service organization onboarding flow.
+- Automated record retention/purge, subscription billing, and a self-service organization onboarding flow.
 - Production schema migrations are still applied manually in order; see `docs/ADMIN_USERS.md`.
 
 ## Deferred engineering cleanup

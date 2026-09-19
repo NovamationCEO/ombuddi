@@ -1,3 +1,4 @@
+import { InvitationDelivery, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -59,6 +60,7 @@ type AdminOmbuds = {
 }
 
 type InvitationResult = {
+    emailDelivery?: EmailDelivery
     inviteUrl: string
     expiresAt: string
 }
@@ -68,6 +70,7 @@ export function AdminUsers() {
     const org = useGetter<AdminOrganization>(['admin', 'organization'])
     const metrics = useGetter<AdminMetrics>(['admin', 'metrics'])
     const users = useGetter<AdminOmbuds[]>(['admin', 'ombuds'])
+    const [inviteDelivery, setInviteDelivery] = React.useState<EmailDelivery>()
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
     const [isAdmin, setIsAdmin] = React.useState(false)
@@ -107,6 +110,7 @@ export function AdminUsers() {
                 {},
             )
             setInviteUrl(result.inviteUrl)
+            setInviteDelivery(result.emailDelivery)
             await users.refetch()
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : 'Unable to create invitation')
@@ -238,9 +242,9 @@ export function AdminUsers() {
             )}
 
             {inviteUrl && (
-                <Alert severity="success">
+                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
                     <Stack spacing={1}>
-                        <Box>This invitation link is shown only now. Copy it before leaving this page.</Box>
+                        <InvitationDelivery delivery={inviteDelivery} />
                         <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
                         <Button onClick={copyInvite} variant="outlined">Copy invitation link</Button>
                     </Stack>

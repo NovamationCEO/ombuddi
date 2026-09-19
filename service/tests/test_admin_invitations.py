@@ -126,6 +126,28 @@ class AdminInvitationTests(unittest.TestCase):
         self.assertIn(INVITED_EMAIL, insert[1])
         self.assertTrue(connection.committed)
 
+    def test_delivery_runs_after_commit_and_preserves_invitation_on_failure(self):
+        connection = InvitationConnection("create")
+
+        def delivery(recipient, url, expires):
+            self.assertTrue(connection.committed)
+            self.assertEqual(recipient, INVITED_EMAIL)
+            self.assertIn('/accept-invite?token=', url)
+            return {'sender': 'admin@ombuddi.com', 'status': 'unconfirmed'}
+
+        with app.test_request_context('/', method='POST', json={}):
+            g.organization_id = str(ORGANIZATION_ID)
+            g.ombuds_id = str(OMBUDS_ID)
+            with (
+                patch('src.admin_views.get_db_connection', return_value=connection),
+                patch('src.admin_views.deliver_invitation', side_effect=delivery) as send,
+            ):
+                response, status = create_invitation(str(OMBUDS_ID))
+        self.assertEqual(status, 201)
+        self.assertEqual(response.get_json()['emailDelivery']['status'], 'unconfirmed')
+        self.assertFalse(connection.rolled_back)
+        send.assert_called_once()
+
     def test_claim_links_auth0_sub_to_local_seat(self):
         connection = InvitationConnection("claim")
         with app.test_request_context(
