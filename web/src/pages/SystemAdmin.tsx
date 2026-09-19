@@ -128,6 +128,8 @@ export function SystemAdmin() {
     }
 
     const creationPending = React.useRef(false)
+    const savePending = React.useRef(false)
+    const statusPending = React.useRef(false)
 
     async function createOrg() {
         if (creationPending.current) return
@@ -170,7 +172,8 @@ export function SystemAdmin() {
     }
 
     async function saveEdit() {
-        if (!editing) return
+        if (!editing || savePending.current) return
+        savePending.current = true
         setSaving(true)
         setEditError('')
         try {
@@ -186,6 +189,7 @@ export function SystemAdmin() {
             setEditError(message)
             setSnack({ message, severity: 'error' })
         } finally {
+            savePending.current = false
             setSaving(false)
         }
     }
@@ -200,7 +204,8 @@ export function SystemAdmin() {
     }
 
     async function changeStatus() {
-        if (!statusTarget) return
+        if (!statusTarget || statusPending.current) return
+        statusPending.current = true
         setStatusSaving(true)
         setStatusError('')
         try {
@@ -214,6 +219,7 @@ export function SystemAdmin() {
         } catch (reason) {
             setStatusError(reason instanceof Error ? reason.message : 'Unable to update organization status')
         } finally {
+            statusPending.current = false
             setStatusSaving(false)
         }
     }

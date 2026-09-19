@@ -61,9 +61,7 @@ def get_metrics():
                 WITH entry_stats AS (
                     SELECT
                         COUNT(*) FILTER (WHERE date >= now() - INTERVAL '30 days') AS last_30,
-                        COUNT(*) FILTER (WHERE date >= date_trunc('year', now()))   AS ytd,
-                        COUNT(DISTINCT ombuds_id)
-                            FILTER (WHERE date >= now() - INTERVAL '30 days')       AS active_seats
+                        COUNT(*) FILTER (WHERE date >= date_trunc('year', now()))   AS ytd
                     FROM entries
                     WHERE organization_id = %s
                 ),
@@ -75,7 +73,7 @@ def get_metrics():
                     WHERE organization_id = %s
                       AND case_kind = 'standard'
                 )
-                SELECT e.last_30, e.ytd, e.active_seats, c.open_cases, c.total_cases
+                SELECT e.last_30, e.ytd, c.open_cases, c.total_cases
                 FROM entry_stats e, case_stats c
                 """,
                 (g.organization_id, g.organization_id),
@@ -84,9 +82,8 @@ def get_metrics():
         return jsonify({
             'entriesLast30Days': row[0],
             'entriesYtd':        row[1],
-            'activeSeats':       row[2],
-            'openCases':         row[3],
-            'totalCases':        row[4],
+            'openCases':         row[2],
+            'totalCases':        row[3],
         })
     except Exception:
         logger.exception('Failed to load organization metrics')

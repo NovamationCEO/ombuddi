@@ -122,7 +122,7 @@ export function SystemOrganizationSeats({
     const { busy, error: actionError, run: runAction } = useAdminAction(refresh)
     const error = actionError?.message
     const errorSeatId = actionError?.target
-    async function run(action: () => Promise<unknown>, fallback: string, seatId?: string) {
+    async function run(action: () => Promise<unknown>, fallback: string, seatId: string) {
         return runAction(
             async () => {
                 setCopyError('')
@@ -135,19 +135,23 @@ export function SystemOrganizationSeats({
     }
 
     async function createSeat() {
-        await run(async () => {
-            const result = await creator<InvitationResult>(`system/organizations/${organization.id}/ombuds`, {
-                name,
-                email,
-                isAdmin,
-                createInvitation: true,
-            })
-            setInviteUrl(result.inviteUrl ?? '')
-            setInviteDelivery(result.emailDelivery)
-            setName('')
-            setEmail('')
-            setIsAdmin(true)
-        }, 'Unable to create user seat')
+        await run(
+            async () => {
+                const result = await creator<InvitationResult>(`system/organizations/${organization.id}/ombuds`, {
+                    name,
+                    email,
+                    isAdmin,
+                    createInvitation: true,
+                })
+                setInviteUrl(result.inviteUrl ?? '')
+                setInviteDelivery(result.emailDelivery)
+                setName('')
+                setEmail('')
+                setIsAdmin(true)
+            },
+            'Unable to create user seat',
+            'create',
+        )
     }
 
     async function invite(seat: SystemSeat) {
@@ -266,7 +270,7 @@ export function SystemOrganizationSeats({
             </Dialog>
 
             <RoundedContainer title="Add and invite a user">
-                {error && !errorSeatId && <Alert severity="error">{error}</Alert>}
+                {error && errorSeatId === 'create' && <Alert severity="error">{error}</Alert>}
                 <Stack spacing={1.5}>
                     <TextField
                         label="User name"

@@ -8,7 +8,14 @@ import { appTheme } from '../theme/appTheme'
 import { AdminUsers } from './AdminUsers'
 import { useSnack } from '../libraries/useSnack'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-const mocks = vi.hoisted(() => ({ creator: vi.fn(), updater: vi.fn(), refetch: vi.fn(), seatCount: 2 }))
+const mocks = vi.hoisted(() => ({
+    creator: vi.fn(),
+    updater: vi.fn(),
+    refetch: vi.fn(),
+    orgRefetch: vi.fn(),
+    metricsRefetch: vi.fn(),
+    seatCount: 2,
+}))
 vi.mock('../tools/db_tools/updater', () => ({ updater: mocks.updater }))
 vi.mock('../tools/db_tools/creator', () => ({ creator: mocks.creator }))
 vi.mock('../tools/db_tools/useGetter', () => ({
@@ -17,7 +24,7 @@ vi.mock('../tools/db_tools/useGetter', () => ({
             key[1] === 'organization'
                 ? { name: 'Example Office', subscriptionTier: 'alpha', seatCount: mocks.seatCount, seatLimit: 25 }
                 : key[1] === 'metrics'
-                  ? { entriesLast30Days: 12, entriesYtd: 30, activeSeats: 2, openCases: 3, totalCases: 5 }
+                  ? { entriesLast30Days: 12, entriesYtd: 30, openCases: 3, totalCases: 5 }
                   : key.length === 2
                     ? [
                           {
@@ -31,7 +38,8 @@ vi.mock('../tools/db_tools/useGetter', () => ({
                           },
                       ]
                     : [],
-        refetch: mocks.refetch,
+        refetch:
+            key[1] === 'organization' ? mocks.orgRefetch : key[1] === 'metrics' ? mocks.metricsRefetch : mocks.refetch,
         isLoading: false,
         error: null,
     }),
@@ -96,7 +104,7 @@ it('combines seat capacity with usage and keeps creation inputs off the page', a
     expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-labelledby')).toBe('create-seat-title')
     expect(input('Name')).toBeTruthy()
 })
-it('creates a seat from the modal and refreshes users, capacity, and metrics', async () => {
+it('creates a seat from the modal and refreshes users and capacity without refetching metrics', async () => {
     mocks.creator.mockResolvedValue({})
     await mount()
     await click('Create user seat')
@@ -108,7 +116,9 @@ it('creates a seat from the modal and refreshes users, capacity, and metrics', a
         email: 'new@example.com',
         isAdmin: false,
     })
-    expect(mocks.refetch).toHaveBeenCalledTimes(3)
+    expect(mocks.refetch).toHaveBeenCalledTimes(1)
+    expect(mocks.orgRefetch).toHaveBeenCalledTimes(1)
+    expect(mocks.metricsRefetch).not.toHaveBeenCalled()
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 250))
     })
@@ -222,4 +232,22 @@ it('places email failures next to the user and emits a snackbar', async () => {
     expect(host.textContent).toContain('Email already used')
     expect(input('Invitation email').value).toBe('other@example.com')
     expect(useSnack.getState().snack.message).toBe('Email already used')
+})
+
+it('refreshes only users after cancelling an invitation', async () => {
+    mocks.creator.mockResolvedValue({})
+    await mount()
+    await click('Cancel invitation')
+    expect(mocks.refetch).toHaveBeenCalledTimes(1)
+    expect(mocks.orgRefetch).not.toHaveBeenCalled()
+    expect(mocks.metricsRefetch).not.toHaveBeenCalled()
+})
+it('refreshes capacity after a status change without refetching metrics', async () => {
+    mocks.updater.mockResolvedValue({})
+    await mount()
+    await click('Deactivate')
+    await click('Deactivate', document.querySelector('[role="dialog"]')!)
+    expect(mocks.refetch).toHaveBeenCalledTimes(1)
+    expect(mocks.orgRefetch).toHaveBeenCalledTimes(1)
+    expect(mocks.metricsRefetch).not.toHaveBeenCalled()
 })

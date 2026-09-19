@@ -325,3 +325,22 @@ it('retains an invitation that completes while another tab is active', async () 
     await click('Users')
     expect(input('Invitation link').value).toBe('https://example.com/pending')
 })
+
+it.each(['Save', 'Deactivate organization'])('guards duplicate %s submissions', async (action) => {
+    let resolve!: (value: unknown) => void
+    mocks.updater.mockReturnValue(
+        new Promise((done) => {
+            resolve = done
+        }),
+    )
+    await mount('/system/orgs?org=org-1&tab=settings')
+    if (action === 'Deactivate organization') await click(action)
+    const scope = action === 'Save' ? document : document.querySelector('[role="dialog"]')!
+    const button = Array.from(scope.querySelectorAll('button')).find((b) => b.textContent === action)!
+    await act(async () => {
+        button.click()
+        button.click()
+    })
+    expect(mocks.updater).toHaveBeenCalledTimes(1)
+    await act(async () => resolve({}))
+})

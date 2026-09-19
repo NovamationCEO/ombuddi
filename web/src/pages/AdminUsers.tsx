@@ -28,7 +28,6 @@ import { RoundedContainer } from '../components/RoundedContainer'
 type AdminMetrics = {
     entriesLast30Days: number
     entriesYtd: number
-    activeSeats: number
     openCases: number
     totalCases: number
 }
@@ -89,9 +88,10 @@ export function AdminUsers() {
 
     const atSeatLimit = org.data != null && org.data.seatCount >= org.data.seatLimit
 
-    const { run, busy, pending, error, clearError } = useAdminAction(async () => {
-        await Promise.all([users.refetch(), org.refetch(), metrics.refetch()])
-    })
+    const { run, busy, pending, error, clearError } = useAdminAction(users.refetch)
+    async function refreshCapacity() {
+        await Promise.all([users.refetch(), org.refetch()])
+    }
     const [historySeat, setHistorySeat] = React.useState<AdminOmbuds | null>(null)
     const [copyError, setCopyError] = React.useState('')
 
@@ -111,6 +111,7 @@ export function AdminUsers() {
             },
             'Unable to create user seat',
             'create',
+            refreshCapacity,
         )
     }
     async function invite(ombudsId: string) {
@@ -175,6 +176,7 @@ export function AdminUsers() {
             },
             'Unable to update user status',
             statusTarget.id,
+            refreshCapacity,
         )
     }
 
@@ -563,7 +565,9 @@ export function AdminUsers() {
                         spacing={2}
                         sx={{ pt: 1 }}
                     >
-                        {error?.target === statusTarget?.id && error && <Alert severity="error">{error.message}</Alert>}
+                        {statusTarget && error?.target === statusTarget.id && (
+                            <Alert severity="error">{error.message}</Alert>
+                        )}
                         <Typography>
                             {statusTarget?.isActive
                                 ? `New requests from ${statusTarget.name} will be blocked immediately. Unused invitations for this seat will be revoked.`
