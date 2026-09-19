@@ -11,7 +11,6 @@ import { creator } from '../../tools/db_tools/creator'
 import { CodeSetterBox } from '../CodeSetterBox'
 import { RoundedContainer } from '../RoundedContainer'
 import { useOrganization } from '../../tools/useOrganization'
-import { institutionalPalette as palette } from '../../theme/institutionalPalette'
 import { ReferralSourceSelector } from '../ReferralSourceSelector'
 import { ReferralSourceSelectionType } from '../../types/majorTypes'
 import { referralSelectionsAreValid } from '../../tools/referralSources'
@@ -135,12 +134,7 @@ export function AddNewCase() {
     }
 
     return (
-        <Box
-            sx={{
-                ...pageLayoutStyle,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2}
                 sx={{ width: '100%', minWidth: 0 }}

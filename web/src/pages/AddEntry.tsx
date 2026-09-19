@@ -477,7 +477,7 @@ export function AddEntry() {
                 </DialogActions>
             </Dialog>
 
-            <Box sx={{ minHeight: '100%', bgcolor: entryWorkspace.background, color: entryWorkspace.ink }}>
+            <Box sx={{ minHeight: '100%', bgcolor: 'transparent', color: entryWorkspace.ink }}>
                 <Box
                     component="header"
                     sx={{

@@ -252,7 +252,7 @@ export function CaseSummary() {
 
     if (caseRes.isLoading) {
         return (
-            <Box sx={{ minHeight: '100%', display: 'grid', placeItems: 'center', bgcolor: workspace.background }}>
+            <Box sx={{ minHeight: '100%', display: 'grid', placeItems: 'center', bgcolor: 'transparent' }}>
                 <CircularProgress sx={{ color: workspace.teal }} />
             </Box>
         )
@@ -261,7 +261,7 @@ export function CaseSummary() {
     const caseItem = caseRes.data
     if (!caseItem) {
         return (
-            <Box sx={{ minHeight: '100%', p: 4, bgcolor: workspace.background, color: workspace.ink }}>
+            <Box sx={{ minHeight: '100%', p: 4, bgcolor: 'transparent', color: workspace.ink }}>
                 <Typography variant="h5">Case not found</Typography>
                 <Button
                     startIcon={<ArrowBack />}
@@ -291,7 +291,7 @@ export function CaseSummary() {
             sx={{
                 minHeight: '100%',
                 boxSizing: 'border-box',
-                bgcolor: workspace.background,
+                bgcolor: 'transparent',
                 color: workspace.ink,
             }}
         >

@@ -47,12 +47,7 @@ export function Cases() {
     }
 
     return (
-        <Box
-            sx={{
-                ...pageLayoutStyle,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Box
                 sx={{
                     mb: 2.5,

@@ -133,12 +133,7 @@ export function HomePage() {
     }, [])
 
     return (
-        <Box
-            sx={{
-                ...pageLayoutStyle,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 71%, ${palette.backgroundDeep} 71%)`,
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Box
                 sx={{
                     mb: 2.5,

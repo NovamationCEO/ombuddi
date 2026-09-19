@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom'
+import { WorkspaceLayout } from './components/WorkspaceLayout'
 import { Page } from './components/Page'
 import { ErrorElement } from './trusted-components/ErrorElement'
 import { PageAlternate } from './components/PageAlternate'
@@ -19,7 +20,7 @@ import {
     WelcomePage,
 } from './routeComponents'
 
-export const router = createBrowserRouter([
+const routes = [
     {
         path: '/',
         element: (
@@ -170,5 +171,14 @@ export const router = createBrowserRouter([
                 description="Review a confidential ombuds case and its protected entries."
             />
         ),
+    },
+]
+
+export const router = createBrowserRouter([
+    ...routes.filter((route) => route.path === '/welcome' || route.path === '/accept-invite'),
+    {
+        element: <WorkspaceLayout />,
+        errorElement: <ErrorElement />,
+        children: routes.filter((route) => route.path !== '/welcome' && route.path !== '/accept-invite'),
     },
 ])

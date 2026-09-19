@@ -7,7 +7,7 @@ export const pageLayoutStyle = {
     minWidth: 0,
     minHeight: '100%',
     boxSizing: 'border-box',
-    bgcolor: 'background.default',
+    bgcolor: 'transparent',
     color: 'text.primary',
     p: pagePadding,
 } as const
