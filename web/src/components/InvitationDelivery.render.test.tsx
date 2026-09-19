@@ -7,6 +7,7 @@ import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './In
 
 describe('Invitation delivery feedback', () => {
     it.each([
+        [{ status: 'failed', reason: 'token_refresh_busy' }, 'creating a replacement revokes the previous link', 'warning'],
         [undefined, 'status unavailable', 'warning'],
         [{ status: 'not_configured' }, 'sending is disabled', 'warning'],
         [{ status: 'started' }, 'If no later outcome appears', 'warning'],

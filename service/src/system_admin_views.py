@@ -9,6 +9,7 @@ from flask import Blueprint, g, jsonify, request
 from connection import get_db_connection
 from email_identity import normalize_email
 from invitation_delivery import deliver_invitation
+from invitation_history import email_history
 from admin_audit import record_administrative_event
 
 
@@ -1087,7 +1088,6 @@ def _seat_json(row) -> dict:
 
 @system_admin_views.route('/api/v1/system/organizations/<org_id>/ombuds/<ombuds_id>/email-history')
 def list_invitation_email_history(org_id, ombuds_id):
-    from invitation_history import email_history
     conn = None
     try:
         conn = get_db_connection()

@@ -132,6 +132,7 @@ class InvitationEmailTests(unittest.TestCase):
         self.assertEqual(self.deliver()['status'], 'failed')
         self.assertEqual(send.call_count, 3)
 
+    @patch('invitation_email.TOKEN_LOCK_TIMEOUT_SECONDS', 0.01)
     @patch('invitation_email.urlopen')
     def test_wait_for_concurrent_refresh_is_bounded(self, send):
         import threading
@@ -147,5 +148,18 @@ class InvitationEmailTests(unittest.TestCase):
             _token_lock.release()
         worker.join()
         self.assertEqual(result[0]['status'], 'failed')
-        self.assertEqual(result[0]['reason'], 'authentication_failed')
+        self.assertEqual(result[0]['reason'], 'token_refresh_busy')
         send.assert_not_called()
+
+    @patch('invitation_email._token_lock')
+    @patch('invitation_email.urlopen')
+    def test_busy_during_401_invalidation_does_not_resubmit(self, send, lock):
+        lock.acquire.side_effect = [True, False]
+        send.side_effect = [io.BytesIO(b'{"access_token":"old"}'),
+                            HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None)]
+        result = self.deliver()
+        self.assertEqual(result['reason'], 'token_refresh_busy')
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['submissionAttempts'], 1)
+        self.assertEqual(send.call_count, 2)
+        lock.release.assert_called_once()

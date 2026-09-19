@@ -138,6 +138,8 @@ Goal: a story you can walk the IOA through.
 
 ## Phase 8 — Nice-to-haves  [parking lot]
 
+- Background invitation email delivery: deliberately deferred on 2026-09-19 because current app scale supports synchronous sending. Revisit for observed sending delays/timeouts, increased volume, or unattended recovery needs. See [design considerations and decision](INVITATION_EMAIL.md#future-background-delivery-deferred).
+
 - Org structure modeling beyond `primary_roles` (departments, hierarchies, custom tags).
 - Calendar import for meeting dates/durations.
 - Multi-ombuds case handoff with re-hashing under the recipient's salt.

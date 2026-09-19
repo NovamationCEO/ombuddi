@@ -1,5 +1,6 @@
 """Sending history scoped to both the authenticated organization and target seat."""
 from flask import jsonify
+from invitation_email_fields import EMAIL_DELIVERY_FIELDS
 
 
 def email_history(conn, organization_id, ombuds_id):
@@ -17,7 +18,7 @@ def email_history(conn, organization_id, ombuds_id):
             ORDER BY created_at DESC, id DESC
             """, (organization_id, ombuds_id),
         )
-        fields = {'invitationId', 'sender', 'status', 'reason', 'stage', 'httpStatus', 'submissionAttempts'}
+        fields = EMAIL_DELIVERY_FIELDS | {'invitationId'}
         return jsonify([{'id': str(row[0]), 'createdAt': row[1].isoformat(),
                          'delivery': {k: v for k, v in row[2].items() if k in fields}}
                         for row in cur.fetchall()])

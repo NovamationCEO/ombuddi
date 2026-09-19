@@ -6,7 +6,8 @@ import { ThemeProvider } from '@mui/material/styles'
 import { appTheme } from '../theme/appTheme'
 import { AdminUsers } from './AdminUsers'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
-const mocks = vi.hoisted(() => ({ creator: vi.fn(), refetch: vi.fn().mockResolvedValue(undefined) }))
+const mocks = vi.hoisted(() => ({ creator: vi.fn(), invalidate: vi.fn().mockResolvedValue(undefined), refetch: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: mocks.invalidate }) }))
 vi.mock('../tools/db_tools/creator', () => ({ creator: mocks.creator }))
 vi.mock('../tools/db_tools/updater', () => ({ updater: vi.fn() }))
 vi.mock('../tools/db_tools/useGetter', () => ({
@@ -29,5 +30,17 @@ it('prevents duplicate requests and re-enables invitation after failure', async 
     await act(async () => reject(new Error('Connection unavailable')))
     expect(button.disabled).toBe(false)
     expect(container.textContent).toContain('Connection unavailable')
+    await act(async () => root.unmount())
+})
+
+it('invalidates persisted sending history after an invitation is created', async () => {
+    mocks.creator.mockResolvedValue({ inviteUrl: 'https://example.com/invite?token=secret', emailDelivery: { status: 'accepted', sender: 'admin@ombuddi.com' } })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(async () => root.render(<ThemeProvider theme={appTheme}><AdminUsers /></ThemeProvider>))
+    const button = Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Create invitation')!
+    await act(async () => button.click())
+    expect(mocks.invalidate).toHaveBeenCalledWith({ queryKey: ['admin', 'ombuds', 'seat', 'email-history'], exact: true })
+    expect(button.disabled).toBe(false)
     await act(async () => root.unmount())
 })

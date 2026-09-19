@@ -13,14 +13,21 @@ from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 SENDER = 'admin@ombuddi.com'
+TOKEN_LOCK_TIMEOUT_SECONDS = 2
+
+
+class TokenRefreshBusy(Exception):
+    """Another request is still refreshing the shared Microsoft token."""
+
+
 _token_cache = {}
 _token_lock = Lock()
 
 
 def _access_token(tenant, client, secret):
     key = (tenant, client, hashlib.sha256(secret.encode()).digest())
-    if not _token_lock.acquire(timeout=2):
-        raise TimeoutError('Token refresh busy')
+    if not _token_lock.acquire(timeout=TOKEN_LOCK_TIMEOUT_SECONDS):
+        raise TokenRefreshBusy()
     try:
         cached = _token_cache.get(key)
         if cached and cached[1] > time.monotonic():
@@ -104,9 +111,9 @@ def deliver_invitation(recipient, invite_url, expires_at):
                     raise
                 # Invalidate only the token rejected, not another thread's refresh.
                 stage = 'authentication'
-                if not _token_lock.acquire(timeout=2):
+                if not _token_lock.acquire(timeout=TOKEN_LOCK_TIMEOUT_SECONDS):
                     exc.close()
-                    raise TimeoutError('Token refresh busy')
+                    raise TokenRefreshBusy()
                 try:
                     for key, cached in list(_token_cache.items()):
                         if cached[0] == token:
@@ -127,7 +134,9 @@ def deliver_invitation(recipient, invite_url, expires_at):
         result['stage'] = stage
         if code is not None:
             result['httpStatus'] = code
-        if stage == 'configuration':
+        if isinstance(exc, TokenRefreshBusy):
+            result.update(status='failed', reason='token_refresh_busy')
+        elif stage == 'configuration':
             result.update(status='configuration_error', reason='invalid_configuration')
         elif stage == 'authentication':
             result.update(status='failed', reason='authentication_failed')

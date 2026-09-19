@@ -1,6 +1,7 @@
 import { InvitationEmailHistory } from '../components/InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
     Alert,
     Box,
@@ -68,6 +69,7 @@ type InvitationResult = {
 
 
 export function AdminUsers() {
+    const queryClient = useQueryClient()
     const org = useGetter<AdminOrganization>(['admin', 'organization'])
     const metrics = useGetter<AdminMetrics>(['admin', 'metrics'])
     const users = useGetter<AdminOmbuds[]>(['admin', 'ombuds'])
@@ -119,6 +121,7 @@ export function AdminUsers() {
             )
             setInviteUrl(result.inviteUrl)
             setInviteDelivery(result.emailDelivery)
+            await queryClient.invalidateQueries({ queryKey: ['admin', 'ombuds', ombudsId, 'email-history'], exact: true })
             await users.refetch()
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : 'Unable to create invitation')
@@ -192,7 +195,7 @@ export function AdminUsers() {
 
             {historySeat && <RoundedContainer title={`Email history — ${historySeat.name}`}>
                 <Button onClick={() => setHistorySeat(null)}>Close history</Button>
-                <InvitationEmailHistory key={`${historySeat.id}:${inviteUrl}`} endpoint={['admin', 'ombuds', historySeat.id, 'email-history']} />
+                <InvitationEmailHistory key={historySeat.id} endpoint={['admin', 'ombuds', historySeat.id, 'email-history']} />
             </RoundedContainer>}
             {error && <Alert severity="error">{error}</Alert>}
             {(users.error || org.error) && (

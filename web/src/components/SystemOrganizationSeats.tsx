@@ -1,6 +1,7 @@
 import { InvitationEmailHistory } from './InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
 import React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
     Alert,
     Box,
@@ -126,6 +127,7 @@ export function SystemOrganizationSeats({
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
     const [isAdmin, setIsAdmin] = React.useState(true)
+    const queryClient = useQueryClient()
     const [busy, setBusy] = React.useState(false)
     const [error, setError] = React.useState('')
     const [inviteUrl, setInviteUrl] = React.useState('')
@@ -179,6 +181,7 @@ export function SystemOrganizationSeats({
             )
             setInviteUrl(result.inviteUrl ?? '')
             setInviteDelivery(result.emailDelivery)
+            await queryClient.invalidateQueries({ queryKey: ['system', 'organizations', organization.id, 'ombuds', seat.id, 'email-history'], exact: true })
         }, 'Unable to create invitation')
     }
 
@@ -358,7 +361,7 @@ export function SystemOrganizationSeats({
                 <RoundedContainer title={`Invitation history — ${historySeat.name}`}>
                     <Stack spacing={1}>
                         <Button sx={{ alignSelf: 'flex-start' }} onClick={() => setHistorySeat(null)}>Close history</Button>
-                        <InvitationEmailHistory key={`${historySeat.id}:${inviteUrl}`} endpoint={['system', 'organizations', organization.id, 'ombuds', historySeat.id, 'email-history']} />
+                        <InvitationEmailHistory key={historySeat.id} endpoint={['system', 'organizations', organization.id, 'ombuds', historySeat.id, 'email-history']} />
                         {(invitationHistory.data ?? []).map((invitation) => (
                             <Box key={invitation.id} sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>

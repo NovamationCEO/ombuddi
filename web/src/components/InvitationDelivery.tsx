@@ -3,13 +3,14 @@ import { Box } from '@mui/material'
 export type EmailDelivery = {
     sender: string
     status: 'started' | 'accepted' | 'not_configured' | 'unconfirmed' | 'configuration_error' | 'failed' | 'rejected'
-    reason?: 'invalid_configuration' | 'authentication_failed' | 'provider_rejected' | 'submission_unknown' | 'audit_unavailable'
+    reason?: 'invalid_configuration' | 'authentication_failed' | 'provider_rejected' | 'submission_unknown' | 'audit_unavailable' | 'token_refresh_busy'
     httpStatus?: number
     auditWarning?: 'outcome_not_saved'
 }
 
 export function deliveryText(delivery?: EmailDelivery): string {
     if (!delivery) return 'Email status unavailable.'
+    if (delivery.reason === 'token_refresh_busy') return 'Email was not sent because the sending service was temporarily busy. The invitation remains valid. You can share its link manually; creating a replacement revokes the previous link.'
     if (delivery.reason === 'audit_unavailable') return 'Email was not sent because its audit record could not be saved. The invitation link remains valid.'
     switch (delivery.status) {
         case 'accepted': return `Microsoft accepted the invitation email from ${delivery.sender}. Inbox delivery is not confirmed.`

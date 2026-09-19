@@ -1,5 +1,6 @@
 """Persist attempt and outcome independently of the invitation transaction."""
 import logging
+from invitation_email_fields import EMAIL_DELIVERY_FIELDS
 from admin_audit import record_administrative_event
 from invitation_email import deliver_invitation as send_email, SENDER
 
@@ -16,7 +17,7 @@ def deliver_invitation(recipient, invite_url, expires_at, *, conn,
                 event_type='ombuds_invitation_email',
                 details={'invitationId': str(invitation_id), **{
                     key: value for key, value in status.items()
-                    if key in {'sender', 'status', 'reason', 'stage', 'httpStatus', 'submissionAttempts'}
+                    if key in EMAIL_DELIVERY_FIELDS
                 }},
             )
         conn.commit()

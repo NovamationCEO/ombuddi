@@ -111,7 +111,8 @@ can indicate incorrect permissions as well as propagation delay.
 
 Token refresh is serialized within each worker to avoid simultaneous token
 requests. Waiting for that lock is capped at two seconds; contention is reported
-as an authentication-stage failure without sending. This does not impose a
+as `token_refresh_busy` without sending, distinct from credential or network
+failures. The invitation stays valid; creating a replacement revokes its link. This does not impose a
 whole-request deadline on network operations. All three invitation interfaces
 use an immediate in-flight guard in addition to disabled buttons. These guards
 prevent repeated clicks in one interface; they are not cross-client idempotency
@@ -122,3 +123,35 @@ this task. Apply it before deploying the backend and frontend together. No
 additional migration is needed for structured results or email-history views.
 Keep `INVITATION_EMAIL_ENABLED=false` until migration and deployment succeed,
 then enable it and test an invitation to an address you control.
+
+`submissionAttempts` counts HTTP submissions, not delivered messages. A rejected
+401 followed by acceptance counts as two submissions, not two deliveries.
+
+
+## Future background delivery (deferred)
+
+Decision, 2026-09-19: retain synchronous invitation sending at the app's current
+small scale. Background delivery is a potential improvement, not a requirement
+for the current release. Revisit when actual sending delays/timeouts, invitation
+volume, or unattended recovery needs justify the added operations work.
+
+A candidate design uses a durable PostgreSQL job queue and a separate worker.
+Create the invitation and sending job in one transaction, return a queued status,
+and let the worker submit to Microsoft and record the outcome. Benefits include
+faster administrator responses, jobs surviving web-process restarts, and controlled
+sending rates. This does not guarantee inbox delivery.
+
+Before implementation, resolve temporary encrypted storage of the raw invitation
+link (the current invitation table stores only its hash), separate key management,
+payload deletion and retention, worker deployment and monitoring, job claiming and
+crash recovery, and UI status refresh. Check for revoked, replaced, claimed, or
+expired invitations before sending. An in-process background thread is not a
+substitute for durable jobs and a supervised worker.
+
+The hardest failure is Microsoft accepting mail followed by a worker crash before
+that acceptance is recorded. Retrying can duplicate a message; not retrying can
+leave an unsent message. Preserve an uncertain state and a deliberate recovery
+path rather than promising exactly-once delivery. Monitor for stalled jobs,
+expired invitations, and retry loops. Compromise of queued payloads and their
+key could expose recipient addresses and invitation links, even though claiming
+still requires the matching verified email.

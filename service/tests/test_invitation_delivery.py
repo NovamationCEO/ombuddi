@@ -21,7 +21,7 @@ class DeliveryAuditTests(unittest.TestCase):
         conn = MagicMock()
         def sending(*args):
             self.assertEqual(conn.commit.call_count, 1)
-            return {'sender': 'admin@ombuddi.com', 'status': 'accepted', 'message': 'Do not persist', 'unknownField': 'secret'}
+            return {'sender': 'admin@ombuddi.com', 'status': 'accepted', 'message': 'Do not persist', 'unknownField': 'secret', 'invitationId': 'spoofed-id'}
         send.side_effect = sending
         result = self.deliver(conn)
         self.assertEqual(result['status'], 'accepted')
