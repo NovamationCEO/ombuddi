@@ -6,6 +6,13 @@ plain-text message through Microsoft Graph after the database commits.
 The recipient is the email bound to the invitation, never an arbitrary address
 supplied alongside a send request. No case or visitor information is included.
 
+## Database rollout
+
+Apply `service/migrations/015_add_invitation_email_audit.sql` before deploying
+this version. It expands the audit event constraint without modifying existing
+events. Fresh databases use the updated `service/schema.sql`. Without this
+migration, the audit write fails and sending is skipped.
+
 ## Microsoft administrator setup
 
 1. In Microsoft Entra admin center, create a single-tenant app registration
@@ -57,10 +64,16 @@ A Graph 202 means accepted for processing, not confirmed inbox delivery.
 Failures and timeouts leave the invitation usable and display an unconfirmed
 status; no automatic retry risks sending duplicate messages after a timeout.
 Check Sent Items/message trace before sharing the existing link manually.
-Issuing another invitation revokes the previous link. Delivery status is returned
-in the creation response, not persisted as delivery history. A process crash
-between commit and send requires manual recovery or a replacement invitation;
-there is no background delivery queue. Secrets, raw links, and provider error
+Issuing another invitation revokes the previous link. Sending attempts and outcomes are persisted as `ombuds_invitation_email` events
+in the system administrator audit log, associated with the invitation ID.
+Statuses distinguish `started`, `accepted`, `not_configured`,
+`configuration_error`, `failed` (before submission), `rejected` (HTTP 4xx), and
+`unconfirmed` (possibly submitted). A lone `started` event means the final
+outcome is unknown; inspect Microsoft message trace before recovery. Failure
+to save the initial audit event prevents sending. Failure to save the final
+event is reported separately without overwriting the sending result.
+A process crash between invitation commit and attempt recording requires
+manual recovery or a replacement invitation; there is no background queue. Secrets, raw links, and provider error
 bodies are not logged by the sender.
 
 Auth0 verification/password reset mail is configured separately. This change
@@ -69,3 +82,19 @@ only handles Ombuddi invitations.
 References: [Microsoft Graph sendMail](https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0),
 [Exchange application RBAC](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac),
 [OAuth client credentials](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow).
+
+Sending still runs synchronously on the request worker. Microsoft access tokens
+are cached per worker using the provider's `expires_in` with a 60-second margin;
+credential changes invalidate the cache key. The token and send requests each
+use a 10-second blocking-operation timeout, not an overall request deadline.
+A slow provider or proxy timeout can therefore leave a committed invitation
+without a response in the browser. Consult the audit log and message trace
+before replacing it. Token caching reduces authentication calls but does not
+remove this synchronous-delivery limitation.
+
+The sender's Sent Items contains recipient addresses and raw invitation links.
+Claiming still requires the matching verified Auth0 email, but the message is
+sensitive: restrict mailbox access and apply an appropriate mail retention
+policy. Audit events contain no raw invitation tokens or message bodies.
+Logs contain only the failure stage, exception class, and HTTP status; a 403
+can indicate incorrect permissions as well as propagation delay.

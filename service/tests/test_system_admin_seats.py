@@ -125,7 +125,8 @@ class SystemAdminSeatTests(unittest.TestCase):
             for sql, params in connection.fake_cursor.executions
             if sql.startswith("INSERT INTO administrative_events")
         ]
-        self.assertEqual(audit_events, ["ombuds_created", "ombuds_invitation_created"])
+        self.assertEqual(audit_events, ["ombuds_created", "ombuds_invitation_created",
+                                        "ombuds_invitation_email", "ombuds_invitation_email"])
 
     def test_system_admin_can_promote_existing_user(self):
         connection = SeatConnection("promote")

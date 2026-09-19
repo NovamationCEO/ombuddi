@@ -129,7 +129,7 @@ class AdminInvitationTests(unittest.TestCase):
     def test_delivery_runs_after_commit_and_preserves_invitation_on_failure(self):
         connection = InvitationConnection("create")
 
-        def delivery(recipient, url, expires):
+        def delivery(recipient, url, expires, **audit_context):
             self.assertTrue(connection.committed)
             self.assertEqual(recipient, INVITED_EMAIL)
             self.assertIn('/accept-invite?token=', url)

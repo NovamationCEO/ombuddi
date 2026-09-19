@@ -8,7 +8,7 @@ from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
 from email_identity import normalize_email
-from invitation_email import deliver_invitation
+from invitation_delivery import deliver_invitation
 from admin_audit import record_administrative_event
 
 
@@ -184,15 +184,18 @@ def create_organization():
         conn.commit()
 
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+        invite_url = f'{frontend_url}/accept-invite?token={raw_token}'
         return jsonify({
             'success': True,
             'organizationId': str(org_id),
             'ombudsId': str(ombuds_id),
             'invitationId': str(invitation_id),
             'expiresAt': expires_at.isoformat(),
-            'inviteUrl': f"{frontend_url}/accept-invite?token={raw_token}",
+            'inviteUrl': invite_url,
             'emailDelivery': deliver_invitation(
-                admin_email, f'{frontend_url}/accept-invite?token={raw_token}', expires_at,
+                admin_email, invite_url, expires_at, conn=conn,
+                invitation_id=invitation_id, organization_id=org_id,
+                actor_ombuds_id=g.ombuds_id, target_ombuds_id=ombuds_id,
             ),
         }), 201
     except Exception as exc:
@@ -523,12 +526,15 @@ def create_org_ombuds(org_id):
         result = {'success': True, 'ombudsId': str(ombuds_id)}
         if raw_token:
             frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+            invite_url = f'{frontend_url}/accept-invite?token={raw_token}'
             result.update({
                 'invitationId': str(invitation_id),
                 'expiresAt': expires_at.isoformat(),
-                'inviteUrl': f"{frontend_url}/accept-invite?token={raw_token}",
+                'inviteUrl': invite_url,
                 'emailDelivery': deliver_invitation(
-                    email, f'{frontend_url}/accept-invite?token={raw_token}', expires_at,
+                    email, invite_url, expires_at, conn=conn,
+                    invitation_id=invitation_id, organization_id=org_id,
+                    actor_ombuds_id=g.ombuds_id, target_ombuds_id=ombuds_id,
                 ),
             })
         return jsonify(result), 201
@@ -883,13 +889,16 @@ def create_org_invitation(org_id, ombuds_id):
         conn.commit()
 
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+        invite_url = f'{frontend_url}/accept-invite?token={raw_token}'
         return jsonify({
             'success': True,
             'id': str(invitation_id),
             'expiresAt': expires_at.isoformat(),
-            'inviteUrl': f"{frontend_url}/accept-invite?token={raw_token}",
+            'inviteUrl': invite_url,
             'emailDelivery': deliver_invitation(
-                invited_email, f'{frontend_url}/accept-invite?token={raw_token}', expires_at,
+                invited_email, invite_url, expires_at, conn=conn,
+                invitation_id=invitation_id, organization_id=org_id,
+                actor_ombuds_id=g.ombuds_id, target_ombuds_id=ombuds_id,
             ),
         }), 201
     except Exception:

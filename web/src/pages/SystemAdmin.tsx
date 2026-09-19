@@ -1,4 +1,4 @@
-import { InvitationDelivery, type EmailDelivery } from '../components/InvitationDelivery'
+import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -160,7 +160,7 @@ export function SystemAdmin() {
             {statusError && <Alert severity="error">{statusError}</Alert>}
 
             {newInviteUrl && (
-                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
+                <Alert severity={invitationSeverity(inviteDelivery)}>
                     <Stack spacing={1}>
                         <InvitationDelivery delivery={inviteDelivery} />
                         <TextField

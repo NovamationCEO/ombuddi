@@ -8,11 +8,12 @@ from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-from invitation_email import deliver_invitation
+from invitation_email import deliver_invitation, _token_cache
 
 
 class InvitationEmailTests(unittest.TestCase):
     def setUp(self):
+        _token_cache.clear()
         self.env = patch.dict(os.environ, {
             'INVITATION_EMAIL_ENABLED': 'true',
             'MICROSOFT_TENANT_ID': 'tenant',
@@ -34,9 +35,9 @@ class InvitationEmailTests(unittest.TestCase):
 
     @patch('invitation_email.urlopen')
     def test_missing_credentials_or_insecure_url_does_not_send(self, send):
-        self.assertEqual(self.deliver('http://localhost:5173/invite')['status'], 'unconfirmed')
+        self.assertEqual(self.deliver('http://localhost:5173/invite')['status'], 'configuration_error')
         del os.environ['MICROSOFT_CLIENT_SECRET']
-        self.assertEqual(self.deliver()['status'], 'unconfirmed')
+        self.assertEqual(self.deliver()['status'], 'configuration_error')
         send.assert_not_called()
 
     @patch('invitation_email.urlopen')
@@ -53,12 +54,13 @@ class InvitationEmailTests(unittest.TestCase):
         self.assertEqual(payload['message']['toRecipients'], [{'emailAddress': {'address': 'invitee@example.com'}}])
         self.assertIn('private-token', payload['message']['body']['content'])
         self.assertTrue(payload['saveToSentItems'])
+        self.assertIn('October 01, 2026 at 00:00 UTC', payload['message']['body']['content'])
 
     @patch('invitation_email.urlopen')
     def test_failure_does_not_leak_provider_error_or_retry(self, send):
         send.side_effect = HTTPError('https://example.com/private-token', 403, 'private-secret', {}, None)
         with self.assertLogs('invitation_email', level='WARNING') as logs:
-            self.assertEqual(self.deliver()['status'], 'unconfirmed')
+            self.assertEqual(self.deliver()['status'], 'failed')
         self.assertNotIn('private-', ' '.join(logs.output))
         self.assertEqual(send.call_count, 1)
 
@@ -67,3 +69,34 @@ class InvitationEmailTests(unittest.TestCase):
         send.side_effect = [io.BytesIO(b'{"access_token":"token"}'), TimeoutError()]
         self.assertEqual(self.deliver()['status'], 'unconfirmed')
         self.assertEqual(send.call_count, 2)
+
+    @patch('invitation_email.urlopen')
+    def test_token_reused_until_expiry(self, send):
+        response = MagicMock()
+        response.__enter__.return_value.status = 202
+        send.side_effect = [io.BytesIO(b'{"access_token":"token","expires_in":3600}'), response, response,
+                            io.BytesIO(b'{"access_token":"renewed","expires_in":3600}'), response]
+        with patch('invitation_email.time.monotonic', return_value=100):
+            self.assertEqual(self.deliver()['status'], 'accepted')
+            self.assertEqual(self.deliver()['status'], 'accepted')
+        self.assertEqual(send.call_count, 3)
+        with patch('invitation_email.time.monotonic', return_value=3700):
+            self.assertEqual(self.deliver()['status'], 'accepted')
+        self.assertEqual(send.call_count, 5)
+
+    @patch('invitation_email.urlopen')
+    def test_rejection_has_safe_status_and_stage(self, send):
+        send.side_effect = [io.BytesIO(b'{"access_token":"token"}'),
+                            HTTPError('https://example.com/private-token', 403, 'private-secret', {}, None)]
+        result = self.deliver()
+        self.assertEqual(result['status'], 'rejected')
+        self.assertEqual(result['httpStatus'], 403)
+        self.assertEqual(result['stage'], 'submission')
+        self.assertNotIn('private-', json.dumps(result))
+
+    @patch('invitation_email.urlopen')
+    def test_unexpected_success_is_not_reported_as_accepted(self, send):
+        response = MagicMock()
+        response.__enter__.return_value.status = 200
+        send.side_effect = [io.BytesIO(b'{"access_token":"token"}'), response]
+        self.assertEqual(self.deliver()['status'], 'unconfirmed')

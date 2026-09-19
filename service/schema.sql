@@ -156,6 +156,7 @@ CREATE TABLE administrative_events (
         'ombuds_admin_granted',
         'ombuds_admin_revoked',
         'ombuds_invitation_created',
+        'ombuds_invitation_email',
         'ombuds_invitation_cancelled',
         'ombuds_invitation_claimed',
         'ombuds_deactivated',

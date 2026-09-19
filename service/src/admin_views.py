@@ -8,7 +8,7 @@ from flask import Blueprint, g, jsonify, request
 
 from connection import get_db_connection
 from email_identity import normalize_email
-from invitation_email import deliver_invitation
+from invitation_delivery import deliver_invitation
 from admin_audit import record_administrative_event
 
 
@@ -438,13 +438,16 @@ def create_invitation(ombuds_id):
         conn.commit()
 
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+        invite_url = f'{frontend_url}/accept-invite?token={raw_token}'
         return jsonify({
             'success': True,
             'id': str(invitation_id),
             'expiresAt': expires_at.isoformat(),
-            'inviteUrl': f"{frontend_url}/accept-invite?token={raw_token}",
+            'inviteUrl': invite_url,
             'emailDelivery': deliver_invitation(
-                invited_email, f'{frontend_url}/accept-invite?token={raw_token}', expires_at,
+                invited_email, invite_url, expires_at, conn=conn,
+                invitation_id=invitation_id, organization_id=g.organization_id,
+                actor_ombuds_id=g.ombuds_id, target_ombuds_id=ombuds_id,
             ),
         }), 201
     except Exception:

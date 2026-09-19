@@ -1,4 +1,4 @@
-import { InvitationDelivery, type EmailDelivery } from '../components/InvitationDelivery'
+import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -101,7 +101,13 @@ export function AdminUsers() {
         }
     }
 
+    const invitationPending = React.useRef(false)
+    const [inviting, setInviting] = React.useState(false)
+
     async function invite(ombudsId: string) {
+        if (invitationPending.current) return
+        invitationPending.current = true
+        setInviting(true)
         setError('')
         setInviteUrl('')
         try {
@@ -114,6 +120,9 @@ export function AdminUsers() {
             await users.refetch()
         } catch (reason) {
             setError(reason instanceof Error ? reason.message : 'Unable to create invitation')
+        } finally {
+            invitationPending.current = false
+            setInviting(false)
         }
     }
 
@@ -242,7 +251,7 @@ export function AdminUsers() {
             )}
 
             {inviteUrl && (
-                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
+                <Alert severity={invitationSeverity(inviteDelivery)}>
                     <Stack spacing={1}>
                         <InvitationDelivery delivery={inviteDelivery} />
                         <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
@@ -354,13 +363,13 @@ export function AdminUsers() {
                                         </>
                                     ) : (
                                         <>
-                                            <Button variant="text" onClick={() => beginEmailEdit(user)}>
+                                            <Button variant="text" onClick={() => beginEmailEdit(user)} disabled={inviting}>
                                                 Edit email
                                             </Button>
                                             <Button
                                                 variant="outlined"
                                                 onClick={() => invite(user.id)}
-                                                disabled={!user.email}
+                                                disabled={inviting || !user.email}
                                             >
                                                 {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
                                             </Button>
@@ -368,6 +377,7 @@ export function AdminUsers() {
                                                 <Button
                                                     color="warning"
                                                     onClick={() => cancelInvitation(user.id)}
+                                                    disabled={inviting}
                                                 >
                                                     Cancel invitation
                                                 </Button>

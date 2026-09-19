@@ -1,4 +1,4 @@
-import { InvitationDelivery, type EmailDelivery } from './InvitationDelivery'
+import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
 import React from 'react'
 import {
     Alert,
@@ -229,7 +229,7 @@ export function SystemOrganizationSeats({
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
             {inviteUrl && (
-                <Alert severity={inviteDelivery?.status === 'accepted' ? 'success' : 'warning'}>
+                <Alert severity={invitationSeverity(inviteDelivery)}>
                     <Stack spacing={1}>
                         <InvitationDelivery delivery={inviteDelivery} />
                         <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
