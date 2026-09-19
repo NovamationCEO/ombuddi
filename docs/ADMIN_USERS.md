@@ -15,6 +15,14 @@ invitations, review invitation history, and inspect the administrative audit
 log. These tools expose user names, emails, roles, and lifecycle state only;
 they do not expose cases, visitors, entries, or notes.
 
+System Administration opens with the organization list. **Manage organization**
+opens a focused view with **Users**, **Settings**, and **Audit** tabs; the selected
+organization and tab are preserved in the URL for refresh, bookmarks, and browser
+Back. **Create organization** opens a modal and keeps its invitation result there.
+User invitation results and invitation history also open in dialogs, so they do
+not appear above or below the current viewport. Settings drafts survive tab
+switches; **Back to organizations** returns to the list.
+
 Invitations use **admin@ombuddi.com** as the official sender. Configure Microsoft
 365 delivery using [Invitation email setup](INVITATION_EMAIL.md). Until enabled,
 the administrator copies the generated link and sends it from that mailbox.

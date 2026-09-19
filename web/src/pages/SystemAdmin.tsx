@@ -1,5 +1,7 @@
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { SystemOrganizationAudit } from '../components/SystemOrganizationAudit'
 import {
     Alert,
     Box,
@@ -10,6 +12,8 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
+    Tabs,
+    Tab,
     Stack,
     TextField,
     Typography,
@@ -46,7 +50,6 @@ type EditingOrg = {
     seatLimit: string
 }
 
-
 export function SystemAdmin() {
     const orgs = useGetter<SystemOrg[]>(['system', 'organizations'])
 
@@ -62,12 +65,45 @@ export function SystemAdmin() {
 
     const [editing, setEditing] = React.useState<EditingOrg | null>(null)
     const [saving, setSaving] = React.useState(false)
+    const [saved, setSaved] = React.useState(false)
     const [editError, setEditError] = React.useState('')
     const [statusTarget, setStatusTarget] = React.useState<SystemOrg | null>(null)
     const [statusReason, setStatusReason] = React.useState('')
     const [statusSaving, setStatusSaving] = React.useState(false)
     const [statusError, setStatusError] = React.useState('')
-    const [managedOrganization, setManagedOrganization] = React.useState<SystemOrg | null>(null)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const organizationId = searchParams.get('org')
+    const managedOrganization = orgs.data?.find((org) => org.id === organizationId)
+    const selectedTab = ['users', 'settings', 'audit'].includes(searchParams.get('tab') ?? '')
+        ? searchParams.get('tab')!
+        : 'users'
+    const [createOpen, setCreateOpen] = React.useState(false)
+    const heading = React.useRef<HTMLHeadingElement>(null)
+    React.useEffect(() => {
+        heading.current?.focus()
+        heading.current?.scrollIntoView?.({ block: 'start' })
+        setSaved(false)
+        setEditError('')
+    }, [organizationId])
+    React.useEffect(() => {
+        if (!managedOrganization) return
+        setEditing((current) =>
+            current?.id === managedOrganization.id
+                ? current
+                : {
+                      id: managedOrganization.id,
+                      name: managedOrganization.name,
+                      subscriptionTier: managedOrganization.subscriptionTier,
+                      seatLimit: String(managedOrganization.seatLimit),
+                  },
+        )
+    }, [managedOrganization])
+    function openOrganization(org: SystemOrg, tab = 'users') {
+        setSearchParams({ org: org.id, tab })
+    }
+    function closeCreate() {
+        if (!creationPending.current) setCreateOpen(false)
+    }
 
     const creationPending = React.useRef(false)
 
@@ -109,6 +145,7 @@ export function SystemAdmin() {
             seatLimit: String(org.seatLimit),
         })
         setEditError('')
+        setSaved(false)
     }
 
     async function saveEdit() {
@@ -121,7 +158,7 @@ export function SystemAdmin() {
                 subscriptionTier: editing.subscriptionTier,
                 seatLimit: parseInt(editing.seatLimit, 10),
             })
-            setEditing(null)
+            setSaved(true)
             await orgs.refetch()
         } catch (reason) {
             setEditError(reason instanceof Error ? reason.message : 'Unable to save changes')
@@ -131,7 +168,11 @@ export function SystemAdmin() {
     }
 
     async function copyInvite() {
-        await navigator.clipboard.writeText(newInviteUrl)
+        try {
+            await navigator.clipboard.writeText(newInviteUrl)
+        } catch {
+            setCreateError('Unable to copy automatically. Select and copy the invitation link.')
+        }
     }
 
     async function changeStatus() {
@@ -154,215 +195,339 @@ export function SystemAdmin() {
     }
 
     return (
-        <Stack spacing={2} sx={{ p: 1 }}>
-            <Typography variant="h5">System Administration</Typography>
-
+        <Stack
+            spacing={2}
+            sx={{ p: 1 }}
+        >
+            <Typography
+                ref={heading}
+                tabIndex={-1}
+                component="h1"
+                variant="h5"
+                sx={{ outline: 'none' }}
+            >
+                {managedOrganization ? managedOrganization.name : 'System Administration'}
+            </Typography>
             {orgs.error && (
-                <Alert severity="error">
-                    Unable to load organizations. Ombuddi system administrator access is required.
-                </Alert>
+                <Alert severity="error">Unable to load organizations. System administrator access is required.</Alert>
             )}
-            {statusError && <Alert severity="error">{statusError}</Alert>}
-
-            {newInviteUrl && (
-                <Alert severity={invitationSeverity(inviteDelivery)}>
-                    <Stack spacing={1}>
-                        <InvitationDelivery delivery={inviteDelivery} />
-                        <TextField
-                            value={newInviteUrl}
-                            fullWidth
-                            slotProps={{ input: { readOnly: true } }}
-                        />
-                        <Button onClick={copyInvite} variant="outlined">Copy invitation link</Button>
-                    </Stack>
-                </Alert>
-            )}
-
-            <RoundedContainer title="Create organization">
-                <Stack spacing={2}>
-                    <Typography variant="body2" color="text.secondary">
-                        Creates the organization and a first administrator seat in one step.
-                        The invitation link replaces the manual Auth0 metadata process.
-                    </Typography>
-                    <Divider />
-                    <TextField
-                        label="Organization name"
-                        value={orgName}
-                        onChange={(e) => setOrgName(e.target.value)}
-                        required
-                    />
-                    <TextField
-                        label="First administrator name"
-                        value={adminName}
-                        onChange={(e) => setAdminName(e.target.value)}
-                        required
-                    />
-                        <TextField
-                            label="First administrator email"
-                            type="email"
-                            value={adminEmail}
-                            onChange={(e) => setAdminEmail(e.target.value)}
-                            required
-                            helperText="The invitation is bound to this verified Auth0 email."
-                    />
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField
-                            label="Subscription tier"
-                            value={tier}
-                            onChange={(e) => setTier(e.target.value)}
-                            sx={{ flex: 1 }}
-                        />
-                        <TextField
-                            label="Seat limit"
-                            type="number"
-                            value={seatLimit}
-                            onChange={(e) => setSeatLimit(e.target.value)}
-                            slotProps={{ htmlInput: { min: 1 } }}
-                            sx={{ width: 130 }}
-                        />
-                    </Box>
-                    {createError && <Alert severity="error">{createError}</Alert>}
+            {orgs.isLoading && <Typography>Loading organizations…</Typography>}
+            {organizationId ? (
+                <>
                     <Button
-                        variant="contained"
-                        onClick={createOrg}
-                        disabled={creating || !orgName.trim() || !adminName.trim() || !adminEmail.trim()}
+                        sx={{ alignSelf: 'flex-start' }}
+                        onClick={() => setSearchParams({})}
                     >
-                        Create organization
+                        Back to organizations
                     </Button>
-                </Stack>
-            </RoundedContainer>
-
-            <RoundedContainer title="All organizations">
-                <Stack spacing={1.5}>
-                    {(orgs.data ?? []).map((org) => (
-                        <Box key={org.id}>
-                            {editing?.id === org.id ? (
-                                <Stack spacing={1.5} sx={{ p: 1.5, border: 1, borderColor: 'primary.main', borderRadius: 1 }}>
-                                    <TextField
-                                        label="Name"
-                                        value={editing.name}
-                                        onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                                        size="small"
+                    {!orgs.isLoading && !orgs.error && !managedOrganization && (
+                        <Alert severity="warning">Organization not found.</Alert>
+                    )}
+                    {managedOrganization && (
+                        <>
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                            >
+                                <Chip label={managedOrganization.isActive ? 'Active' : 'Deactivated'} />
+                                <Typography>
+                                    {managedOrganization.seatCount} active seats / {managedOrganization.seatLimit}
+                                </Typography>
+                            </Stack>
+                            <Tabs
+                                value={selectedTab}
+                                onChange={(_, tab) => openOrganization(managedOrganization, tab)}
+                                aria-label="Organization management"
+                            >
+                                {['users', 'settings', 'audit'].map((tab) => (
+                                    <Tab
+                                        key={tab}
+                                        value={tab}
+                                        label={tab === 'users' ? 'Users' : tab === 'settings' ? 'Settings' : 'Audit'}
+                                        id={`org-tab-${tab}`}
+                                        aria-controls={`org-panel-${tab}`}
                                     />
-                                    <Box sx={{ display: 'flex', gap: 1.5 }}>
-                                        <TextField
-                                            label="Tier"
-                                            value={editing.subscriptionTier}
-                                            onChange={(e) => setEditing({ ...editing, subscriptionTier: e.target.value })}
-                                            size="small"
-                                            sx={{ flex: 1 }}
-                                        />
-                                        <TextField
-                                            label="Seat limit"
-                                            type="number"
-                                            value={editing.seatLimit}
-                                            onChange={(e) => setEditing({ ...editing, seatLimit: e.target.value })}
-                                            size="small"
-                                            slotProps={{ htmlInput: { min: 1 } }}
-                                            sx={{ width: 120 }}
-                                        />
-                                    </Box>
-                                    {editError && <Alert severity="error">{editError}</Alert>}
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button variant="contained" size="small" onClick={saveEdit} disabled={saving}>
-                                            Save
-                                        </Button>
-                                        <Button size="small" onClick={() => setEditing(null)}>
-                                            Cancel
-                                        </Button>
-                                    </Box>
-                                </Stack>
-                            ) : (
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    p: 1.5,
-                                    border: 1,
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                    gap: 2,
-                                }}>
-                                    <Box sx={{ minWidth: 0 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                                            <Typography sx={{ fontWeight: 600 }}>{org.name}</Typography>
-                                            <Chip label={org.subscriptionTier} size="small" variant="outlined" sx={{ textTransform: 'capitalize' }} />
-                                            <Chip
-                                                label={org.isActive ? 'Active' : 'Deactivated'}
-                                                size="small"
-                                                color={org.isActive ? 'success' : 'default'}
-                                                variant={org.isActive ? 'outlined' : 'filled'}
-                                            />
-                                        </Box>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {org.linkedCount} linked · {org.seatCount} active seats
-                                            {org.totalSeatCount !== org.seatCount ? ` · ${org.totalSeatCount} total` : ''}
-                                            {' · '}limit {org.seatLimit}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                        <Button variant="outlined" size="small" onClick={() => startEdit(org)}>
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="contained"
-                                            size="small"
-                                            onClick={() => setManagedOrganization(org)}
+                                ))}
+                            </Tabs>
+                            <Box
+                                tabIndex={0}
+                                role="tabpanel"
+                                id="org-panel-users"
+                                aria-labelledby="org-tab-users"
+                                hidden={selectedTab !== 'users'}
+                            >
+                                <SystemOrganizationSeats
+                                    key={managedOrganization.id}
+                                    organization={managedOrganization}
+                                    onOrganizationChanged={orgs.refetch}
+                                />
+                            </Box>
+                            <Box
+                                tabIndex={0}
+                                role="tabpanel"
+                                id="org-panel-settings"
+                                aria-labelledby="org-tab-settings"
+                                hidden={selectedTab !== 'settings'}
+                            >
+                                {selectedTab === 'settings' && editing && (
+                                    <Stack spacing={2}>
+                                        {saved && <Alert severity="success">Organization settings saved.</Alert>}
+                                        <Stack
+                                            spacing={1.5}
+                                            sx={{ p: 1.5, border: 1, borderColor: 'primary.main', borderRadius: 1 }}
                                         >
-                                            Manage seats
-                                        </Button>
+                                            <TextField
+                                                label="Name"
+                                                value={editing.name}
+                                                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                                                size="small"
+                                            />
+                                            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                                                <TextField
+                                                    label="Tier"
+                                                    value={editing.subscriptionTier}
+                                                    onChange={(e) =>
+                                                        setEditing({ ...editing, subscriptionTier: e.target.value })
+                                                    }
+                                                    size="small"
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <TextField
+                                                    label="Seat limit"
+                                                    type="number"
+                                                    value={editing.seatLimit}
+                                                    onChange={(e) =>
+                                                        setEditing({ ...editing, seatLimit: e.target.value })
+                                                    }
+                                                    size="small"
+                                                    slotProps={{ htmlInput: { min: 1 } }}
+                                                    sx={{ width: 120 }}
+                                                />
+                                            </Box>
+                                            {editError && <Alert severity="error">{editError}</Alert>}
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={saveEdit}
+                                                    disabled={saving}
+                                                >
+                                                    Save
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    disabled={saving}
+                                                    onClick={() => startEdit(managedOrganization)}
+                                                >
+                                                    Reset
+                                                </Button>
+                                            </Box>
+                                        </Stack>
+
                                         <Button
-                                            variant={org.isActive ? 'text' : 'outlined'}
-                                            color={org.isActive ? 'error' : 'primary'}
-                                            size="small"
+                                            color={managedOrganization.isActive ? 'error' : 'primary'}
                                             onClick={() => {
-                                                setStatusTarget(org)
+                                                setStatusTarget(managedOrganization)
                                                 setStatusReason('')
                                                 setStatusError('')
                                             }}
                                         >
-                                            {org.isActive ? 'Deactivate' : 'Reactivate'}
+                                            {managedOrganization.isActive
+                                                ? 'Deactivate organization'
+                                                : 'Reactivate organization'}
                                         </Button>
-                                    </Box>
+                                    </Stack>
+                                )}
+                            </Box>
+                            <Box
+                                tabIndex={0}
+                                role="tabpanel"
+                                id="org-panel-audit"
+                                aria-labelledby="org-tab-audit"
+                                hidden={selectedTab !== 'audit'}
+                            >
+                                {selectedTab === 'audit' && (
+                                    <SystemOrganizationAudit organizationId={managedOrganization.id} />
+                                )}
+                            </Box>
+                        </>
+                    )}
+                </>
+            ) : (
+                <>
+                    <Button
+                        variant="contained"
+                        sx={{ alignSelf: 'flex-start' }}
+                        onClick={() => {
+                            setNewInviteUrl('')
+                            setInviteDelivery(undefined)
+                            setCreateError('')
+                            setCreateOpen(true)
+                        }}
+                    >
+                        Create organization
+                    </Button>
+                    <RoundedContainer title="All organizations">
+                        <Stack spacing={1.5}>
+                            {(orgs.data ?? []).map((org) => (
+                                <Box
+                                    key={org.id}
+                                    sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
+                                >
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={2}
+                                        sx={{ justifyContent: 'space-between', alignItems: { sm: 'center' } }}
+                                    >
+                                        <Box>
+                                            <Typography sx={{ fontWeight: 600 }}>{org.name}</Typography>
+                                            <Typography variant="body2">
+                                                {org.isActive ? 'Active' : 'Deactivated'} · {org.seatCount} active seats
+                                                · limit {org.seatLimit}
+                                            </Typography>
+                                        </Box>
+                                        <Button
+                                            variant="outlined"
+                                            onClick={() => openOrganization(org)}
+                                        >
+                                            Manage organization
+                                        </Button>
+                                    </Stack>
                                 </Box>
+                            ))}
+                            {!orgs.isLoading && !orgs.error && orgs.data?.length === 0 && (
+                                <Typography>No organizations yet.</Typography>
+                            )}
+                        </Stack>
+                    </RoundedContainer>
+                </>
+            )}
+            <Dialog
+                open={createOpen}
+                onClose={closeCreate}
+                fullWidth
+                maxWidth="sm"
+                aria-labelledby="create-organization-title"
+            >
+                <DialogTitle id="create-organization-title">
+                    {newInviteUrl ? 'Organization created' : 'Create organization'}
+                </DialogTitle>
+                <DialogContent>
+                    {newInviteUrl && createError && <Alert severity="error">{createError}</Alert>}
+                    {newInviteUrl ? (
+                        <Box sx={{ pt: 1 }}>
+                            {newInviteUrl && (
+                                <Alert severity={invitationSeverity(inviteDelivery)}>
+                                    <Stack spacing={1}>
+                                        <InvitationDelivery delivery={inviteDelivery} />
+                                        <TextField
+                                            label="Invitation link"
+                                            value={newInviteUrl}
+                                            fullWidth
+                                            slotProps={{ input: { readOnly: true } }}
+                                        />
+                                        <Button
+                                            onClick={copyInvite}
+                                            variant="outlined"
+                                        >
+                                            Copy invitation link
+                                        </Button>
+                                    </Stack>
+                                </Alert>
                             )}
                         </Box>
-                    ))}
-                    {!orgs.isLoading && (orgs.data?.length ?? 0) === 0 && (
-                        <Typography color="text.secondary">No organizations yet.</Typography>
+                    ) : (
+                        <Box
+                            component="form"
+                            onSubmit={(event) => {
+                                event.preventDefault()
+                                void createOrg()
+                            }}
+                            sx={{ pt: 1 }}
+                        >
+                            <Stack spacing={2}>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Creates the organization and a first administrator seat in one step. An invitation
+                                    will be created for the first administrator.
+                                </Typography>
+                                <Divider />
+                                <TextField
+                                    autoFocus
+                                    label="Organization name"
+                                    value={orgName}
+                                    onChange={(e) => setOrgName(e.target.value)}
+                                    required
+                                />
+                                <TextField
+                                    label="First administrator name"
+                                    value={adminName}
+                                    onChange={(e) => setAdminName(e.target.value)}
+                                    required
+                                />
+                                <TextField
+                                    label="First administrator email"
+                                    type="email"
+                                    value={adminEmail}
+                                    onChange={(e) => setAdminEmail(e.target.value)}
+                                    required
+                                    helperText="The administrator must sign in with this email address."
+                                />
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField
+                                        label="Subscription tier"
+                                        value={tier}
+                                        onChange={(e) => setTier(e.target.value)}
+                                        sx={{ flex: 1 }}
+                                    />
+                                    <TextField
+                                        label="Seat limit"
+                                        type="number"
+                                        value={seatLimit}
+                                        onChange={(e) => setSeatLimit(e.target.value)}
+                                        slotProps={{ htmlInput: { min: 1 } }}
+                                        sx={{ width: 130 }}
+                                    />
+                                </Box>
+                                {createError && <Alert severity="error">{createError}</Alert>}
+                                <Button
+                                    variant="contained"
+                                    type="submit"
+                                    disabled={creating || !orgName.trim() || !adminName.trim() || !adminEmail.trim()}
+                                >
+                                    Create organization
+                                </Button>
+                            </Stack>
+                        </Box>
                     )}
-                </Stack>
-            </RoundedContainer>
-
-            {managedOrganization && (
-                <Box>
-                    <Button onClick={() => setManagedOrganization(null)} sx={{ mb: 1 }}>
-                        Close seat management
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={closeCreate}
+                        disabled={creating}
+                    >
+                        {newInviteUrl ? 'Done' : 'Cancel'}
                     </Button>
-                    <SystemOrganizationSeats
-                        key={managedOrganization.id}
-                        organization={managedOrganization}
-                        onOrganizationChanged={async () => {
-                            const result = await orgs.refetch()
-                            const refreshed = result.data?.find((org) => org.id === managedOrganization.id)
-                            if (refreshed) setManagedOrganization(refreshed)
-                            return result
-                        }}
-                    />
-                </Box>
-            )}
-
+                </DialogActions>
+            </Dialog>
             <Dialog
+                aria-labelledby="organization-status-title"
                 open={statusTarget !== null}
                 onClose={() => !statusSaving && setStatusTarget(null)}
                 fullWidth
                 maxWidth="sm"
             >
-                <DialogTitle>
+                <DialogTitle id="organization-status-title">
                     {statusTarget?.isActive ? 'Deactivate organization' : 'Reactivate organization'}
                 </DialogTitle>
                 <DialogContent>
-                    <Stack spacing={2} sx={{ pt: 1 }}>
+                    <Stack
+                        spacing={2}
+                        sx={{ pt: 1 }}
+                    >
+                        {statusError && <Alert severity="error">{statusError}</Alert>}
                         <Typography>
                             {statusTarget?.isActive
                                 ? `New requests from everyone in ${statusTarget.name} will be blocked immediately, and unused invitations will be revoked. No records will be deleted.`
@@ -379,7 +544,12 @@ export function SystemAdmin() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setStatusTarget(null)} disabled={statusSaving}>Cancel</Button>
+                    <Button
+                        onClick={() => setStatusTarget(null)}
+                        disabled={statusSaving}
+                    >
+                        Cancel
+                    </Button>
                     <Button
                         onClick={changeStatus}
                         disabled={statusSaving}

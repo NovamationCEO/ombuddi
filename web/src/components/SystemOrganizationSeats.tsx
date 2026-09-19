@@ -12,6 +12,10 @@ import {
     Stack,
     TextField,
     Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material'
 import { creator } from '../tools/db_tools/creator'
 import { updater } from '../tools/db_tools/updater'
@@ -59,16 +63,6 @@ type InvitationHistory = {
     createdBy: { id: string; name: string; email: string | null }
 }
 
-type AuditEvent = {
-    id: string
-    eventType: string
-    reason: string | null
-    details: Record<string, unknown>
-    createdAt: string
-    actor: { id: string; name: string; email: string | null }
-    target: { id: string; name: string; email: string | null } | null
-}
-
 type InvitationResult = {
     emailDelivery?: EmailDelivery
     inviteUrl?: string
@@ -82,29 +76,6 @@ function invitationStatus(invitation: InvitationHistory) {
     return 'Expired'
 }
 
-function eventLabel(eventType: string) {
-    return eventType
-        .replace(/^ombuds_/, '')
-        .replace(/^organization_/, 'organization ')
-        .replaceAll('_', ' ')
-        .replace(/^./, (letter) => letter.toUpperCase())
-}
-
-function detailText(details: Record<string, unknown>) {
-    const values: string[] = []
-    function visit(value: unknown, path: string) {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            Object.entries(value).forEach(([key, child]) => visit(child, path ? `${path} ${key}` : key))
-            return
-        }
-        if (value !== null && value !== '') {
-            values.push(`${path.replaceAll(/([A-Z])/g, ' $1').toLowerCase()}: ${String(value)}`)
-        }
-    }
-    visit(details, '')
-    return values.join(' · ')
-}
-
 export function SystemOrganizationSeats({
     organization,
     onOrganizationChanged,
@@ -113,7 +84,6 @@ export function SystemOrganizationSeats({
     onOrganizationChanged: () => Promise<unknown>
 }) {
     const seats = useGetter<SystemSeat[]>(['system', 'organizations', organization.id, 'ombuds'])
-    const audit = useGetter<AuditEvent[]>(['system', 'organizations', organization.id, 'audit'])
     const [inviteDelivery, setInviteDelivery] = React.useState<EmailDelivery>()
     const [historySeat, setHistorySeat] = React.useState<SystemSeat | null>(null)
     const invitationHistory = useGetter<InvitationHistory[]>([
@@ -135,7 +105,14 @@ export function SystemOrganizationSeats({
     const [editingEmail, setEditingEmail] = React.useState('')
 
     async function refresh() {
-        await Promise.all([seats.refetch(), audit.refetch(), onOrganizationChanged()])
+        await Promise.all([
+            seats.refetch(),
+            queryClient.invalidateQueries({
+                queryKey: ['system', 'organizations', organization.id, 'audit'],
+                exact: true,
+            }),
+            onOrganizationChanged(),
+        ])
     }
 
     const actionPending = React.useRef(false)
@@ -161,10 +138,12 @@ export function SystemOrganizationSeats({
 
     async function createSeat() {
         await run(async () => {
-            const result = await creator<InvitationResult>(
-                `system/organizations/${organization.id}/ombuds`,
-                { name, email, isAdmin, createInvitation: true },
-            )
+            const result = await creator<InvitationResult>(`system/organizations/${organization.id}/ombuds`, {
+                name,
+                email,
+                isAdmin,
+                createInvitation: true,
+            })
             setInviteUrl(result.inviteUrl ?? '')
             setInviteDelivery(result.emailDelivery)
             setName('')
@@ -181,43 +160,46 @@ export function SystemOrganizationSeats({
             )
             setInviteUrl(result.inviteUrl ?? '')
             setInviteDelivery(result.emailDelivery)
-            await queryClient.invalidateQueries({ queryKey: ['system', 'organizations', organization.id, 'ombuds', seat.id, 'email-history'], exact: true })
+            await queryClient.invalidateQueries({
+                queryKey: ['system', 'organizations', organization.id, 'ombuds', seat.id, 'email-history'],
+                exact: true,
+            })
         }, 'Unable to create invitation')
     }
 
     async function cancelInvitation(seat: SystemSeat) {
         await run(
-            () => creator(
-                `system/organizations/${organization.id}/ombuds/${seat.id}/invitation/cancel`,
-                {},
-            ),
+            () => creator(`system/organizations/${organization.id}/ombuds/${seat.id}/invitation/cancel`, {}),
             'Unable to cancel invitation',
         )
     }
 
     async function changeRole(seat: SystemSeat) {
         await run(
-            () => updater(`system/organizations/${organization.id}/ombuds/${seat.id}/role`, {
-                isAdmin: !seat.isAdmin,
-            }),
+            () =>
+                updater(`system/organizations/${organization.id}/ombuds/${seat.id}/role`, {
+                    isAdmin: !seat.isAdmin,
+                }),
             'Unable to update administrator role',
         )
     }
 
     async function changeStatus(seat: SystemSeat) {
         await run(
-            () => updater(`system/organizations/${organization.id}/ombuds/${seat.id}/status`, {
-                active: !seat.isActive,
-            }),
+            () =>
+                updater(`system/organizations/${organization.id}/ombuds/${seat.id}/status`, {
+                    active: !seat.isActive,
+                }),
             'Unable to update seat status',
         )
     }
 
     async function saveEmail(seat: SystemSeat) {
         const saved = await run(
-            () => updater(`system/organizations/${organization.id}/ombuds/${seat.id}`, {
-                email: editingEmail,
-            }),
+            () =>
+                updater(`system/organizations/${organization.id}/ombuds/${seat.id}`, {
+                    email: editingEmail,
+                }),
             'Unable to update email',
         )
         if (saved) {
@@ -232,36 +214,83 @@ export function SystemOrganizationSeats({
 
     return (
         <Stack spacing={2}>
-            <Typography variant="h5">Manage {organization.name}</Typography>
-            <Typography variant="body2" color="text.secondary">
-                System administrators can see seat identity and lifecycle information, but this view does not expose cases, visitors, notes, or other organization records.
+            <Typography
+                variant="body2"
+                color="text.secondary"
+            >
+                System administrators can see seat identity and lifecycle information, but this view does not expose
+                cases, visitors, notes, or other organization records.
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
-            {inviteUrl && (
-                <Alert severity={invitationSeverity(inviteDelivery)}>
-                    <Stack spacing={1}>
-                        <InvitationDelivery delivery={inviteDelivery} />
-                        <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
-                        <Button onClick={copyInvite} variant="outlined">Copy invitation link</Button>
-                    </Stack>
-                </Alert>
-            )}
+            <Dialog
+                open={!!inviteUrl}
+                onClose={() => setInviteUrl('')}
+                fullWidth
+                maxWidth="sm"
+                aria-labelledby="invitation-result-title"
+            >
+                <DialogTitle id="invitation-result-title">Invitation created</DialogTitle>
+                <DialogContent>
+                    <Alert severity={invitationSeverity(inviteDelivery)}>
+                        <Stack spacing={1}>
+                            <InvitationDelivery delivery={inviteDelivery} />
+                            <TextField
+                                value={inviteUrl}
+                                fullWidth
+                                slotProps={{ input: { readOnly: true } }}
+                            />
+                            <Button
+                                onClick={copyInvite}
+                                variant="outlined"
+                            >
+                                Copy invitation link
+                            </Button>
+                        </Stack>
+                    </Alert>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setInviteUrl('')}>Done</Button>
+                </DialogActions>
+            </Dialog>
 
             <RoundedContainer title="Add and invite a user">
                 <Stack spacing={1.5}>
-                    <TextField label="User name" value={name} onChange={(event) => setName(event.target.value)} />
-                    <TextField label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+                    <TextField
+                        label="User name"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                    />
+                    <TextField
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                    />
                     <FormControlLabel
-                        control={<Checkbox checked={isAdmin} onChange={(event) => setIsAdmin(event.target.checked)} />}
+                        control={
+                            <Checkbox
+                                checked={isAdmin}
+                                onChange={(event) => setIsAdmin(event.target.checked)}
+                            />
+                        }
                         label="Organization administrator"
                     />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                        variant="caption"
+                        color="text.secondary"
+                    >
                         The seat is created and its seven-day invitation is issued in one step.
                     </Typography>
                     <Button
                         variant="contained"
                         onClick={createSeat}
-                        disabled={busy || !organization.isActive || !name.trim() || !email.trim() || organization.seatCount >= organization.seatLimit}
+                        disabled={
+                            busy ||
+                            !organization.isActive ||
+                            !name.trim() ||
+                            !email.trim() ||
+                            organization.seatCount >= organization.seatLimit
+                        }
                     >
                         Create seat and invitation
                     </Button>
@@ -271,17 +300,45 @@ export function SystemOrganizationSeats({
             <RoundedContainer title={`Seats (${organization.seatCount} active / ${organization.seatLimit})`}>
                 <Stack spacing={1.5}>
                     {(seats.data ?? []).map((seat) => (
-                        <Box key={seat.id} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                        <Box
+                            key={seat.id}
+                            sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
+                        >
                             <Stack spacing={1}>
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                     <Typography sx={{ fontWeight: 600 }}>{seat.name}</Typography>
-                                    <Chip size="small" label={seat.isActive ? 'Active seat' : 'Deactivated seat'} color={seat.isActive ? 'success' : 'default'} />
-                                    <Chip size="small" label={seat.isLinked ? 'Auth0 linked' : 'Awaiting account'} variant="outlined" />
-                                    {seat.isAdmin && <Chip size="small" label="Organization admin" color="primary" variant="outlined" />}
-                                    {seat.isSystemAdmin && <Chip size="small" label="System admin" color="secondary" variant="outlined" />}
+                                    <Chip
+                                        size="small"
+                                        label={seat.isActive ? 'Active seat' : 'Deactivated seat'}
+                                        color={seat.isActive ? 'success' : 'default'}
+                                    />
+                                    <Chip
+                                        size="small"
+                                        label={seat.isLinked ? 'Auth0 linked' : 'Awaiting account'}
+                                        variant="outlined"
+                                    />
+                                    {seat.isAdmin && (
+                                        <Chip
+                                            size="small"
+                                            label="Organization admin"
+                                            color="primary"
+                                            variant="outlined"
+                                        />
+                                    )}
+                                    {seat.isSystemAdmin && (
+                                        <Chip
+                                            size="small"
+                                            label="System admin"
+                                            color="secondary"
+                                            variant="outlined"
+                                        />
+                                    )}
                                 </Box>
                                 {editingEmailFor === seat.id ? (
-                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={1}
+                                    >
                                         <TextField
                                             size="small"
                                             type="email"
@@ -290,26 +347,44 @@ export function SystemOrganizationSeats({
                                             onChange={(event) => setEditingEmail(event.target.value)}
                                             sx={{ flex: 1 }}
                                         />
-                                        <Button onClick={() => saveEmail(seat)} disabled={busy || !editingEmail.trim()}>Save</Button>
-                                        <Button onClick={() => setEditingEmailFor(null)} disabled={busy}>Cancel</Button>
+                                        <Button
+                                            onClick={() => saveEmail(seat)}
+                                            disabled={busy || !editingEmail.trim()}
+                                        >
+                                            Save
+                                        </Button>
+                                        <Button
+                                            onClick={() => setEditingEmailFor(null)}
+                                            disabled={busy}
+                                        >
+                                            Cancel
+                                        </Button>
                                     </Stack>
                                 ) : (
                                     <Typography variant="body2">{seat.email || 'No email recorded'}</Typography>
                                 )}
                                 {seat.isLinked && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Updating the recorded email does not change or replace the linked Auth0 identity.
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                    >
+                                        Updating the recorded email does not change or replace the linked Auth0
+                                        identity.
                                     </Typography>
                                 )}
                                 {seat.invitation && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Latest invitation: {seat.invitation.claimedAt
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                    >
+                                        Latest invitation:{' '}
+                                        {seat.invitation.claimedAt
                                             ? 'claimed'
                                             : seat.invitation.revokedAt
-                                                ? 'cancelled'
-                                                : seat.invitation.isActive
-                                                    ? `active until ${new Date(seat.invitation.expiresAt).toLocaleString()}`
-                                                    : 'expired'}
+                                              ? 'cancelled'
+                                              : seat.invitation.isActive
+                                                ? `active until ${new Date(seat.invitation.expiresAt).toLocaleString()}`
+                                                : 'expired'}
                                     </Typography>
                                 )}
                                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -323,20 +398,38 @@ export function SystemOrganizationSeats({
                                     >
                                         Edit email
                                     </Button>
-                                    <Button size="small" onClick={() => changeRole(seat)} disabled={busy || seat.isSystemAdmin}>
+                                    <Button
+                                        size="small"
+                                        onClick={() => changeRole(seat)}
+                                        disabled={busy || seat.isSystemAdmin}
+                                    >
                                         {seat.isAdmin ? 'Remove admin role' : 'Make organization admin'}
                                     </Button>
                                     {!seat.isLinked && seat.isActive && (
-                                        <Button size="small" variant="outlined" onClick={() => invite(seat)} disabled={busy || !seat.email}>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => invite(seat)}
+                                            disabled={busy || !seat.email}
+                                        >
                                             {seat.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
                                         </Button>
                                     )}
                                     {seat.invitation?.isActive && (
-                                        <Button size="small" color="warning" onClick={() => cancelInvitation(seat)} disabled={busy}>
+                                        <Button
+                                            size="small"
+                                            color="warning"
+                                            onClick={() => cancelInvitation(seat)}
+                                            disabled={busy}
+                                        >
                                             Cancel invitation
                                         </Button>
                                     )}
-                                    <Button size="small" onClick={() => setHistorySeat(seat)} disabled={busy}>
+                                    <Button
+                                        size="small"
+                                        onClick={() => setHistorySeat(seat)}
+                                        disabled={busy}
+                                    >
                                         Invitation history
                                     </Button>
                                     <Button
@@ -358,51 +451,59 @@ export function SystemOrganizationSeats({
             </RoundedContainer>
 
             {historySeat && (
-                <RoundedContainer title={`Invitation history — ${historySeat.name}`}>
-                    <Stack spacing={1}>
-                        <Button sx={{ alignSelf: 'flex-start' }} onClick={() => setHistorySeat(null)}>Close history</Button>
-                        <InvitationEmailHistory key={historySeat.id} endpoint={['system', 'organizations', organization.id, 'ombuds', historySeat.id, 'email-history']} />
-                        {(invitationHistory.data ?? []).map((invitation) => (
-                            <Box key={invitation.id} sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {invitationStatus(invitation)} · {invitation.invitedEmail}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Created {new Date(invitation.createdAt).toLocaleString()} by {invitation.createdBy.name}
-                                    {' · '}Expires {new Date(invitation.expiresAt).toLocaleString()}
-                                    {invitation.claimedByEmail ? ` · Claimed by ${invitation.claimedByEmail}` : ''}
-                                </Typography>
-                            </Box>
-                        ))}
-                        {!invitationHistory.isLoading && (invitationHistory.data?.length ?? 0) === 0 && (
-                            <Typography color="text.secondary">No invitations have been issued.</Typography>
-                        )}
-                    </Stack>
-                </RoundedContainer>
+                <Dialog
+                    open
+                    onClose={() => setHistorySeat(null)}
+                    fullWidth
+                    maxWidth="md"
+                    aria-labelledby="invitation-history-title"
+                >
+                    <DialogTitle id="invitation-history-title">Invitation history — {historySeat.name}</DialogTitle>
+                    <DialogContent>
+                        <Stack spacing={1}>
+                            <InvitationEmailHistory
+                                key={historySeat.id}
+                                endpoint={[
+                                    'system',
+                                    'organizations',
+                                    organization.id,
+                                    'ombuds',
+                                    historySeat.id,
+                                    'email-history',
+                                ]}
+                            />
+                            {(invitationHistory.data ?? []).map((invitation) => (
+                                <Box
+                                    key={invitation.id}
+                                    sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}
+                                >
+                                    <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 600 }}
+                                    >
+                                        {invitationStatus(invitation)} · {invitation.invitedEmail}
+                                    </Typography>
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                    >
+                                        Created {new Date(invitation.createdAt).toLocaleString()} by{' '}
+                                        {invitation.createdBy.name}
+                                        {' · '}Expires {new Date(invitation.expiresAt).toLocaleString()}
+                                        {invitation.claimedByEmail ? ` · Claimed by ${invitation.claimedByEmail}` : ''}
+                                    </Typography>
+                                </Box>
+                            ))}
+                            {!invitationHistory.isLoading && (invitationHistory.data?.length ?? 0) === 0 && (
+                                <Typography color="text.secondary">No invitations have been issued.</Typography>
+                            )}
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setHistorySeat(null)}>Close history</Button>
+                    </DialogActions>
+                </Dialog>
             )}
-
-            <RoundedContainer title="Administrative audit log">
-                <Stack spacing={1}>
-                    {(audit.data ?? []).map((event) => {
-                        const details = detailText(event.details)
-                        return (
-                            <Box key={event.id} sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {eventLabel(event.eventType)}{event.target ? ` — ${event.target.name}` : ''}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {new Date(event.createdAt).toLocaleString()} · by {event.actor.name}
-                                    {event.reason ? ` · ${event.reason}` : ''}
-                                </Typography>
-                                {details && <Typography variant="caption" sx={{ display: 'block' }}>{details}</Typography>}
-                            </Box>
-                        )
-                    })}
-                    {!audit.isLoading && (audit.data?.length ?? 0) === 0 && (
-                        <Typography color="text.secondary">No administrative events recorded yet.</Typography>
-                    )}
-                </Stack>
-            </RoundedContainer>
         </Stack>
     )
 }
