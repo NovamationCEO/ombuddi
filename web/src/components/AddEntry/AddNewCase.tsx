@@ -135,7 +135,12 @@ export function AddNewCase() {
     }
 
     return (
-        <Box sx={pageLayoutStyle}>
+        <Box
+            sx={{
+                ...pageLayoutStyle,
+                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
+            }}
+        >
             <Stack
                 spacing={2}
                 sx={{ width: '100%', minWidth: 0 }}

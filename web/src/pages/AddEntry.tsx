@@ -491,7 +491,6 @@ export function AddEntry() {
                     <Box
                         sx={{
                             width: '100%',
-                            mx: 'auto',
                             boxSizing: 'border-box',
                             px: pagePadding,
                             pt: pagePadding,
@@ -590,7 +589,6 @@ export function AddEntry() {
                     component="main"
                     sx={{
                         width: '100%',
-                        mx: 'auto',
                         boxSizing: 'border-box',
                         p: pagePadding,
                         display: 'grid',

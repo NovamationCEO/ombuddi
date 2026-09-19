@@ -1,4 +1,4 @@
-import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
+import { pageLayoutStyle } from '../theme/pageLayout'
 import { ArrowForward, ShieldOutlined } from '@mui/icons-material'
 import { Box, ButtonBase, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -133,76 +133,86 @@ export function HomePage() {
     }, [])
 
     return (
-        <Box sx={pageLayoutStyle}>
-            <Box sx={{ width: '100%', minWidth: 0 }}>
-                <Box
-                    sx={{
-                        mb: 2.5,
-                    }}
-                >
-                    <Box>
-                        <Typography
-                            component="p"
-                            sx={{
-                                color: palette.blueGreen,
-                                fontSize: '0.76rem',
-                                fontWeight: 700,
-                                letterSpacing: '0.14em',
-                                textTransform: 'uppercase',
-                                mb: 1.25,
-                            }}
-                        >
-                            {organization.name || 'Your organization'}
-                        </Typography>
-                        <Typography
-                            component="h1"
-                            variant="h4"
-                            sx={pageTitleStyle}
-                        >
-                            {greeting}
-                            {firstName ? `, ${firstName}` : ''}.
-                        </Typography>
-                        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
-                            Everything you need to continue your confidential case work.
-                        </Typography>
-                    </Box>
-                </Box>
-
-                <DestinationSection
-                    title="Your workspace"
-                    items={primaryDestinations}
-                />
-                <DestinationSection
-                    title="Account & settings"
-                    items={secondaryDestinations}
-                    separated
-                />
-                <DestinationSection
-                    title="Administration"
-                    items={visibleAdminDestinations}
-                    separated
-                />
-
-                <Stack
-                    direction="row"
-                    spacing={1.5}
-                    sx={{
-                        mt: 3,
-                        p: 2,
-                        alignItems: 'center',
-                        color: palette.muted,
-                        bgcolor: palette.surface,
-                        border: `1px solid ${palette.border}`,
-                        borderLeft: `3px solid ${palette.purple}`,
-                        borderRadius: 2,
-                    }}
-                >
-                    <ShieldOutlined sx={{ color: palette.blueGreen }} />
-                    <Typography sx={{ fontSize: '0.9rem' }}>
-                        Your case notes remain encrypted before they leave this browser.
+        <Box
+            sx={{
+                ...pageLayoutStyle,
+                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 71%, ${palette.backgroundDeep} 71%)`,
+            }}
+        >
+            <Box
+                sx={{
+                    mb: 2.5,
+                }}
+            >
+                <Box>
+                    <Typography
+                        component="p"
+                        sx={{
+                            color: palette.blueGreen,
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.14em',
+                            textTransform: 'uppercase',
+                            mb: 1.25,
+                        }}
+                    >
+                        {organization.name || 'Your organization'}
                     </Typography>
-                </Stack>
+                    <Typography
+                        component="h1"
+                        variant="h4"
+                        sx={{
+                            color: palette.text,
+                            fontSize: { xs: '2.35rem', sm: '3rem', lg: '3.45rem' },
+                            fontWeight: 650,
+                            letterSpacing: '-0.045em',
+                            lineHeight: 1.03,
+                            mb: 1.5,
+                        }}
+                    >
+                        {greeting}
+                        {firstName ? `, ${firstName}` : ''}.
+                    </Typography>
+                    <Typography sx={{ maxWidth: 600, color: palette.muted, fontSize: '1.02rem' }}>
+                        Everything you need to continue your confidential case work.
+                    </Typography>
+                </Box>
             </Box>
+
+            <DestinationSection
+                title="Your workspace"
+                items={primaryDestinations}
+            />
+            <DestinationSection
+                title="Account & settings"
+                items={secondaryDestinations}
+                separated
+            />
+            <DestinationSection
+                title="Administration"
+                items={visibleAdminDestinations}
+                separated
+            />
+
+            <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                    mt: 3,
+                    p: 2,
+                    alignItems: 'center',
+                    color: palette.muted,
+                    bgcolor: palette.surface,
+                    border: `1px solid ${palette.border}`,
+                    borderLeft: `3px solid ${palette.purple}`,
+                    borderRadius: 2,
+                }}
+            >
+                <ShieldOutlined sx={{ color: palette.blueGreen }} />
+                <Typography sx={{ fontSize: '0.9rem' }}>
+                    Your case notes remain encrypted before they leave this browser.
+                </Typography>
+            </Stack>
         </Box>
     )
 }

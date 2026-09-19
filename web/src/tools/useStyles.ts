@@ -38,7 +38,6 @@ export function useStyles() {
             margin: 1,
             boxShadow: `0 0 5px ${palette.app.shadow}`,
         },
-        mainContainer: { padding: 3 },
         roundButton: {
             border: `1px solid ${palette.app.borderStrong}`,
             borderRadius: '50%',

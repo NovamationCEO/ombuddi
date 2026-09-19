@@ -47,124 +47,127 @@ export function Cases() {
     }
 
     return (
-        <Box sx={pageLayoutStyle}>
-            <Box sx={{ width: '100%', minWidth: 0 }}>
-                <Box
-                    sx={{
-                        mb: 2.5,
-                        display: 'flex',
-                        flexDirection: { xs: 'column', md: 'row' },
-                        alignItems: { md: 'flex-start' },
-                        justifyContent: 'space-between',
-                        gap: 2.5,
-                    }}
-                >
-                    <Box>
-                        <Typography
-                            component="h1"
-                            variant="h4"
-                            sx={pageTitleStyle}
-                        >
-                            Cases
-                        </Typography>
-                        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
-                            Review and continue your confidential case work.
-                        </Typography>
-                    </Box>
-
-                    <Stack
-                        direction={{ xs: 'column-reverse', sm: 'row' }}
-                        spacing={1.25}
-                        sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
+        <Box
+            sx={{
+                ...pageLayoutStyle,
+                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
+            }}
+        >
+            <Box
+                sx={{
+                    mb: 2.5,
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    alignItems: { md: 'flex-start' },
+                    justifyContent: 'space-between',
+                    gap: 2.5,
+                }}
+            >
+                <Box>
+                    <Typography
+                        component="h1"
+                        variant="h4"
+                        sx={pageTitleStyle}
                     >
-                        <Button
-                            variant="outlined"
-                            startIcon={<Commit />}
-                            onClick={() => void logGeneralActivity()}
-                            disabled={openingGeneral}
-                            sx={{
-                                color: palette.purpleLight,
-                                borderColor: 'primary.light',
-                                '&:hover': {
-                                    borderColor: palette.purpleLight,
-                                    bgcolor: 'action.hover',
-                                },
-                            }}
-                        >
-                            {openingGeneral ? (
-                                <>
-                                    <CircularProgress
-                                        size={15}
-                                        color="inherit"
-                                        sx={{ mr: 0.75 }}
-                                    />
-                                    Opening…
-                                </>
-                            ) : (
-                                'Log general activity'
-                            )}
-                        </Button>
-                        <Button
-                            variant="contained"
-                            startIcon={<Add />}
-                            onClick={() => navigate('/add_case')}
-                            sx={{
-                                bgcolor: palette.purple,
-                                color: 'primary.contrastText',
-                                '&:hover': { bgcolor: palette.purpleDark },
-                            }}
-                        >
-                            New case
-                        </Button>
-                    </Stack>
+                        Cases
+                    </Typography>
+                    <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
+                        Review and continue your confidential case work.
+                    </Typography>
                 </Box>
 
-                {caseLoadError && (
-                    <Alert
-                        severity="error"
-                        action={<Button onClick={() => void retryCases()}>Retry</Button>}
-                        sx={{ mb: 2 }}
-                    >
-                        Some case records could not be loaded.
-                    </Alert>
-                )}
-
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' },
-                        gap: 1.5,
-                    }}
+                <Stack
+                    direction={{ xs: 'column-reverse', sm: 'row' }}
+                    spacing={1.25}
+                    sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
                 >
-                    {cases.map((caseItem) => (
-                        <CaseCard
-                            key={caseItem.id}
-                            caseItem={caseItem}
-                        />
-                    ))}
-                </Box>
-
-                {!cases.length && !caseLoading && !caseLoadError && (
-                    <Box
+                    <Button
+                        variant="outlined"
+                        startIcon={<Commit />}
+                        onClick={() => void logGeneralActivity()}
+                        disabled={openingGeneral}
                         sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            color: palette.muted,
-                            bgcolor: palette.surface,
-                            border: `1px solid ${palette.border}`,
-                            borderRadius: 3,
+                            color: palette.purpleLight,
+                            borderColor: 'primary.light',
+                            '&:hover': {
+                                borderColor: palette.purpleLight,
+                                bgcolor: 'action.hover',
+                            },
                         }}
                     >
-                        <Typography
-                            variant="h6"
-                            sx={{ color: palette.text, mb: 0.75 }}
-                        >
-                            No cases yet
-                        </Typography>
-                        <Typography>Create a case when you are ready to begin recording work.</Typography>
-                    </Box>
-                )}
+                        {openingGeneral ? (
+                            <>
+                                <CircularProgress
+                                    size={15}
+                                    color="inherit"
+                                    sx={{ mr: 0.75 }}
+                                />
+                                Opening…
+                            </>
+                        ) : (
+                            'Log general activity'
+                        )}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={() => navigate('/add_case')}
+                        sx={{
+                            bgcolor: palette.purple,
+                            color: 'primary.contrastText',
+                            '&:hover': { bgcolor: palette.purpleDark },
+                        }}
+                    >
+                        New case
+                    </Button>
+                </Stack>
             </Box>
+
+            {caseLoadError && (
+                <Alert
+                    severity="error"
+                    action={<Button onClick={() => void retryCases()}>Retry</Button>}
+                    sx={{ mb: 2 }}
+                >
+                    Some case records could not be loaded.
+                </Alert>
+            )}
+
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' },
+                    gap: 1.5,
+                }}
+            >
+                {cases.map((caseItem) => (
+                    <CaseCard
+                        key={caseItem.id}
+                        caseItem={caseItem}
+                    />
+                ))}
+            </Box>
+
+            {!cases.length && !caseLoading && !caseLoadError && (
+                <Box
+                    sx={{
+                        p: 4,
+                        textAlign: 'center',
+                        color: palette.muted,
+                        bgcolor: palette.surface,
+                        border: `1px solid ${palette.border}`,
+                        borderRadius: 3,
+                    }}
+                >
+                    <Typography
+                        variant="h6"
+                        sx={{ color: palette.text, mb: 0.75 }}
+                    >
+                        No cases yet
+                    </Typography>
+                    <Typography>Create a case when you are ready to begin recording work.</Typography>
+                </Box>
+            )}
         </Box>
     )
 }

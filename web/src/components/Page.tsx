@@ -1,22 +1,14 @@
 import { useStyles } from '../tools/useStyles'
 import type { ReactNode } from 'react'
 
-import {
-    Box,
-    CircularProgress,
-} from '@mui/material'
+import { Box, CircularProgress } from '@mui/material'
 import { useAuth0 } from '@auth0/auth0-react'
 import { Navigate } from 'react-router-dom'
 import { AppRail } from './AppRail'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { PageMetadata } from './PageMetadata'
 
-export function Page(props: {
-    element: ReactNode
-    title: string
-    description?: string
-    fullBleed?: boolean
-}) {
+export function Page(props: { element: ReactNode; title: string; description?: string }) {
     const style = useStyles()
     const { isLoading, isAuthenticated } = useAuth0()
 
@@ -49,7 +41,10 @@ export function Page(props: {
                 bgcolor: palette.backgroundDeep,
             }}
         >
-            <PageMetadata title={props.title} description={props.description} />
+            <PageMetadata
+                title={props.title}
+                description={props.description}
+            />
             <AppRail />
             <Box
                 sx={{
@@ -70,7 +65,6 @@ export function Page(props: {
                     }}
                 >
                     <Box
-                        {...(!props.fullBleed ? style.mainContainer : {})}
                         sx={{
                             flex: 1,
                             minWidth: 0,
@@ -82,7 +76,6 @@ export function Page(props: {
                     </Box>
                 </Box>
             </Box>
-
         </Box>
     )
 }

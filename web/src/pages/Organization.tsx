@@ -132,7 +132,7 @@ export function Organization() {
         <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2.5}
-                sx={{ width: '100%', mx: 'auto' }}
+                sx={{ width: '100%' }}
             >
                 <Box sx={{ mb: 0.5 }}>
                     <Typography

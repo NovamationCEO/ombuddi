@@ -276,7 +276,7 @@ export function ReportPage() {
 
     return (
         <Box sx={pageLayoutStyle}>
-            <Box sx={{ width: '100%', mx: 'auto' }}>
+            <Box sx={{ width: '100%' }}>
                 <Box sx={{ mb: 2.5 }}>
                     <Typography
                         variant="h4"

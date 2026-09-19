@@ -481,7 +481,6 @@ export function CaseSummary() {
                     <Box
                         sx={{
                             width: '100%',
-                            mx: 'auto',
                             boxSizing: 'border-box',
                             px: pagePadding,
                             pt: pagePadding,
@@ -831,7 +830,6 @@ export function CaseSummary() {
                 <Box
                     sx={{
                         width: '100%',
-                        mx: 'auto',
                         boxSizing: 'border-box',
                         px: pagePadding,
                         pt: { xs: 1.5, sm: 2 },

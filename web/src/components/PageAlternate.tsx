@@ -13,7 +13,6 @@ type PageAlternateProps = {
     indexable?: boolean
     canonicalPath?: string
     hideHeader?: boolean
-    fullBleed?: boolean
     fixedColorScheme?: 'light' | 'dark'
 }
 
@@ -24,7 +23,6 @@ export function PageAlternate({
     indexable = false,
     canonicalPath,
     hideHeader = false,
-    fullBleed = false,
     fixedColorScheme,
 }: PageAlternateProps) {
     const style = useStyles()
@@ -66,7 +64,6 @@ export function PageAlternate({
                     }}
                 >
                     <Box
-                        {...(!fullBleed ? style.mainContainer : {})}
                         sx={{
                             flex: 1,
                             width: '100%',

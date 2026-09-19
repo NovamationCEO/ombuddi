@@ -86,7 +86,7 @@ export function Profile() {
         <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2.5}
-                sx={{ width: '100%', mx: 'auto' }}
+                sx={{ width: '100%' }}
             >
                 <Box>
                     <Typography
@@ -180,40 +180,50 @@ export function Profile() {
                 </RoundedContainer>
 
                 <RoundedContainer title="Appearance">
-                    <Stack spacing={1.5}>
-                        <Typography sx={{ color: 'text.secondary' }}>
-                            Choose the color theme used on signed-in pages.
-                        </Typography>
-                        <ToggleButtonGroup
-                            exclusive
-                            value={colorScheme ?? 'dark'}
-                            onChange={(_event, mode: 'light' | 'dark' | null) => {
-                                if (mode) setMode(mode)
-                            }}
-                            aria-label="Color theme"
-                            sx={{ alignSelf: 'flex-start' }}
-                        >
-                            <ToggleButton
-                                value="dark"
-                                aria-label="Dark mode"
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 3,
+                            '& > .MuiStack-root': { flex: '1 1 320px', minWidth: 0 },
+                            '& .MuiToggleButtonGroup-root': { width: '100%', mt: 'auto' },
+                            '& .MuiToggleButton-root': { flex: 1, minWidth: 0, minHeight: 58, gap: 1, px: 1 },
+                        }}
+                    >
+                        <Stack spacing={1.25}>
+                            <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>Color theme</Typography>
+                            <Typography sx={{ color: 'text.secondary' }}>
+                                Choose the color theme used on signed-in pages.
+                            </Typography>
+                            <ToggleButtonGroup
+                                exclusive
+                                value={colorScheme ?? 'dark'}
+                                onChange={(_event, mode: 'light' | 'dark' | null) => {
+                                    if (mode) setMode(mode)
+                                }}
+                                aria-label="Color theme"
                             >
-                                <DarkModeOutlined sx={{ mr: 1 }} />
-                                Dark
-                            </ToggleButton>
-                            <ToggleButton
-                                value="light"
-                                aria-label="Light mode"
-                            >
-                                <LightModeOutlined sx={{ mr: 1 }} />
-                                Light
-                            </ToggleButton>
-                        </ToggleButtonGroup>
-
-                        <Box sx={{ pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                                <ToggleButton
+                                    value="dark"
+                                    aria-label="Dark mode"
+                                >
+                                    <DarkModeOutlined />
+                                    Dark
+                                </ToggleButton>
+                                <ToggleButton
+                                    value="light"
+                                    aria-label="Light mode"
+                                >
+                                    <LightModeOutlined />
+                                    Light
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Stack>
+                        <Stack spacing={1.25}>
                             <Typography sx={{ color: 'text.primary', fontWeight: 650 }}>
                                 Person identity markers
                             </Typography>
-                            <Typography sx={{ mt: 0.35, mb: 1.25, color: 'text.secondary' }}>
+                            <Typography sx={{ color: 'text.secondary' }}>
                                 Choose how people are represented to you. This changes only their appearance; the same
                                 private person keeps the same underlying identity marker.
                             </Typography>
@@ -225,14 +235,13 @@ export function Profile() {
                                 }}
                                 aria-label="Person identity marker style"
                                 disabled={savingAvatarStyle || !ombudsRes.data}
-                                sx={{ alignSelf: 'flex-start' }}
                             >
                                 <ToggleButton
                                     value="monster"
                                     aria-label="Monster person markers"
                                     sx={{ gap: 1 }}
                                 >
-                                    <Box sx={{ width: 38, height: 38 }}>
+                                    <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
                                         <PersonMonster seed={avatarPreviewSeed} />
                                     </Box>
                                     Avatars
@@ -242,14 +251,14 @@ export function Profile() {
                                     aria-label="Neutral geometric person markers"
                                     sx={{ gap: 1 }}
                                 >
-                                    <Box sx={{ width: 38, height: 38 }}>
+                                    <Box sx={{ width: 38, height: 38, flexShrink: 0 }}>
                                         <PersonGeometricPortrait seed={avatarPreviewSeed} />
                                     </Box>
                                     Geometry
                                 </ToggleButton>
                             </ToggleButtonGroup>
-                        </Box>
-                    </Stack>
+                        </Stack>
+                    </Box>
                 </RoundedContainer>
 
                 <RoundedContainer title="Session security">
