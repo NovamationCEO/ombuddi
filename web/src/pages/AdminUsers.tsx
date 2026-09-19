@@ -1,6 +1,8 @@
 import { InvitationEmailHistory } from '../components/InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
+import { useAdminAction } from '../libraries/useAdminAction'
+import { useSnack } from '../libraries/useSnack'
 import { useQueryClient } from '@tanstack/react-query'
 import {
     Alert,
@@ -67,7 +69,6 @@ type InvitationResult = {
     expiresAt: string
 }
 
-
 export function AdminUsers() {
     const queryClient = useQueryClient()
     const org = useGetter<AdminOrganization>(['admin', 'organization'])
@@ -77,242 +78,365 @@ export function AdminUsers() {
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
     const [isAdmin, setIsAdmin] = React.useState(false)
-    const [saving, setSaving] = React.useState(false)
-    const [error, setError] = React.useState('')
     const [inviteUrl, setInviteUrl] = React.useState('')
     const [editingEmailFor, setEditingEmailFor] = React.useState<string | null>(null)
     const [editingEmail, setEditingEmail] = React.useState('')
     const [statusTarget, setStatusTarget] = React.useState<AdminOmbuds | null>(null)
     const [statusReason, setStatusReason] = React.useState('')
-    const [statusSaving, setStatusSaving] = React.useState(false)
+
+    const [createOpen, setCreateOpen] = React.useState(false)
+    const setSnack = useSnack((state) => state.setSnack)
 
     const atSeatLimit = org.data != null && org.data.seatCount >= org.data.seatLimit
 
-    async function createSeat() {
-        setSaving(true)
-        setError('')
-        try {
-            await creator('admin/ombuds', { name, email, isAdmin })
-            setName('')
-            setEmail('')
-            setIsAdmin(false)
-            await users.refetch()
-        } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Unable to create user seat')
-        } finally {
-            setSaving(false)
-        }
-    }
-
+    const { run, busy, pending, error, clearError } = useAdminAction(async () => {
+        await Promise.all([users.refetch(), org.refetch(), metrics.refetch()])
+    })
     const [historySeat, setHistorySeat] = React.useState<AdminOmbuds | null>(null)
-    const invitationPending = React.useRef(false)
-    const [inviting, setInviting] = React.useState(false)
+    const [copyError, setCopyError] = React.useState('')
 
+    async function createSeat() {
+        if (!org.data || atSeatLimit) return
+        await run(
+            async () => {
+                await creator('admin/ombuds', { name, email, isAdmin })
+                setName('')
+                setEmail('')
+                setIsAdmin(false)
+                setCreateOpen(false)
+                setSnack({
+                    message: 'User seat created. Create an invitation from the user list when ready.',
+                    severity: 'success',
+                })
+            },
+            'Unable to create user seat',
+            'create',
+        )
+    }
     async function invite(ombudsId: string) {
-        if (invitationPending.current) return
-        invitationPending.current = true
-        setInviting(true)
-        setError('')
-        setInviteUrl('')
-        try {
-            const result = await creator<InvitationResult>(
-                `admin/ombuds/${ombudsId}/invitation`,
-                {},
-            )
-            setInviteUrl(result.inviteUrl)
-            setInviteDelivery(result.emailDelivery)
-            await queryClient.invalidateQueries({ queryKey: ['admin', 'ombuds', ombudsId, 'email-history'], exact: true })
-            await users.refetch()
-        } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Unable to create invitation')
-        } finally {
-            invitationPending.current = false
-            setInviting(false)
-        }
+        await run(
+            async () => {
+                setCopyError('')
+                const result = await creator<InvitationResult>(`admin/ombuds/${ombudsId}/invitation`, {})
+                setInviteUrl(result.inviteUrl)
+                setInviteDelivery(result.emailDelivery)
+                await queryClient.invalidateQueries({
+                    queryKey: ['admin', 'ombuds', ombudsId, 'email-history'],
+                    exact: true,
+                })
+            },
+            'Unable to create invitation',
+            ombudsId,
+        )
     }
-
     async function cancelInvitation(ombudsId: string) {
-        setError('')
-        setInviteUrl('')
+        await run(
+            () => creator(`admin/ombuds/${ombudsId}/invitation/cancel`, {}),
+            'Unable to cancel invitation',
+            ombudsId,
+        )
+    }
+    async function copyInvite() {
+        setCopyError('')
         try {
-            await creator(`admin/ombuds/${ombudsId}/invitation/cancel`, {})
-            await users.refetch()
-        } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Unable to cancel invitation')
+            await navigator.clipboard.writeText(inviteUrl)
+            setSnack({ message: 'Invitation link copied.', severity: 'success' })
+        } catch {
+            setCopyError('Unable to copy automatically. Select and copy the invitation link.')
         }
     }
-
-    async function copyInvite() {
-        await navigator.clipboard.writeText(inviteUrl)
-    }
-
     function beginEmailEdit(user: AdminOmbuds) {
         setEditingEmailFor(user.id)
         setEditingEmail(user.email ?? '')
-        setError('')
+        clearError()
     }
-
     async function saveSeatEmail() {
         if (!editingEmailFor) return
-        setSaving(true)
-        setError('')
-        setInviteUrl('')
-        try {
-            await updater(`admin/ombuds/${editingEmailFor}`, { email: editingEmail })
-            setEditingEmailFor(null)
-            setEditingEmail('')
-            await users.refetch()
-        } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Unable to update user email')
-        } finally {
-            setSaving(false)
-        }
+        await run(
+            async () => {
+                await updater(`admin/ombuds/${editingEmailFor}`, { email: editingEmail })
+                setEditingEmailFor(null)
+                setEditingEmail('')
+            },
+            'Unable to update user email',
+            editingEmailFor,
+        )
     }
-
     async function changeStatus() {
         if (!statusTarget) return
-        setStatusSaving(true)
-        setError('')
-        setInviteUrl('')
-        try {
-            await updater(`admin/ombuds/${statusTarget.id}/status`, {
-                active: !statusTarget.isActive,
-                reason: statusReason,
-            })
-            setStatusTarget(null)
-            setStatusReason('')
-            await Promise.all([users.refetch(), org.refetch()])
-        } catch (reason) {
-            setError(reason instanceof Error ? reason.message : 'Unable to update user status')
-        } finally {
-            setStatusSaving(false)
-        }
+        await run(
+            async () => {
+                await updater(`admin/ombuds/${statusTarget.id}/status`, {
+                    active: !statusTarget.isActive,
+                    reason: statusReason,
+                })
+                setStatusTarget(null)
+                setStatusReason('')
+            },
+            'Unable to update user status',
+            statusTarget.id,
+        )
     }
 
     return (
-        <Stack spacing={2} sx={{ p: 1 }}>
+        <Stack
+            spacing={2}
+            sx={{ p: 1 }}
+        >
             <Typography variant="h5">Manage Users</Typography>
 
-            {historySeat && <RoundedContainer title={`Email history — ${historySeat.name}`}>
-                <Button onClick={() => setHistorySeat(null)}>Close history</Button>
-                <InvitationEmailHistory key={historySeat.id} endpoint={['admin', 'ombuds', historySeat.id, 'email-history']} />
-            </RoundedContainer>}
-            {error && <Alert severity="error">{error}</Alert>}
+            {historySeat && (
+                <Dialog
+                    open
+                    onClose={() => setHistorySeat(null)}
+                    fullWidth
+                    maxWidth="md"
+                    aria-labelledby="email-history-title"
+                >
+                    <DialogTitle id="email-history-title">Email history — {historySeat.name}</DialogTitle>
+                    <DialogContent>
+                        <InvitationEmailHistory
+                            key={historySeat.id}
+                            endpoint={['admin', 'ombuds', historySeat.id, 'email-history']}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setHistorySeat(null)}>Close history</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
             {(users.error || org.error) && (
-                <Alert severity="error">
-                    Unable to load users. Organization administrator access is required.
-                </Alert>
+                <Alert severity="error">Unable to load users. Organization administrator access is required.</Alert>
             )}
 
-            {org.data && (
-                <RoundedContainer title="Organization">
-                    <Stack spacing={1.5}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Typography sx={{ fontWeight: 600 }}>{org.data.name}</Typography>
-                            <Chip
-                                label={org.data.subscriptionTier}
-                                size="small"
-                                variant="outlined"
-                                sx={{ textTransform: 'capitalize' }}
-                            />
-                        </Box>
-                        <Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    Seats used
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {org.data.seatCount} active / {org.data.seatLimit}
-                                </Typography>
-                            </Box>
-                            <LinearProgress
-                                variant="determinate"
-                                value={Math.min(100, (org.data.seatCount / org.data.seatLimit) * 100)}
-                                color={atSeatLimit ? 'error' : 'primary'}
-                                sx={{ borderRadius: 1, height: 6 }}
-                            />
-                        </Box>
-                    </Stack>
-                </RoundedContainer>
-            )}
-
-            {metrics.data && (
+            {(org.data || metrics.data) && (
                 <RoundedContainer title="Usage">
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2 }}>
-                        {[
-                            { label: 'Entries (30 days)', value: metrics.data.entriesLast30Days },
-                            { label: 'Entries (YTD)',     value: metrics.data.entriesYtd },
-                            { label: 'Active seats',      value: metrics.data.activeSeats },
-                            { label: 'Open cases',        value: metrics.data.openCases },
-                            { label: 'Total cases',       value: metrics.data.totalCases },
-                        ].map(({ label, value }) => (
-                            <Box key={label} sx={{ textAlign: 'center', p: 1 }}>
-                                <Typography variant="h4" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                                    {value}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {label}
-                                </Typography>
+                    <Stack spacing={2}>
+                        {org.data && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                                <Typography sx={{ fontWeight: 600 }}>{org.data.name}</Typography>
+                                <Chip
+                                    label={org.data.subscriptionTier}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ textTransform: 'capitalize' }}
+                                />
                             </Box>
-                        ))}
-                    </Box>
+                        )}
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                                gap: 2,
+                            }}
+                        >
+                            {org.data && (
+                                <Box sx={{ p: 1, textAlign: 'center' }}>
+                                    <Typography
+                                        variant="h4"
+                                        sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                                    >
+                                        {org.data.seatCount}
+                                        <Typography
+                                            component="span"
+                                            color="text.secondary"
+                                        >
+                                            {' '}
+                                            / {org.data.seatLimit}
+                                        </Typography>
+                                    </Typography>
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                    >
+                                        Seats used
+                                    </Typography>
+                                    <LinearProgress
+                                        aria-label="Seats used"
+                                        variant="determinate"
+                                        value={
+                                            org.data.seatLimit > 0
+                                                ? Math.min(100, (org.data.seatCount / org.data.seatLimit) * 100)
+                                                : 0
+                                        }
+                                        color={atSeatLimit ? 'error' : 'primary'}
+                                        sx={{ borderRadius: 1, height: 6, mt: 1 }}
+                                    />
+                                </Box>
+                            )}
+                            {metrics.data &&
+                                [
+                                    { label: 'Entries (30 days)', value: metrics.data.entriesLast30Days },
+                                    { label: 'Entries (YTD)', value: metrics.data.entriesYtd },
+                                    { label: 'Open cases', value: metrics.data.openCases },
+                                    { label: 'Total cases', value: metrics.data.totalCases },
+                                ].map(({ label, value }) => (
+                                    <Box
+                                        key={label}
+                                        sx={{ textAlign: 'center', p: 1 }}
+                                    >
+                                        <Typography
+                                            variant="h4"
+                                            sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                                        >
+                                            {value}
+                                        </Typography>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                        >
+                                            {label}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                        </Box>
+                        {metrics.error && <Alert severity="warning">Unable to load usage metrics.</Alert>}
+                        {atSeatLimit && (
+                            <Alert severity="warning">
+                                Your organization has reached its {org.data?.seatLimit}-seat limit. Contact Ombuddi to
+                                add more seats.
+                            </Alert>
+                        )}
+                    </Stack>
                 </RoundedContainer>
             )}
 
             {inviteUrl && (
-                <Alert severity={invitationSeverity(inviteDelivery)}>
-                    <Stack spacing={1}>
-                        <InvitationDelivery delivery={inviteDelivery} />
-                        <TextField value={inviteUrl} fullWidth slotProps={{ input: { readOnly: true } }} />
-                        <Button onClick={copyInvite} variant="outlined">Copy invitation link</Button>
-                    </Stack>
-                </Alert>
+                <Dialog
+                    open
+                    fullWidth
+                    maxWidth="sm"
+                    aria-labelledby="invitation-result-title"
+                >
+                    <DialogTitle id="invitation-result-title">Invitation created</DialogTitle>
+                    <DialogContent>
+                        {copyError && <Alert severity="error">{copyError}</Alert>}
+                        <Alert severity={invitationSeverity(inviteDelivery)}>
+                            <Stack spacing={1}>
+                                <InvitationDelivery delivery={inviteDelivery} />
+                                <TextField
+                                    label="Invitation link"
+                                    value={inviteUrl}
+                                    fullWidth
+                                    slotProps={{ input: { readOnly: true } }}
+                                />
+                                <Button
+                                    onClick={copyInvite}
+                                    variant="outlined"
+                                >
+                                    Copy invitation link
+                                </Button>
+                            </Stack>
+                        </Alert>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setInviteUrl('')}>Done</Button>
+                    </DialogActions>
+                </Dialog>
             )}
 
-            {atSeatLimit ? (
-                <Alert severity="warning">
-                    Your organization has reached its {org.data?.seatLimit}-seat limit.
-                    Contact Ombuddi to add more seats.
-                </Alert>
-            ) : (
-                <RoundedContainer title="Create user seat">
-                    <Stack spacing={2}>
-                        <TextField
-                            label="Name"
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            required
-                        />
-                        <TextField
-                            label="Email"
-                            type="email"
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)}
-                            required
-                            helperText="The invitation can only be claimed by an Auth0 account with this verified email."
-                        />
-                        <FormControlLabel
-                            control={(
-                                <Checkbox
-                                    checked={isAdmin}
-                                    onChange={(event) => setIsAdmin(event.target.checked)}
-                                />
-                            )}
-                            label="Organization administrator"
-                        />
-                        <Button
-                            variant="contained"
-                            onClick={createSeat}
-                            disabled={saving || !name.trim() || !email.trim()}
+            <Dialog
+                open={createOpen}
+                onClose={() => {
+                    if (!pending.current) setCreateOpen(false)
+                }}
+                fullWidth
+                maxWidth="sm"
+                aria-labelledby="create-seat-title"
+            >
+                <DialogTitle id="create-seat-title">Create user seat</DialogTitle>
+                <DialogContent>
+                    <Box
+                        component="form"
+                        id="create-seat-form"
+                        onSubmit={(event) => {
+                            event.preventDefault()
+                            void createSeat()
+                        }}
+                    >
+                        <Stack
+                            spacing={2}
+                            sx={{ pt: 1 }}
                         >
-                            Create seat
-                        </Button>
-                    </Stack>
-                </RoundedContainer>
-            )}
+                            {error?.target === 'create' && <Alert severity="error">{error.message}</Alert>}
+                            <Typography variant="body2">
+                                Create the seat first, then send an invitation from the user list.
+                            </Typography>
+                            <TextField
+                                label="Name"
+                                value={name}
+                                onChange={(event) => setName(event.target.value)}
+                                required
+                            />
+                            <TextField
+                                label="Email"
+                                type="email"
+                                value={email}
+                                onChange={(event) => setEmail(event.target.value)}
+                                required
+                                helperText="The invitation can only be claimed by an Auth0 account with this verified email."
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isAdmin}
+                                        onChange={(event) => setIsAdmin(event.target.checked)}
+                                    />
+                                }
+                                label="Organization administrator"
+                            />
+                        </Stack>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        disabled={busy}
+                        onClick={() => setCreateOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        type="submit"
+                        form="create-seat-form"
+                        disabled={busy || atSeatLimit || !org.data || !name.trim() || !email.trim()}
+                    >
+                        Create seat
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <RoundedContainer title="Organization users">
                 <Stack spacing={1.5}>
+                    <Button
+                        variant="contained"
+                        sx={{ alignSelf: 'flex-start' }}
+                        aria-describedby={atSeatLimit ? 'seat-limit-explanation' : undefined}
+                        disabled={!org.data || atSeatLimit || busy}
+                        onClick={() => {
+                            clearError()
+                            setCreateOpen(true)
+                        }}
+                    >
+                        Create user seat
+                    </Button>
+                    {atSeatLimit && (
+                        <Typography
+                            id="seat-limit-explanation"
+                            variant="body2"
+                            color="text.secondary"
+                        >
+                            All {org.data?.seatLimit} seats are in use. Contact Ombuddi to add more seats.
+                        </Typography>
+                    )}
+                    {busy && (
+                        <Typography
+                            role="status"
+                            variant="body2"
+                        >
+                            Updating users…
+                        </Typography>
+                    )}
                     {(users.data ?? []).map((user) => (
                         <Box
                             key={user.id}
@@ -328,6 +452,7 @@ export function AdminUsers() {
                             }}
                         >
                             <Box>
+                                {error?.target === user.id && <Alert severity="error">{error.message}</Alert>}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                     <Typography sx={{ fontWeight: 600 }}>{user.name}</Typography>
                                     <Chip
@@ -357,29 +482,37 @@ export function AdminUsers() {
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                 <Button onClick={() => setHistorySeat(user)}>Email history</Button>
-                                {!user.isLinked && user.isActive && (
-                                    editingEmailFor === user.id ? (
+                                {!user.isLinked &&
+                                    user.isActive &&
+                                    (editingEmailFor === user.id ? (
                                         <>
                                             <Button
                                                 variant="contained"
                                                 onClick={saveSeatEmail}
-                                                disabled={saving || !editingEmail.trim()}
+                                                disabled={busy || !editingEmail.trim()}
                                             >
                                                 Save email
                                             </Button>
-                                            <Button onClick={() => setEditingEmailFor(null)} disabled={saving}>
+                                            <Button
+                                                onClick={() => setEditingEmailFor(null)}
+                                                disabled={busy}
+                                            >
                                                 Cancel
                                             </Button>
                                         </>
                                     ) : (
                                         <>
-                                            <Button variant="text" onClick={() => beginEmailEdit(user)} disabled={inviting}>
+                                            <Button
+                                                variant="text"
+                                                onClick={() => beginEmailEdit(user)}
+                                                disabled={busy}
+                                            >
                                                 Edit email
                                             </Button>
                                             <Button
                                                 variant="outlined"
                                                 onClick={() => invite(user.id)}
-                                                disabled={inviting || !user.email}
+                                                disabled={busy || !user.email}
                                             >
                                                 {user.invitation?.isActive ? 'Replace invitation' : 'Create invitation'}
                                             </Button>
@@ -387,21 +520,21 @@ export function AdminUsers() {
                                                 <Button
                                                     color="warning"
                                                     onClick={() => cancelInvitation(user.id)}
-                                                    disabled={inviting}
+                                                    disabled={busy}
                                                 >
                                                     Cancel invitation
                                                 </Button>
                                             )}
                                         </>
-                                    )
-                                )}
+                                    ))}
                                 <Button
+                                    disabled={busy}
                                     variant={user.isActive ? 'text' : 'outlined'}
                                     color={user.isActive ? 'error' : 'primary'}
                                     onClick={() => {
                                         setStatusTarget(user)
                                         setStatusReason('')
-                                        setError('')
+                                        clearError()
                                     }}
                                 >
                                     {user.isActive ? 'Deactivate' : 'Reactivate'}
@@ -416,16 +549,21 @@ export function AdminUsers() {
             </RoundedContainer>
 
             <Dialog
+                aria-labelledby="user-status-title"
                 open={statusTarget !== null}
-                onClose={() => !statusSaving && setStatusTarget(null)}
+                onClose={() => !pending.current && setStatusTarget(null)}
                 fullWidth
                 maxWidth="sm"
             >
-                <DialogTitle>
+                <DialogTitle id="user-status-title">
                     {statusTarget?.isActive ? 'Deactivate user' : 'Reactivate user'}
                 </DialogTitle>
                 <DialogContent>
-                    <Stack spacing={2} sx={{ pt: 1 }}>
+                    <Stack
+                        spacing={2}
+                        sx={{ pt: 1 }}
+                    >
+                        {error?.target === statusTarget?.id && error && <Alert severity="error">{error.message}</Alert>}
                         <Typography>
                             {statusTarget?.isActive
                                 ? `New requests from ${statusTarget.name} will be blocked immediately. Unused invitations for this seat will be revoked.`
@@ -442,10 +580,15 @@ export function AdminUsers() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setStatusTarget(null)} disabled={statusSaving}>Cancel</Button>
+                    <Button
+                        onClick={() => setStatusTarget(null)}
+                        disabled={busy}
+                    >
+                        Cancel
+                    </Button>
                     <Button
                         onClick={changeStatus}
-                        disabled={statusSaving}
+                        disabled={busy}
                         variant="contained"
                         color={statusTarget?.isActive ? 'error' : 'primary'}
                     >
