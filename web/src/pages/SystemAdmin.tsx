@@ -69,7 +69,11 @@ export function SystemAdmin() {
     const [statusError, setStatusError] = React.useState('')
     const [managedOrganization, setManagedOrganization] = React.useState<SystemOrg | null>(null)
 
+    const creationPending = React.useRef(false)
+
     async function createOrg() {
+        if (creationPending.current) return
+        creationPending.current = true
         setCreating(true)
         setCreateError('')
         setNewInviteUrl('')
@@ -92,6 +96,7 @@ export function SystemAdmin() {
         } catch (reason) {
             setCreateError(reason instanceof Error ? reason.message : 'Unable to create organization')
         } finally {
+            creationPending.current = false
             setCreating(false)
         }
     }

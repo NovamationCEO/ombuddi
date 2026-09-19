@@ -1,3 +1,4 @@
+import { InvitationEmailHistory } from './InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './InvitationDelivery'
 import React from 'react'
 import {
@@ -135,7 +136,11 @@ export function SystemOrganizationSeats({
         await Promise.all([seats.refetch(), audit.refetch(), onOrganizationChanged()])
     }
 
+    const actionPending = React.useRef(false)
+
     async function run(action: () => Promise<unknown>, fallback: string) {
+        if (actionPending.current) return false
+        actionPending.current = true
         setBusy(true)
         setError('')
         setInviteUrl('')
@@ -147,6 +152,7 @@ export function SystemOrganizationSeats({
             setError(reason instanceof Error ? reason.message : fallback)
             return false
         } finally {
+            actionPending.current = false
             setBusy(false)
         }
     }
@@ -352,6 +358,7 @@ export function SystemOrganizationSeats({
                 <RoundedContainer title={`Invitation history — ${historySeat.name}`}>
                     <Stack spacing={1}>
                         <Button sx={{ alignSelf: 'flex-start' }} onClick={() => setHistorySeat(null)}>Close history</Button>
+                        <InvitationEmailHistory key={`${historySeat.id}:${inviteUrl}`} endpoint={['system', 'organizations', organization.id, 'ombuds', historySeat.id, 'email-history']} />
                         {(invitationHistory.data ?? []).map((invitation) => (
                             <Box key={invitation.id} sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>

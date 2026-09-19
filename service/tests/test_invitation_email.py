@@ -45,7 +45,7 @@ class InvitationEmailTests(unittest.TestCase):
         response = MagicMock()
         response.__enter__.return_value.status = 202
         send.side_effect = [io.BytesIO(b'{"access_token":"access-secret"}'), response]
-        self.assertEqual(self.deliver(), {'status': 'accepted', 'sender': 'admin@ombuddi.com'})
+        self.assertEqual(self.deliver(), {'status': 'accepted', 'sender': 'admin@ombuddi.com', 'submissionAttempts': 1})
         token_request = send.call_args_list[0].args[0]
         self.assertIn(b'grant_type=client_credentials', token_request.data)
         request = send.call_args_list[1].args[0]
@@ -100,3 +100,52 @@ class InvitationEmailTests(unittest.TestCase):
         response.__enter__.return_value.status = 200
         send.side_effect = [io.BytesIO(b'{"access_token":"token"}'), response]
         self.assertEqual(self.deliver()['status'], 'unconfirmed')
+
+    @patch('invitation_email.urlopen')
+    def test_401_refreshes_once_and_succeeds(self, send):
+        response = MagicMock()
+        response.__enter__.return_value.status = 202
+        send.side_effect = [io.BytesIO(b'{"access_token":"old","expires_in":3600}'),
+                            HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None),
+                            io.BytesIO(b'{"access_token":"new","expires_in":3600}'), response]
+        result = self.deliver()
+        self.assertEqual(result['status'], 'accepted')
+        self.assertEqual(result['submissionAttempts'], 2)
+        self.assertEqual(send.call_count, 4)
+        self.assertEqual(send.call_args_list[3].args[0].get_header('Authorization'), 'Bearer new')
+
+    @patch('invitation_email.urlopen')
+    def test_second_401_is_not_retried(self, send):
+        send.side_effect = [io.BytesIO(b'{"access_token":"old"}'),
+                            HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None),
+                            io.BytesIO(b'{"access_token":"new"}'),
+                            HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None)]
+        result = self.deliver()
+        self.assertEqual(result['status'], 'rejected')
+        self.assertEqual(result['submissionAttempts'], 2)
+        self.assertEqual(send.call_count, 4)
+
+    @patch('invitation_email.urlopen')
+    def test_refresh_failure_does_not_resubmit(self, send):
+        send.side_effect = [io.BytesIO(b'{"access_token":"old"}'),
+                            HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None), TimeoutError()]
+        self.assertEqual(self.deliver()['status'], 'failed')
+        self.assertEqual(send.call_count, 3)
+
+    @patch('invitation_email.urlopen')
+    def test_wait_for_concurrent_refresh_is_bounded(self, send):
+        import threading
+        from invitation_email import _token_lock
+        result = []
+        _token_lock.acquire()
+        try:
+            worker = threading.Thread(target=lambda: result.append(self.deliver()))
+            worker.start()
+            worker.join(timeout=4)
+            self.assertFalse(worker.is_alive())
+        finally:
+            _token_lock.release()
+        worker.join()
+        self.assertEqual(result[0]['status'], 'failed')
+        self.assertEqual(result[0]['reason'], 'authentication_failed')
+        send.assert_not_called()

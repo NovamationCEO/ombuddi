@@ -1083,3 +1083,18 @@ def _seat_json(row) -> dict:
             ),
         },
     }
+
+
+@system_admin_views.route('/api/v1/system/organizations/<org_id>/ombuds/<ombuds_id>/email-history')
+def list_invitation_email_history(org_id, ombuds_id):
+    from invitation_history import email_history
+    conn = None
+    try:
+        conn = get_db_connection()
+        return email_history(conn, org_id, ombuds_id)
+    except Exception:
+        logger.exception('Failed to load invitation email history')
+        return jsonify({'error': 'Database error', 'message': 'Unable to load email history'}), 500
+    finally:
+        if conn:
+            conn.close()

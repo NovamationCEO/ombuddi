@@ -1,3 +1,4 @@
+import { InvitationEmailHistory } from '../components/InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import {
@@ -101,6 +102,7 @@ export function AdminUsers() {
         }
     }
 
+    const [historySeat, setHistorySeat] = React.useState<AdminOmbuds | null>(null)
     const invitationPending = React.useRef(false)
     const [inviting, setInviting] = React.useState(false)
 
@@ -188,6 +190,10 @@ export function AdminUsers() {
         <Stack spacing={2} sx={{ p: 1 }}>
             <Typography variant="h5">Manage Users</Typography>
 
+            {historySeat && <RoundedContainer title={`Email history — ${historySeat.name}`}>
+                <Button onClick={() => setHistorySeat(null)}>Close history</Button>
+                <InvitationEmailHistory key={`${historySeat.id}:${inviteUrl}`} endpoint={['admin', 'ombuds', historySeat.id, 'email-history']} />
+            </RoundedContainer>}
             {error && <Alert severity="error">{error}</Alert>}
             {(users.error || org.error) && (
                 <Alert severity="error">
@@ -347,6 +353,7 @@ export function AdminUsers() {
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                <Button onClick={() => setHistorySeat(user)}>Email history</Button>
                                 {!user.isLinked && user.isActive && (
                                     editingEmailFor === user.id ? (
                                         <>

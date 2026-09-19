@@ -7,14 +7,16 @@ import { InvitationDelivery, invitationSeverity, type EmailDelivery } from './In
 
 describe('Invitation delivery feedback', () => {
     it.each([
-        [undefined, 'not configured', 'warning'],
-        [{ status: 'not_configured' }, 'not configured', 'warning'],
+        [undefined, 'status unavailable', 'warning'],
+        [{ status: 'not_configured' }, 'sending is disabled', 'warning'],
+        [{ status: 'started' }, 'If no later outcome appears', 'warning'],
+        [{ status: 'failed', reason: 'audit_unavailable' }, 'audit record could not be saved', 'warning'],
         [{ status: 'accepted' }, 'Microsoft accepted', 'success'],
         [{ status: 'unconfirmed' }, 'could not be confirmed', 'warning'],
-        [{ status: 'configuration_error', message: 'Configure HTTPS.' }, 'Configure HTTPS.', 'warning'],
-        [{ status: 'failed', message: 'Authentication failed.' }, 'Authentication failed.', 'warning'],
-        [{ status: 'rejected', message: 'Microsoft rejected.', httpStatus: 403 }, 'HTTP 403', 'warning'],
-        [{ status: 'accepted', auditWarning: 'Audit unavailable.' }, 'Audit unavailable.', 'warning'],
+        [{ status: 'configuration_error', reason: 'invalid_configuration' }, 'HTTPS FRONTEND_URL', 'warning'],
+        [{ status: 'failed', reason: 'authentication_failed' }, 'authentication failed', 'warning'],
+        [{ status: 'rejected', reason: 'provider_rejected', httpStatus: 403 }, 'HTTP 403', 'warning'],
+        [{ status: 'accepted', auditWarning: 'outcome_not_saved' }, 'final email status could not be saved', 'warning'],
     ] as const)('shows accurate feedback for %j', async (input, expected, severity) => {
         const delivery = input ? { sender: 'admin@ombuddi.com', ...input } as EmailDelivery : undefined
         const container = document.createElement('div')

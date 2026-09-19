@@ -21,7 +21,7 @@ class DeliveryAuditTests(unittest.TestCase):
         conn = MagicMock()
         def sending(*args):
             self.assertEqual(conn.commit.call_count, 1)
-            return {'sender': 'admin@ombuddi.com', 'status': 'accepted'}
+            return {'sender': 'admin@ombuddi.com', 'status': 'accepted', 'message': 'Do not persist', 'unknownField': 'secret'}
         send.side_effect = sending
         result = self.deliver(conn)
         self.assertEqual(result['status'], 'accepted')
@@ -31,6 +31,7 @@ class DeliveryAuditTests(unittest.TestCase):
         self.assertEqual([d['status'] for d in details], ['started', 'accepted'])
         self.assertEqual(details[1]['invitationId'], 'invitation-id')
         self.assertNotIn('secret', json.dumps(details))
+        self.assertNotIn('message', details[1])
 
     @patch('invitation_delivery.send_email')
     def test_failed_attempt_audit_prevents_send(self, send):

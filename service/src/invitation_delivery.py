@@ -14,7 +14,10 @@ def deliver_invitation(recipient, invite_url, expires_at, *, conn,
                 cur, actor_ombuds_id=actor_ombuds_id, organization_id=organization_id,
                 target_ombuds_id=target_ombuds_id,
                 event_type='ombuds_invitation_email',
-                details={'invitationId': str(invitation_id), **status},
+                details={'invitationId': str(invitation_id), **{
+                    key: value for key, value in status.items()
+                    if key in {'sender', 'status', 'reason', 'stage', 'httpStatus', 'submissionAttempts'}
+                }},
             )
         conn.commit()
 
@@ -29,14 +32,12 @@ def deliver_invitation(recipient, invite_url, expires_at, *, conn,
     except Exception:
         rollback_audit()
         logger.warning('Invitation email attempt audit could not be saved; submission skipped')
-        return {'sender': SENDER, 'status': 'failed', 'message':
-                'Email was not sent because its audit record could not be saved. The invitation link remains valid.'}
+        return {'sender': SENDER, 'status': 'failed', 'reason': 'audit_unavailable'}
     result = send_email(recipient, invite_url, expires_at)
     try:
         record(result)
     except Exception:
         rollback_audit()
         logger.warning('Invitation email outcome audit could not be saved')
-        result = {**result, 'auditWarning':
-                  'The final email status could not be saved. Check Microsoft message trace; do not assume sending failed.'}
+        result = {**result, 'auditWarning': 'outcome_not_saved'}
     return result

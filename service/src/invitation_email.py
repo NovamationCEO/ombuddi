@@ -19,7 +19,9 @@ _token_lock = Lock()
 
 def _access_token(tenant, client, secret):
     key = (tenant, client, hashlib.sha256(secret.encode()).digest())
-    with _token_lock:
+    if not _token_lock.acquire(timeout=2):
+        raise TimeoutError('Token refresh busy')
+    try:
         cached = _token_cache.get(key)
         if cached and cached[1] > time.monotonic():
             return cached[0]
@@ -40,12 +42,14 @@ def _access_token(tenant, client, secret):
         _token_cache.clear()
         _token_cache[key] = (token, started + lifetime)
         return token
+    finally:
+        _token_lock.release()
 
 
 def deliver_invitation(recipient, invite_url, expires_at):
     """Called only after commit; delivery failure must not undo a valid invitation.
 
-    No automatic retries: a timeout can occur after Microsoft accepted the mail.
+    Retry once only after an explicit 401 rejection; never retry an uncertain send.
     """
     result = {'sender': SENDER, 'status': 'not_configured'}
     if os.environ.get('INVITATION_EMAIL_ENABLED', '').lower() != 'true':
@@ -81,16 +85,40 @@ def deliver_invitation(recipient, invite_url, expires_at):
             },
             'saveToSentItems': True,
         }
-        request = Request(
-            f'https://graph.microsoft.com/v1.0/users/{quote(SENDER, safe="")}/sendMail',
-            data=json.dumps(message).encode(),
-            headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
-            method='POST',
-        )
-        stage = 'submission'
-        with urlopen(request, timeout=10) as response:
-            if response.status != 202:
-                raise ValueError('Unexpected sendMail response')
+        for attempt in range(2):
+            request = Request(
+                f'https://graph.microsoft.com/v1.0/users/{quote(SENDER, safe="")}/sendMail',
+                data=json.dumps(message).encode(),
+                headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+                method='POST',
+            )
+            stage = 'submission'
+            result['submissionAttempts'] = attempt + 1
+            try:
+                with urlopen(request, timeout=10) as response:
+                    if response.status != 202:
+                        raise ValueError('Unexpected sendMail response')
+                break
+            except HTTPError as exc:
+                if exc.code != 401:
+                    raise
+                # Invalidate only the token rejected, not another thread's refresh.
+                stage = 'authentication'
+                if not _token_lock.acquire(timeout=2):
+                    exc.close()
+                    raise TimeoutError('Token refresh busy')
+                try:
+                    for key, cached in list(_token_cache.items()):
+                        if cached[0] == token:
+                            del _token_cache[key]
+                finally:
+                    _token_lock.release()
+                if attempt == 1:
+                    stage = 'submission'
+                    raise
+                exc.close()
+                stage = 'authentication'
+                token = _access_token(tenant, client, secret)
         result['status'] = 'accepted'
     except Exception as exc:
         code = exc.code if isinstance(exc, HTTPError) else None
@@ -100,22 +128,13 @@ def deliver_invitation(recipient, invite_url, expires_at):
         if code is not None:
             result['httpStatus'] = code
         if stage == 'configuration':
-            result.update(status='configuration_error', message=(
-                'Email was not sent. Configure the Microsoft credentials and an HTTPS FRONTEND_URL.'
-            ))
+            result.update(status='configuration_error', reason='invalid_configuration')
         elif stage == 'authentication':
-            result.update(status='failed', message=(
-                'Email was not sent. Microsoft authentication failed; check credentials and service connectivity.'
-            ))
+            result.update(status='failed', reason='authentication_failed')
         elif code is not None and 400 <= code < 500:
-            result.update(status='rejected', message=(
-                'Microsoft rejected the email. Check mailbox permissions, service limits, and the HTTP status.'
-            ))
-            if code == 401:
-                with _token_lock:
-                    _token_cache.clear()
+            result.update(status='rejected', reason='provider_rejected')
         else:
-            result.update(status='unconfirmed', message=(
-                'Email submission could not be confirmed. Check Sent Items or Microsoft message trace before sending again.'
-            ))
+            result.update(status='unconfirmed', reason='submission_unknown')
+        if isinstance(exc, HTTPError):
+            exc.close()
     return result
