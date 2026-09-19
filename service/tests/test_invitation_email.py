@@ -149,6 +149,7 @@ class InvitationEmailTests(unittest.TestCase):
         worker.join()
         self.assertEqual(result[0]['status'], 'failed')
         self.assertEqual(result[0]['reason'], 'token_refresh_busy')
+        self.assertNotIn('previousHttpStatus', result[0])
         send.assert_not_called()
 
     @patch('invitation_email._token_lock')
@@ -157,7 +158,11 @@ class InvitationEmailTests(unittest.TestCase):
         lock.acquire.side_effect = [True, False]
         send.side_effect = [io.BytesIO(b'{"access_token":"old"}'),
                             HTTPError('https://graph.microsoft.com', 401, 'invalid', {}, None)]
-        result = self.deliver()
+        with self.assertLogs('invitation_email', level='WARNING') as logs:
+            result = self.deliver()
+        self.assertEqual(result['previousHttpStatus'], 401)
+        self.assertNotIn('httpStatus', result)
+        self.assertIn('http_status=None previous_http_status=401', ' '.join(logs.output))
         self.assertEqual(result['reason'], 'token_refresh_busy')
         self.assertEqual(result['status'], 'failed')
         self.assertEqual(result['submissionAttempts'], 1)

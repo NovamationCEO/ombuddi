@@ -109,6 +109,8 @@ def deliver_invitation(recipient, invite_url, expires_at):
             except HTTPError as exc:
                 if exc.code != 401:
                     raise
+                # Preserve the rejection if refresh subsequently fails locally.
+                result['previousHttpStatus'] = 401
                 # Invalidate only the token rejected, not another thread's refresh.
                 stage = 'authentication'
                 if not _token_lock.acquire(timeout=TOKEN_LOCK_TIMEOUT_SECONDS):
@@ -129,8 +131,8 @@ def deliver_invitation(recipient, invite_url, expires_at):
         result['status'] = 'accepted'
     except Exception as exc:
         code = exc.code if isinstance(exc, HTTPError) else None
-        logger.warning('Invitation email failed: stage=%s type=%s http_status=%s',
-                       stage, type(exc).__name__, code)
+        logger.warning('Invitation email failed: stage=%s type=%s http_status=%s previous_http_status=%s',
+                       stage, type(exc).__name__, code, result.get('previousHttpStatus'))
         result['stage'] = stage
         if code is not None:
             result['httpStatus'] = code

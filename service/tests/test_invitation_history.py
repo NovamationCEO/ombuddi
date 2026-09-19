@@ -28,7 +28,7 @@ class InvitationHistoryTests(unittest.TestCase):
         cur.fetchone.return_value = ('seat',)
         cur.fetchall.return_value = [('event', datetime.now(timezone.utc), {
             'invitationId': 'invite', 'status': 'accepted', 'sender': 'admin@ombuddi.com',
-            'message': 'old UI copy', 'token': 'secret',
+            'message': 'old UI copy', 'token': 'secret', 'previousHttpStatus': 401,
         })]
         with app.test_request_context('/?organizationId=other-org'):
             g.organization_id = 'my-org'
@@ -37,6 +37,7 @@ class InvitationHistoryTests(unittest.TestCase):
         self.assertEqual(cur.execute.call_args.args[1], ('my-org', 'seat'))
         self.assertIn("event_type = 'ombuds_invitation_email'", cur.execute.call_args.args[0])
         self.assertEqual(response.get_json()[0]['delivery']['status'], 'accepted')
+        self.assertEqual(response.get_json()[0]['delivery']['previousHttpStatus'], 401)
         self.assertNotIn('secret', response.get_data(as_text=True))
         self.assertNotIn('message', response.get_json()[0]['delivery'])
         conn.close.assert_called_once()

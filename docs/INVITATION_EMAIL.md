@@ -155,3 +155,8 @@ path rather than promising exactly-once delivery. Monitor for stalled jobs,
 expired invitations, and retry loops. Compromise of queued payloads and their
 key could expose recipient addresses and invitation links, even though claiming
 still requires the matching verified email.
+
+When a submission receives a 401, `previousHttpStatus` preserves that rejection
+through refresh and retry, including subsequent local lock contention. It is
+retained in audit/history and failure logs separately from the final failure's
+`httpStatus`; lock contention itself is not an HTTP error.
