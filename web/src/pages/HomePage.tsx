@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { ArrowForward, ShieldOutlined } from '@mui/icons-material'
 import { Box, ButtonBase, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -132,19 +133,11 @@ export function HomePage() {
     }, [])
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                p: { xs: 3, sm: 4, lg: 5 },
-                boxSizing: 'border-box',
-                color: palette.text,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 71%, ${palette.backgroundDeep} 71%)`,
-            }}
-        >
-            <Box sx={{ maxWidth: 1360, mx: 'auto' }}>
+        <Box sx={pageLayoutStyle}>
+            <Box sx={{ width: '100%', minWidth: 0 }}>
                 <Box
                     sx={{
-                        mb: { xs: 4, md: 5 },
+                        mb: 2.5,
                     }}
                 >
                     <Box>
@@ -163,19 +156,13 @@ export function HomePage() {
                         </Typography>
                         <Typography
                             component="h1"
-                            sx={{
-                                color: palette.text,
-                                fontSize: { xs: '2.35rem', sm: '3rem', lg: '3.45rem' },
-                                fontWeight: 650,
-                                letterSpacing: '-0.045em',
-                                lineHeight: 1.03,
-                                mb: 1.5,
-                            }}
+                            variant="h4"
+                            sx={pageTitleStyle}
                         >
                             {greeting}
                             {firstName ? `, ${firstName}` : ''}.
                         </Typography>
-                        <Typography sx={{ maxWidth: 600, color: palette.muted, fontSize: '1.02rem' }}>
+                        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
                             Everything you need to continue your confidential case work.
                         </Typography>
                     </Box>

@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
 import { useSnack } from '../libraries/useSnack'
@@ -226,15 +227,18 @@ export function SystemAdmin() {
 
     return (
         <Stack
-            spacing={2}
-            sx={{ p: 1 }}
+            spacing={2.5}
+            sx={pageLayoutStyle}
         >
             <Typography
                 ref={heading}
                 tabIndex={-1}
                 component="h1"
-                variant="h5"
-                sx={{ '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 } }}
+                variant="h4"
+                sx={{
+                    ...pageTitleStyle,
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 },
+                }}
             >
                 {managedOrganization ? managedOrganization.name : 'System Administration'}
             </Typography>

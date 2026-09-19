@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { InvitationEmailHistory } from '../components/InvitationEmailHistory'
 import { InvitationDelivery, invitationSeverity, type EmailDelivery } from '../components/InvitationDelivery'
 import React from 'react'
@@ -182,10 +183,16 @@ export function AdminUsers() {
 
     return (
         <Stack
-            spacing={2}
-            sx={{ p: 1 }}
+            spacing={2.5}
+            sx={pageLayoutStyle}
         >
-            <Typography variant="h5">Manage Users</Typography>
+            <Typography
+                component="h1"
+                variant="h4"
+                sx={pageTitleStyle}
+            >
+                Manage Users
+            </Typography>
 
             {historySeat && (
                 <Dialog

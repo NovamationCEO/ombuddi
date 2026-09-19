@@ -52,12 +52,21 @@ export const router = createBrowserRouter([
         element: (
             <PageAlternate
                 element={<AcceptInvitation />}
+                fullBleed
                 title="Accept Invitation"
                 description="Accept an invitation to join an Ombuddi organization."
             />
         ),
     },
-    { path: '/select_case', element: <Page element={<SelectCase />} title="Select Case" /> },
+    {
+        path: '/select_case',
+        element: (
+            <Page
+                element={<SelectCase />}
+                title="Select Case"
+            />
+        ),
+    },
     {
         path: '/cases',
         element: (
@@ -91,7 +100,16 @@ export const router = createBrowserRouter([
             />
         ),
     },
-    { path: '/add_person', element: <Page element={<AddPerson />} title="Add Person" /> },
+    {
+        path: '/add_person',
+        element: (
+            <Page
+                element={<AddPerson />}
+                title="Add Person"
+                fullBleed
+            />
+        ),
+    },
     {
         path: '/profile',
         element: (
@@ -114,8 +132,26 @@ export const router = createBrowserRouter([
             />
         ),
     },
-    { path: '/admin/users', element: <Page element={<AdminUsers />} title="Manage Users" /> },
-    { path: '/system/orgs', element: <Page element={<SystemAdmin />} title="System Administration" /> },
+    {
+        path: '/admin/users',
+        element: (
+            <Page
+                element={<AdminUsers />}
+                title="Manage Users"
+                fullBleed
+            />
+        ),
+    },
+    {
+        path: '/system/orgs',
+        element: (
+            <Page
+                element={<SystemAdmin />}
+                title="System Administration"
+                fullBleed
+            />
+        ),
+    },
     {
         path: '/case/:caseId/add_entry',
         element: (

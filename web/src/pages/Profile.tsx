@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { DarkModeOutlined, LightModeOutlined, LockOutlined } from '@mui/icons-material'
 import {
     Alert,
@@ -82,24 +83,16 @@ export function Profile() {
     const profileLoadError = ombudsRes.error || organizationRes.error
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                boxSizing: 'border-box',
-                bgcolor: 'background.default',
-                color: 'text.primary',
-                p: { xs: 2, sm: 3, lg: 4 },
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2.5}
-                sx={{ width: '100%', maxWidth: 900, mx: 'auto' }}
+                sx={{ width: '100%', mx: 'auto' }}
             >
                 <Box>
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: 'text.primary', fontWeight: 700 }}
+                        sx={pageTitleStyle}
                     >
                         Profile
                     </Typography>

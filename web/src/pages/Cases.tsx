@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { Add, Commit } from '@mui/icons-material'
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
 import React from 'react'
@@ -27,12 +28,7 @@ export function Cases() {
     const caseLoadError = activeRes.isError || generalRes.isError || monitoringRes.isError || closedRes.isError
 
     async function retryCases() {
-        await Promise.all([
-            activeRes.refetch(),
-            generalRes.refetch(),
-            monitoringRes.refetch(),
-            closedRes.refetch(),
-        ])
+        await Promise.all([activeRes.refetch(), generalRes.refetch(), monitoringRes.refetch(), closedRes.refetch()])
     }
 
     async function logGeneralActivity() {
@@ -51,19 +47,11 @@ export function Cases() {
     }
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                p: { xs: 3, sm: 4, lg: 5 },
-                boxSizing: 'border-box',
-                color: palette.text,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
-            }}
-        >
-            <Box sx={{ maxWidth: 1360, mx: 'auto' }}>
+        <Box sx={pageLayoutStyle}>
+            <Box sx={{ width: '100%', minWidth: 0 }}>
                 <Box
                     sx={{
-                        mb: 3.5,
+                        mb: 2.5,
                         display: 'flex',
                         flexDirection: { xs: 'column', md: 'row' },
                         alignItems: { md: 'flex-start' },
@@ -74,18 +62,12 @@ export function Cases() {
                     <Box>
                         <Typography
                             component="h1"
-                            sx={{
-                                color: palette.text,
-                                fontSize: { xs: '2.35rem', sm: '3rem' },
-                                fontWeight: 650,
-                                letterSpacing: '-0.045em',
-                                lineHeight: 1.03,
-                                mb: 1.25,
-                            }}
+                            variant="h4"
+                            sx={pageTitleStyle}
                         >
                             Cases
                         </Typography>
-                        <Typography sx={{ color: palette.muted }}>
+                        <Typography sx={{ mt: 0.5, color: 'text.secondary' }}>
                             Review and continue your confidential case work.
                         </Typography>
                     </Box>
@@ -163,25 +145,25 @@ export function Cases() {
                 </Box>
 
                 {!cases.length && !caseLoading && !caseLoadError && (
-                        <Box
-                            sx={{
-                                p: 4,
-                                textAlign: 'center',
-                                color: palette.muted,
-                                bgcolor: palette.surface,
-                                border: `1px solid ${palette.border}`,
-                                borderRadius: 3,
-                            }}
+                    <Box
+                        sx={{
+                            p: 4,
+                            textAlign: 'center',
+                            color: palette.muted,
+                            bgcolor: palette.surface,
+                            border: `1px solid ${palette.border}`,
+                            borderRadius: 3,
+                        }}
+                    >
+                        <Typography
+                            variant="h6"
+                            sx={{ color: palette.text, mb: 0.75 }}
                         >
-                            <Typography
-                                variant="h6"
-                                sx={{ color: palette.text, mb: 0.75 }}
-                            >
-                                No cases yet
-                            </Typography>
-                            <Typography>Create a case when you are ready to begin recording work.</Typography>
-                        </Box>
-                    )}
+                            No cases yet
+                        </Typography>
+                        <Typography>Create a case when you are ready to begin recording work.</Typography>
+                    </Box>
+                )}
             </Box>
         </Box>
     )

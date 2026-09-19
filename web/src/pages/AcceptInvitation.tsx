@@ -1,14 +1,11 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import React from 'react'
 import { Alert, Button, CircularProgress, Stack, Typography } from '@mui/material'
 import { useAuth0 } from '@auth0/auth0-react'
 import { creator } from '../tools/db_tools/creator'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { useNavigate } from 'react-router-dom'
-import {
-    clearPendingInvitationToken,
-    loadPendingInvitationToken,
-} from '../tools/auth/pendingInvitation'
-
+import { clearPendingInvitationToken, loadPendingInvitationToken } from '../tools/auth/pendingInvitation'
 
 export function AcceptInvitation() {
     const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0()
@@ -70,8 +67,17 @@ export function AcceptInvitation() {
     }
 
     return (
-        <Stack spacing={2} sx={{ p: 1, maxWidth: 640, mx: 'auto' }}>
-            <Typography variant="h5">Join Ombuddi</Typography>
+        <Stack
+            spacing={2.5}
+            sx={pageLayoutStyle}
+        >
+            <Typography
+                component="h1"
+                variant="h4"
+                sx={pageTitleStyle}
+            >
+                Join Ombuddi
+            </Typography>
             <RoundedContainer title="Accept invitation">
                 <Stack spacing={2}>
                     {!token && <Alert severity="error">This invitation link is incomplete.</Alert>}
@@ -79,8 +85,8 @@ export function AcceptInvitation() {
                     {errorCode === 'VERIFIED_EMAIL_REQUIRED' && (
                         <Alert severity="warning">
                             Auth0 created your account, but your email address is still awaiting verification. Check
-                            your inbox and spam folder for a separate verification message. After verifying, return
-                            here and sign in again. If no message arrives, contact the inviting administrator.
+                            your inbox and spam folder for a separate verification message. After verifying, return here
+                            and sign in again. If no message arrives, contact the inviting administrator.
                         </Alert>
                     )}
                     <Typography>
@@ -94,16 +100,31 @@ export function AcceptInvitation() {
                         </Alert>
                     )}
                     {!token ? null : !isAuthenticated ? (
-                        <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
-                            <Button variant="contained" onClick={() => void authenticate('signup')} disabled={!token}>
+                        <Stack
+                            spacing={1}
+                            sx={{ alignItems: 'flex-start' }}
+                        >
+                            <Button
+                                variant="contained"
+                                onClick={() => void authenticate('signup')}
+                                disabled={!token}
+                            >
                                 Create account to accept invitation
                             </Button>
-                            <Button variant="text" onClick={() => void authenticate('login')} disabled={!token}>
+                            <Button
+                                variant="text"
+                                onClick={() => void authenticate('login')}
+                                disabled={!token}
+                            >
                                 I already have an Auth0 account
                             </Button>
                         </Stack>
                     ) : error ? (
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: 'flex-start' }}>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={1}
+                            sx={{ alignItems: 'flex-start' }}
+                        >
                             {errorCode === 'VERIFIED_EMAIL_REQUIRED' && (
                                 <Button
                                     variant="contained"
@@ -122,7 +143,11 @@ export function AcceptInvitation() {
                             </Button>
                         </Stack>
                     ) : (
-                        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                        <Stack
+                            direction="row"
+                            spacing={1.5}
+                            sx={{ alignItems: 'center' }}
+                        >
                             <CircularProgress size={20} />
                             <Typography>Linking your Ombuddi account…</Typography>
                         </Stack>

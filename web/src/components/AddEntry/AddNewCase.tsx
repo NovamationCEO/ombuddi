@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../../theme/pageLayout'
 import { Button, TextField, Tooltip, Typography } from '@mui/material'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
@@ -134,23 +135,16 @@ export function AddNewCase() {
     }
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                p: { xs: 3, sm: 4, lg: 5 },
-                boxSizing: 'border-box',
-                color: palette.text,
-                background: `linear-gradient(122deg, ${palette.background} 0%, ${palette.background} 76%, ${palette.backgroundDeep} 76%)`,
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2}
-                sx={{ maxWidth: 1360, mx: 'auto' }}
+                sx={{ width: '100%', minWidth: 0 }}
             >
                 <Box>
                     <Typography
-                        variant={'h5'}
-                        sx={{ color: palette.text }}
+                        component="h1"
+                        variant="h4"
+                        sx={pageTitleStyle}
                     >
                         Add New Case
                     </Typography>

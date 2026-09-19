@@ -1,3 +1,4 @@
+import { pagePadding, pageTitleStyle } from '../theme/pageLayout'
 import {
     Alert,
     Box,
@@ -138,8 +139,8 @@ export function AddEntry() {
         setDuration(entry.duration)
         setStoredNotes(entry.notes ?? '')
         const encrypted = isEncrypted(entry.notes ?? '')
-        setNotes(encrypted ? '' : entry.notes ?? '')
-        setOriginalNotes(encrypted ? '' : entry.notes ?? '')
+        setNotes(encrypted ? '' : (entry.notes ?? ''))
+        setOriginalNotes(encrypted ? '' : (entry.notes ?? ''))
         setUnlockPhrase(encrypted ? null : '')
         setNotesLocked(encrypted)
         setChangeNoteProtection(false)
@@ -164,11 +165,8 @@ export function AddEntry() {
         setEntryPeople((prev) => prev.filter((p) => p.id !== personId))
     }
 
-    const notesNeedProtection = isEditing
-        && !notesLocked
-        && !isEncrypted(storedNotes)
-        && Boolean(notes)
-        && notes !== originalNotes
+    const notesNeedProtection =
+        isEditing && !notesLocked && !isEncrypted(storedNotes) && Boolean(notes) && notes !== originalNotes
 
     async function save() {
         const organizationId = caseRes.data?.organizationId
@@ -253,7 +251,10 @@ export function AddEntry() {
     ) {
         return (
             <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center', p: 3 }}>
-                <Stack spacing={2} sx={{ alignItems: 'center' }}>
+                <Stack
+                    spacing={2}
+                    sx={{ alignItems: 'center' }}
+                >
                     <Typography>Unable to load this entry for editing.</Typography>
                     <Button onClick={() => navigate(`/case/${caseId}`)}>Back to case</Button>
                 </Stack>
@@ -272,9 +273,15 @@ export function AddEntry() {
     if (isEditing && entryRes.data && currentOmbudsRes.data && entryRes.data.ombudsId !== currentOmbudsRes.data.id) {
         return (
             <Box sx={{ minHeight: 320, display: 'grid', placeItems: 'center', p: 3 }}>
-                <Stack spacing={2} sx={{ alignItems: 'center', textAlign: 'center' }}>
+                <Stack
+                    spacing={2}
+                    sx={{ alignItems: 'center', textAlign: 'center' }}
+                >
                     <Typography>Only the ombuds who recorded this entry can edit it.</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
                         You can still view the entry from the case record.
                     </Typography>
                     <Button onClick={() => navigate(`/case/${caseId}`)}>Back to case</Button>
@@ -360,11 +367,7 @@ export function AddEntry() {
                                 {entryPeople.map((p) => (
                                     <Chip
                                         key={p.id}
-                                        avatar={
-                                            <PersonAvatar
-                                                person={p}
-                                            />
-                                        }
+                                        avatar={<PersonAvatar person={p} />}
                                         label={personLabel(p)}
                                         sx={{
                                             bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
@@ -428,11 +431,7 @@ export function AddEntry() {
                                         {casePeopleNotStaged.map((p) => (
                                             <Chip
                                                 key={p.id}
-                                                avatar={
-                                                    <PersonAvatar
-                                                        person={p}
-                                                    />
-                                                }
+                                                avatar={<PersonAvatar person={p} />}
                                                 label={personLabel(p)}
                                                 variant={'outlined'}
                                                 onClick={() => addPerson(p)}
@@ -492,11 +491,11 @@ export function AddEntry() {
                     <Box
                         sx={{
                             width: '100%',
-                            maxWidth: 1480,
                             mx: 'auto',
                             boxSizing: 'border-box',
-                            px: { xs: 2, sm: 3, lg: 4 },
-                            py: { xs: 1.5, sm: 2 },
+                            px: pagePadding,
+                            pt: pagePadding,
+                            pb: 2.5,
                             display: 'flex',
                             flexDirection: { xs: 'column', sm: 'row' },
                             alignItems: { xs: 'stretch', sm: 'center' },
@@ -527,11 +526,7 @@ export function AddEntry() {
                             <Typography
                                 variant="h4"
                                 component="h1"
-                                sx={{
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    fontSize: { xs: '1.45rem', sm: '1.8rem' },
-                                    fontWeight: 700,
-                                }}
+                                sx={{ ...pageTitleStyle, color: 'var(--mui-palette-app-headerText)' }}
                             >
                                 {isEditing ? 'Edit case note' : 'New case note'}
                             </Typography>
@@ -564,11 +559,15 @@ export function AddEntry() {
                                 variant="contained"
                                 startIcon={<SaveOutlined />}
                                 onClick={save}
-                                disabled={isSaving
-                                    || !caseRes.data?.organizationId
-                                    || Boolean(!notesLocked
-                                        && (isEditing ? changeNoteProtection || notesNeedProtection : notes)
-                                        && notePhrase.phrase === null)}
+                                disabled={
+                                    isSaving ||
+                                    !caseRes.data?.organizationId ||
+                                    Boolean(
+                                        !notesLocked &&
+                                        (isEditing ? changeNoteProtection || notesNeedProtection : notes) &&
+                                        notePhrase.phrase === null,
+                                    )
+                                }
                                 sx={{
                                     flex: { xs: 1, sm: 'initial' },
                                     color: 'var(--mui-palette-primary-contrastText)',
@@ -591,10 +590,9 @@ export function AddEntry() {
                     component="main"
                     sx={{
                         width: '100%',
-                        maxWidth: 1480,
                         mx: 'auto',
                         boxSizing: 'border-box',
-                        p: { xs: 2, sm: 3, lg: 4 },
+                        p: pagePadding,
                         display: 'grid',
                         gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.45fr) minmax(300px, 0.72fr)' },
                         gap: 2.5,
@@ -662,8 +660,14 @@ export function AddEntry() {
                                         bgcolor: entryWorkspace.tealPale,
                                     }}
                                 >
-                                    <Stack spacing={1} sx={{ alignItems: 'center', textAlign: 'center', p: 3 }}>
-                                        <Typography variant="body2" sx={{ color: entryWorkspace.muted }}>
+                                    <Stack
+                                        spacing={1}
+                                        sx={{ alignItems: 'center', textAlign: 'center', p: 3 }}
+                                    >
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: entryWorkspace.muted }}
+                                        >
                                             Unlock this note to edit its text or change the phrase used to protect it.
                                         </Typography>
                                         <ProtectedText
@@ -692,58 +696,64 @@ export function AddEntry() {
                                         sx={fieldStyle}
                                     />
                                     <Box sx={{ mt: 1.5 }}>
-                                        {isEditing ? notesNeedProtection ? (
-                                            <Stack spacing={1.25}>
-                                                <Alert severity="warning">
-                                                    This text was not previously protected. Choose how to protect it
-                                                    before saving; it will not be stored as plaintext.
-                                                </Alert>
-                                                <PhraseSourceControl
-                                                    source={notePhrase.source}
-                                                    onSourceChange={notePhrase.setSource}
-                                                    customPhrase={notePhrase.customPhrase}
-                                                    onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                    purpose="encrypt"
-                                                />
-                                            </Stack>
-                                        ) : (
-                                            <Stack spacing={1.25}>
-                                                <Typography variant="caption" sx={{ color: entryWorkspace.muted }}>
-                                                    Saving keeps the note’s existing protection. Its phrase changes
-                                                    only if you explicitly choose to replace it.
-                                                </Typography>
-                                                {!changeNoteProtection ? (
-                                                    <Button
-                                                        variant="outlined"
-                                                        size="small"
-                                                        onClick={() => setChangeNoteProtection(true)}
-                                                        sx={{ alignSelf: 'flex-start' }}
+                                        {isEditing ? (
+                                            notesNeedProtection ? (
+                                                <Stack spacing={1.25}>
+                                                    <Alert severity="warning">
+                                                        This text was not previously protected. Choose how to protect it
+                                                        before saving; it will not be stored as plaintext.
+                                                    </Alert>
+                                                    <PhraseSourceControl
+                                                        source={notePhrase.source}
+                                                        onSourceChange={notePhrase.setSource}
+                                                        customPhrase={notePhrase.customPhrase}
+                                                        onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                        purpose="encrypt"
+                                                    />
+                                                </Stack>
+                                            ) : (
+                                                <Stack spacing={1.25}>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{ color: entryWorkspace.muted }}
                                                     >
-                                                        Change protection phrase
-                                                    </Button>
-                                                ) : (
-                                                    <>
-                                                        <Alert severity="warning">
-                                                            Changing this phrase replaces the only phrase that can
-                                                            recover this note. Confirm it carefully; exact spaces count.
-                                                        </Alert>
-                                                        <PhraseSourceControl
-                                                            source={notePhrase.source}
-                                                            onSourceChange={notePhrase.setSource}
-                                                            customPhrase={notePhrase.customPhrase}
-                                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                            purpose="encrypt"
-                                                        />
+                                                        Saving keeps the note’s existing protection. Its phrase changes
+                                                        only if you explicitly choose to replace it.
+                                                    </Typography>
+                                                    {!changeNoteProtection ? (
                                                         <Button
+                                                            variant="outlined"
                                                             size="small"
-                                                            onClick={() => setChangeNoteProtection(false)}
+                                                            onClick={() => setChangeNoteProtection(true)}
                                                             sx={{ alignSelf: 'flex-start' }}
                                                         >
-                                                            Keep existing protection
+                                                            Change protection phrase
                                                         </Button>
-                                                    </>
-                                                )}
-                                            </Stack>
+                                                    ) : (
+                                                        <>
+                                                            <Alert severity="warning">
+                                                                Changing this phrase replaces the only phrase that can
+                                                                recover this note. Confirm it carefully; exact spaces
+                                                                count.
+                                                            </Alert>
+                                                            <PhraseSourceControl
+                                                                source={notePhrase.source}
+                                                                onSourceChange={notePhrase.setSource}
+                                                                customPhrase={notePhrase.customPhrase}
+                                                                onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                                purpose="encrypt"
+                                                            />
+                                                            <Button
+                                                                size="small"
+                                                                onClick={() => setChangeNoteProtection(false)}
+                                                                sx={{ alignSelf: 'flex-start' }}
+                                                            >
+                                                                Keep existing protection
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </Stack>
+                                            )
                                         ) : (
                                             <PhraseSourceControl
                                                 source={notePhrase.source}
@@ -813,11 +823,7 @@ export function AddEntry() {
                                     {entryPeople.map((person) => (
                                         <Chip
                                             key={person.id}
-                                            avatar={
-                                                <PersonAvatar
-                                                    person={person}
-                                                />
-                                            }
+                                            avatar={<PersonAvatar person={person} />}
                                             label={personLabel(person)}
                                             onDelete={() => removePerson(person.id)}
                                             sx={{

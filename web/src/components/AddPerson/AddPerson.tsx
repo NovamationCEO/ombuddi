@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../../theme/pageLayout'
 import { Box, Stack, Typography } from '@mui/material'
 import { PersonForm } from './PersonForm'
 
@@ -8,9 +9,15 @@ import { PersonForm } from './PersonForm'
  */
 export function AddPerson() {
     return (
-        <Box>
-            <Stack spacing={2}>
-                <Typography variant="h4">Add Person</Typography>
+        <Box sx={pageLayoutStyle}>
+            <Stack spacing={2.5}>
+                <Typography
+                    component="h1"
+                    variant="h4"
+                    sx={pageTitleStyle}
+                >
+                    Add Person
+                </Typography>
                 <PersonForm onSaved={() => null} />
             </Stack>
         </Box>

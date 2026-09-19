@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import { RoundedContainer } from '../components/RoundedContainer'
 import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import React from 'react'
@@ -128,24 +129,16 @@ export function Organization() {
     }
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                boxSizing: 'border-box',
-                bgcolor: 'background.default',
-                color: 'text.primary',
-                p: { xs: 2, sm: 3, lg: 4 },
-            }}
-        >
+        <Box sx={pageLayoutStyle}>
             <Stack
                 spacing={2.5}
-                sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}
+                sx={{ width: '100%', mx: 'auto' }}
             >
                 <Box sx={{ mb: 0.5 }}>
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: 'text.primary', fontWeight: 700 }}
+                        sx={pageTitleStyle}
                     >
                         Organization settings
                     </Typography>

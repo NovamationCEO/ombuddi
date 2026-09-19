@@ -1,3 +1,4 @@
+import { pagePadding, pageTitleStyle } from '../theme/pageLayout'
 import { Add, ArrowBack, CalendarMonthOutlined, EditOutlined, ScheduleOutlined } from '@mui/icons-material'
 import {
     Box,
@@ -149,10 +150,11 @@ export function CaseSummary() {
     const organizationId = caseRes.data?.organizationId ?? ''
     const rawDescription = caseRes.data?.description ?? ''
     const descriptionLocked = isEncrypted(rawDescription) && decryptedDescription === null
-    const descriptionNeedsProtection = !descriptionLocked
-        && !isEncrypted(rawDescription)
-        && Boolean(editDescription)
-        && editDescription !== (decryptedDescription ?? '')
+    const descriptionNeedsProtection =
+        !descriptionLocked &&
+        !isEncrypted(rawDescription) &&
+        Boolean(editDescription) &&
+        editDescription !== (decryptedDescription ?? '')
 
     React.useEffect(() => {
         setDecryptedDescription(isEncrypted(rawDescription) ? null : rawDescription)
@@ -374,8 +376,8 @@ export function CaseSummary() {
                         ) : descriptionNeedsProtection ? (
                             <Stack spacing={1.25}>
                                 <Alert severity="warning">
-                                    This text was not previously protected. Choose how to protect it before saving;
-                                    it will not be stored as plaintext.
+                                    This text was not previously protected. Choose how to protect it before saving; it
+                                    will not be stored as plaintext.
                                 </Alert>
                                 <PhraseSourceControl
                                     source={editDescriptionPhrase.source}
@@ -387,9 +389,12 @@ export function CaseSummary() {
                             </Stack>
                         ) : !changeDescriptionProtection ? (
                             <Stack spacing={1}>
-                                <Typography variant="body2" color="text.secondary">
-                                    Saving keeps the existing description protection. Changing the case name or
-                                    status will not rotate its phrase.
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Saving keeps the existing description protection. Changing the case name or status
+                                    will not rotate its phrase.
                                 </Typography>
                                 <Button
                                     variant="outlined"
@@ -449,9 +454,9 @@ export function CaseSummary() {
                         disabled={
                             saving ||
                             !editName.trim() ||
-                            (!descriptionLocked
-                                && (changeDescriptionProtection || descriptionNeedsProtection)
-                                && editDescriptionPhrase.phrase === null)
+                            (!descriptionLocked &&
+                                (changeDescriptionProtection || descriptionNeedsProtection) &&
+                                editDescriptionPhrase.phrase === null)
                         }
                         sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
                     >
@@ -476,11 +481,11 @@ export function CaseSummary() {
                     <Box
                         sx={{
                             width: '100%',
-                            maxWidth: 1480,
                             mx: 'auto',
                             boxSizing: 'border-box',
-                            px: { xs: 2, sm: 3, lg: 4 },
-                            py: { xs: 1.25, sm: 1.5 },
+                            px: pagePadding,
+                            pt: pagePadding,
+                            pb: 2.5,
                         }}
                     >
                         <Button
@@ -531,12 +536,7 @@ export function CaseSummary() {
                                     <Typography
                                         variant="h4"
                                         component="h1"
-                                        sx={{
-                                            color: 'var(--mui-palette-app-headerText)',
-                                            fontWeight: 700,
-                                            fontSize: { xs: '1.3rem', sm: '1.65rem' },
-                                            lineHeight: 1.2,
-                                        }}
+                                        sx={{ ...pageTitleStyle, color: 'var(--mui-palette-app-headerText)' }}
                                     >
                                         {caseItem.name}
                                     </Typography>
@@ -831,10 +831,9 @@ export function CaseSummary() {
                 <Box
                     sx={{
                         width: '100%',
-                        maxWidth: 1480,
                         mx: 'auto',
                         boxSizing: 'border-box',
-                        px: { xs: 2, sm: 3, lg: 4 },
+                        px: pagePadding,
                         pt: { xs: 1.5, sm: 2 },
                         pb: { xs: 2, sm: 3, lg: 4 },
                         display: 'grid',
@@ -895,7 +894,10 @@ export function CaseSummary() {
                                     Add entry
                                 </Button>
                             ) : (
-                                <Typography variant="caption" sx={{ color: workspace.muted, textAlign: 'right' }}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ color: workspace.muted, textAlign: 'right' }}
+                                >
                                     This General record belongs to another ombuds.
                                 </Typography>
                             )}

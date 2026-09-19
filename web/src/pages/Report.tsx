@@ -1,3 +1,4 @@
+import { pageLayoutStyle, pageTitleStyle } from '../theme/pageLayout'
 import {
     Box,
     IconButton,
@@ -274,21 +275,13 @@ export function ReportPage() {
     const personMonths = data?.personsByMonth.map((r) => r.month) ?? []
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                boxSizing: 'border-box',
-                bgcolor: 'background.default',
-                color: 'text.primary',
-                p: { xs: 2, sm: 3, lg: 4 },
-            }}
-        >
-            <Box sx={{ width: '100%', maxWidth: 1480, mx: 'auto' }}>
+        <Box sx={pageLayoutStyle}>
+            <Box sx={{ width: '100%', mx: 'auto' }}>
                 <Box sx={{ mb: 2.5 }}>
                     <Typography
                         variant="h4"
                         component="h1"
-                        sx={{ color: 'text.primary', fontWeight: 700 }}
+                        sx={pageTitleStyle}
                     >
                         Reports
                     </Typography>
