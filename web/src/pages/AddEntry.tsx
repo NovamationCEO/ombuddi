@@ -44,7 +44,6 @@ import { protectedTextForSave } from '../tools/protectedTextEdit'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
 const entryWorkspace = {
-    background: 'var(--mui-palette-background-default)',
     paper: 'var(--mui-palette-background-paper)',
     ink: 'var(--mui-palette-text-primary)',
     muted: 'var(--mui-palette-text-secondary)',

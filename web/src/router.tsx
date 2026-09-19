@@ -20,18 +20,7 @@ import {
     WelcomePage,
 } from './routeComponents'
 
-const routes = [
-    {
-        path: '/',
-        element: (
-            <Page
-                element={<HomePage />}
-                title="Home"
-                description="Your private Ombuddi workspace for confidential case work."
-            />
-        ),
-        errorElement: <ErrorElement />,
-    },
+const publicRoutes = [
     {
         path: '/welcome',
         element: (
@@ -55,6 +44,20 @@ const routes = [
                 description="Accept an invitation to join an Ombuddi organization."
             />
         ),
+    },
+]
+
+const workspaceRoutes = [
+    {
+        path: '/',
+        element: (
+            <Page
+                element={<HomePage />}
+                title="Home"
+                description="Your private Ombuddi workspace for confidential case work."
+            />
+        ),
+        errorElement: <ErrorElement />,
     },
     {
         path: '/select_case',
@@ -174,11 +177,13 @@ const routes = [
     },
 ]
 
+// Public routes render standalone; everything else sits inside the authenticated
+// workspace shell, which keeps the rail and background mounted across navigation.
 export const router = createBrowserRouter([
-    ...routes.filter((route) => route.path === '/welcome' || route.path === '/accept-invite'),
+    ...publicRoutes,
     {
         element: <WorkspaceLayout />,
         errorElement: <ErrorElement />,
-        children: routes.filter((route) => route.path !== '/welcome' && route.path !== '/accept-invite'),
+        children: workspaceRoutes,
     },
 ])
