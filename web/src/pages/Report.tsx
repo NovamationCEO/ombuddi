@@ -293,10 +293,11 @@ export function ReportPage() {
                 <Stack
                     direction="row"
                     spacing={2}
+                    useFlexGap
                     sx={{
                         mb: 2,
                         p: 2,
-                        alignItems: 'center',
+                        alignItems: 'flex-end',
                         flexWrap: 'wrap',
                         bgcolor: 'background.paper',
                         border: '1px solid',
