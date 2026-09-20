@@ -1,33 +1,18 @@
 import { useStyles } from '../tools/useStyles'
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense } from 'react'
+import { useWorkspaceScroll } from '../tools/useWorkspaceScroll'
 import { WorkspaceBackground } from './WorkspaceBackground'
 
 import { Box, CircularProgress } from '@mui/material'
 import { useAuth0 } from '@auth0/auth0-react'
-import { Navigate, Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom'
 import { AppRail } from './AppRail'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 
 export function WorkspaceLayout() {
-    const { key } = useLocation()
-    const navigationType = useNavigationType()
-    const scroller = useRef<HTMLDivElement>(null)
-    const offsets = useRef(new Map<string, number>())
-    // The workspace scrolls in its own container, so router scroll restoration
-    // does not apply. Going Back returns to where the page was left; anything
-    // else opens at the top. A page still loading its content restores to the
-    // top, because there is nothing to scroll yet.
-    useEffect(() => {
-        const node = scroller.current
-        if (!node) return
-        const saved = navigationType === 'POP' ? offsets.current.get(key) : undefined
-        node.scrollTo?.({ top: saved ?? 0, left: 0 })
-        return () => {
-            offsets.current.set(key, node.scrollTop)
-        }
-    }, [key, navigationType])
     const style = useStyles()
     const { isLoading, isAuthenticated } = useAuth0()
+    const scroller = useWorkspaceScroll(!isLoading && isAuthenticated)
 
     if (isLoading) {
         return (
