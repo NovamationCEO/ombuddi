@@ -69,8 +69,13 @@ def deliver_invitation(recipient, invite_url, expires_at):
         if not all((tenant, client, secret)):
             raise ValueError('Incomplete Microsoft configuration')
         url = urlsplit(invite_url)
-        if url.scheme != 'https' or not url.hostname or url.username or url.password:
-            raise ValueError('Invitation email requires an HTTPS frontend URL')
+        local_http = (
+            os.environ.get('INVITATION_EMAIL_ALLOW_LOCALHOST', '').lower() == 'true'
+            and url.scheme == 'http'
+            and url.hostname in {'localhost', '127.0.0.1', '::1'}
+        )
+        if (url.scheme != 'https' and not local_http) or not url.hostname or url.username or url.password:
+            raise ValueError('Invitation email requires HTTPS or explicitly enabled HTTP loopback')
         stage = 'authentication'
         token = _access_token(tenant, client, secret)
         message = {

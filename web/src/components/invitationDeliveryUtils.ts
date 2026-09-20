@@ -26,7 +26,7 @@ export function deliveryText(delivery?: EmailDelivery): string {
         case 'not_configured':
             return 'Email sending is disabled. Send this invitation from admin@ombuddi.com.'
         case 'configuration_error':
-            return 'Email was not sent. Configure the Microsoft credentials and an HTTPS FRONTEND_URL.'
+            return 'Email was not sent. Check the Microsoft credentials and FRONTEND_URL email configuration.'
         case 'failed':
             return 'Email was not sent. Microsoft authentication failed; check credentials and service connectivity.'
         case 'rejected':

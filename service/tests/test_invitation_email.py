@@ -41,6 +41,31 @@ class InvitationEmailTests(unittest.TestCase):
         send.assert_not_called()
 
     @patch('invitation_email.urlopen')
+    def test_explicit_local_testing_allows_only_loopback_http(self, send):
+        os.environ['INVITATION_EMAIL_ALLOW_LOCALHOST'] = 'true'
+        response = MagicMock()
+        response.__enter__.return_value.status = 202
+        for host in ('localhost:5173', '127.0.0.1:5173', '[::1]:5173'):
+            with self.subTest(host=host):
+                _token_cache.clear()
+                send.side_effect = [io.BytesIO(b'{"access_token":"token"}'), response]
+                url = f'http://{host}/accept-invite?token=test-token'
+                self.assertEqual(self.deliver(url)['status'], 'accepted')
+                payload = json.loads(send.call_args.args[0].data)
+                self.assertIn(url, payload['message']['body']['content'])
+                self.assertTrue(send.call_args.args[0].full_url.startswith('https://graph.microsoft.com/'))
+
+    @patch('invitation_email.urlopen')
+    def test_local_exception_does_not_allow_other_insecure_hosts_or_credentials(self, send):
+        os.environ['INVITATION_EMAIL_ALLOW_LOCALHOST'] = 'true'
+        for url in ('http://example.com/invite', 'http://localhost.example.com/invite',
+                    'http://192.168.1.2/invite', 'http://localhost@evil.example/invite',
+                    'http://user:password@localhost/invite', 'ftp://localhost/invite'):
+            with self.subTest(url=url):
+                self.assertEqual(self.deliver(url)['status'], 'configuration_error')
+        send.assert_not_called()
+
+    @patch('invitation_email.urlopen')
     def test_graph_acceptance_sender_recipient_and_message(self, send):
         response = MagicMock()
         response.__enter__.return_value.status = 202

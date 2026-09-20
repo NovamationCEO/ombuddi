@@ -19,7 +19,7 @@ describe('Invitation delivery feedback', () => {
         [{ status: 'failed', reason: 'audit_unavailable' }, 'audit record could not be saved', 'warning'],
         [{ status: 'accepted' }, 'Microsoft accepted', 'success'],
         [{ status: 'unconfirmed' }, 'could not be confirmed', 'warning'],
-        [{ status: 'configuration_error', reason: 'invalid_configuration' }, 'HTTPS FRONTEND_URL', 'warning'],
+        [{ status: 'configuration_error', reason: 'invalid_configuration' }, 'FRONTEND_URL email configuration', 'warning'],
         [{ status: 'failed', reason: 'authentication_failed' }, 'authentication failed', 'warning'],
         [{ status: 'rejected', reason: 'provider_rejected', httpStatus: 403 }, 'HTTP 403', 'warning'],
         [{ status: 'accepted', auditWarning: 'outcome_not_saved' }, 'final email status could not be saved', 'warning'],

@@ -49,8 +49,8 @@ migration, the audit write fails and sending is skipped.
    ```
 
    Local Docker passes these variables through from `service/.env`.
-   Sending requires an HTTPS frontend URL so real recipients receive a usable,
-   secure invitation. Mail remains disabled by default for local development.
+   Sending requires an HTTPS frontend URL by default so real recipients receive a usable,
+   secure invitation. The explicit local-testing exception is described below. Mail remains disabled by default for local development.
 
 6. Create a test seat for an email you control and issue an invitation. Confirm
    the UI reports Microsoft acceptance, the mailbox's Sent Items has the
@@ -160,3 +160,34 @@ When a submission receives a 401, `previousHttpStatus` preserves that rejection
 through refresh and retry, including subsequent local lock contention. It is
 retained in audit/history and failure logs separately from the final failure's
 `httpStatus`; lock contention itself is not an HTTP error.
+
+## Sending test invitations from localhost
+
+The local backend can send real email through the same Microsoft Graph app.
+For testing on your own computer, set these values in the ignored `service/.env`:
+
+```dotenv
+FRONTEND_URL=http://localhost:5173
+INVITATION_EMAIL_ENABLED=true
+INVITATION_EMAIL_ALLOW_LOCALHOST=true
+MICROSOFT_TENANT_ID=<tenant-id>
+MICROSOFT_CLIENT_ID=<client-id>
+MICROSOFT_CLIENT_SECRET=<secret-value>
+```
+
+Then recreate the backend to pick up the environment changes:
+
+```sh
+docker compose -f service/docker-compose.yml up -d --no-deps app
+```
+
+The exception permits only HTTP links whose hostname is exactly `localhost`,
+`127.0.0.1`, or `::1`. Other HTTP hosts remain rejected. Leave the exception
+unset or false in production. Microsoft authentication and email submission
+still use HTTPS; this option affects only the invitation link inside the email.
+
+Use only recipient accounts you control. Open the email link on the same
+computer running the frontend and local backend. Tokens belong to the database
+that created them: a local token cannot be claimed through production. Creation
+and delivery still require migration 015, and delivery is still audited.
+The option does not restrict recipient addresses automatically.
