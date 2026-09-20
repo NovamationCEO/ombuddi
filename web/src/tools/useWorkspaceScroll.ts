@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 
-const RESTORE_TIMEOUT_MS = 5000
+const RESTORE_TIMEOUT_MS = 1500
 const RETRY_INTERVAL_MS = 50
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
 
@@ -42,8 +42,9 @@ export function useWorkspaceScroll(enabled: boolean) {
             remember()
         }
         function onKey(event: KeyboardEvent) {
-            const target = event.target
-            if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"]')) return
+            const element = event.target
+            if (element instanceof Element && element.closest('input, textarea, select, [contenteditable="true"]'))
+                return
             if (SCROLL_KEYS.has(event.key)) stop()
         }
         function restore() {

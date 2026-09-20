@@ -128,19 +128,19 @@ it('does not treat typing in a form as scrolling intent', async () => {
     await act(async () => vi.advanceTimersByTime(50))
     expect(top).toBe(850)
 })
-it('bounds retries when the content never grows', async () => {
+it('stops retrying after 1.5 seconds when the content never grows', async () => {
     scroll(850)
     await click('Short')
     delayed = true
     await click('Back')
-    await act(async () => vi.advanceTimersByTime(5000))
+    await act(async () => vi.advanceTimersByTime(1500))
     expect(vi.getTimerCount()).toBe(0)
     const calls = scrollTo.mock.calls.length
     height = 2000
     await act(async () => vi.advanceTimersByTime(5000))
     expect(scrollTo).toHaveBeenCalledTimes(calls)
 })
-it('keeps query-only tab changes in place and starts new paths at the top', async () => {
+it('preserves position when changing or removing query parameters', async () => {
     scroll(400)
     await click('Tab')
     expect(top).toBe(400)
