@@ -344,3 +344,19 @@ it.each(['Save', 'Deactivate organization'])('guards duplicate %s submissions', 
     expect(mocks.updater).toHaveBeenCalledTimes(1)
     await act(async () => resolve({}))
 })
+
+it('creates a non-admin ombuds without offering an admin checkbox', async () => {
+    mocks.creator.mockResolvedValue({ inviteUrl: 'https://example.com/invite' })
+    await mount('/system/orgs?org=org-1&tab=users')
+    expect(host.textContent).toContain('Add an Ombuds')
+    expect(document.querySelector('input[type="checkbox"]')).toBeNull()
+    await fill('User name', 'New Ombuds')
+    await fill('Email', 'new@example.com')
+    await click('Create seat and invitation')
+    expect(mocks.creator).toHaveBeenCalledWith('system/organizations/org-1/ombuds', {
+        name: 'New Ombuds',
+        email: 'new@example.com',
+        isAdmin: false,
+        createInvitation: true,
+    })
+})

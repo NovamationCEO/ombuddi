@@ -9,9 +9,7 @@ import {
     Alert,
     Box,
     Button,
-    Checkbox,
     Chip,
-    FormControlLabel,
     Stack,
     TextField,
     Typography,
@@ -101,7 +99,6 @@ export function SystemOrganizationSeats({
     ])
     const [name, setName] = React.useState('')
     const [email, setEmail] = React.useState('')
-    const [isAdmin, setIsAdmin] = React.useState(true)
     const queryClient = useQueryClient()
     const [copyError, setCopyError] = React.useState('')
     const setSnack = useSnack((state) => state.setSnack)
@@ -141,14 +138,13 @@ export function SystemOrganizationSeats({
                 const result = await creator<InvitationResult>(`system/organizations/${organization.id}/ombuds`, {
                     name,
                     email,
-                    isAdmin,
+                    isAdmin: false,
                     createInvitation: true,
                 })
                 setInviteUrl(result.inviteUrl ?? '')
                 setInviteDelivery(result.emailDelivery)
                 setName('')
                 setEmail('')
-                setIsAdmin(true)
             },
             'Unable to create user seat',
             'create',
@@ -270,7 +266,7 @@ export function SystemOrganizationSeats({
                 </DialogActions>
             </Dialog>
 
-            <RoundedContainer title="Add and invite a user">
+            <RoundedContainer title="Add an Ombuds">
                 {error && errorSeatId === 'create' && <Alert severity="error">{error}</Alert>}
                 <Stack spacing={1.5}>
                     <TextField
@@ -283,15 +279,6 @@ export function SystemOrganizationSeats({
                         type="email"
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={isAdmin}
-                                onChange={(event) => setIsAdmin(event.target.checked)}
-                            />
-                        }
-                        label="Organization administrator"
                     />
                     <Typography
                         variant="caption"
