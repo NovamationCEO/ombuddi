@@ -1,11 +1,9 @@
 import { pageLayoutStyle } from '../theme/pageLayout'
 import {
-    Alert,
     Box,
     Button,
     Chip,
     CircularProgress,
-    Collapse,
     MenuItem,
     Dialog,
     DialogActions,
@@ -26,19 +24,17 @@ import { updater } from '../tools/db_tools/updater'
 import { deleter } from '../tools/db_tools/deleter'
 import { PersonFinder } from '../components/PersonFinder'
 import { PersonForm } from '../components/AddPerson/PersonForm'
-import { ArrowBack, LockOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
+import { ArrowBack, LockOutlined, LockOpenOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
 import React from 'react'
 import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
 import { encryptNotes, isEncrypted } from '../tools/notesCrypto'
-import { usePhraseSelection } from '../tools/phraseSource'
-import { PhraseSourceControl } from '../components/PhraseSourceControl'
+import { NoteEncryptionDialog, type NoteEncryptionChoice } from '../components/NoteEncryptionDialog'
 import { PersonAvatar } from '../components/PersonAvatar'
 import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
 import { entryPersonChanges } from '../tools/entryPersonChanges'
 import { calendarDateInputValue, localCalendarDateInputValue } from '../tools/calendarDate'
-import { protectedTextForSave } from '../tools/protectedTextEdit'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { ThemeProvider } from '@mui/material/styles'
 import { caseFolderTheme } from '../theme/caseFolderTheme'
@@ -63,8 +59,6 @@ export function AddEntry() {
     const [notes, setNotes] = useState('')
     const [storedNotes, setStoredNotes] = useState('')
     const [originalNotes, setOriginalNotes] = useState('')
-    const [unlockPhrase, setUnlockPhrase] = useState<string | null>(null)
-    const [changeNoteProtection, setChangeNoteProtection] = useState(false)
     const [notesLocked, setNotesLocked] = useState(false)
     const [entryInitialized, setEntryInitialized] = useState(!isEditing)
     const navigate = useNavigate()
@@ -72,7 +66,8 @@ export function AddEntry() {
     const setSnack = useSnack((state) => state.setSnack)
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => localCalendarDateInputValue())
-    const notePhrase = usePhraseSelection('default', true)
+    const [encryptionChoice, setEncryptionChoice] = useState<NoteEncryptionChoice | null>(null)
+    const [saveAfterChoice, setSaveAfterChoice] = useState(false)
     const [protectionOpen, setProtectionOpen] = useState(false)
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
@@ -118,9 +113,8 @@ export function AddEntry() {
         const encrypted = isEncrypted(entry.notes ?? '')
         setNotes(encrypted ? '' : (entry.notes ?? ''))
         setOriginalNotes(encrypted ? '' : (entry.notes ?? ''))
-        setUnlockPhrase(encrypted ? null : '')
         setNotesLocked(encrypted)
-        setChangeNoteProtection(false)
+        setEncryptionChoice(null)
         setEntryPeople(people)
         originalPersonIds.current = people.map((person) => person.id)
         initializedEntryId.current = entryId
@@ -142,29 +136,29 @@ export function AddEntry() {
         setEntryPeople((prev) => prev.filter((p) => p.id !== personId))
     }
 
-    const notesNeedProtection =
-        isEditing && !notesLocked && !isEncrypted(storedNotes) && Boolean(notes) && notes !== originalNotes
+    const needsEncryptionChoice = !isEditing || (!notesLocked && notes !== originalNotes)
+    const encryptionOff =
+        encryptionChoice?.mode === 'none' ||
+        (encryptionChoice === null && isEditing && !isEncrypted(storedNotes) && !needsEncryptionChoice)
 
-    async function save() {
+    async function save(choice = encryptionChoice) {
         const organizationId = caseRes.data?.organizationId
-        const replaceProtection = changeNoteProtection || notesNeedProtection
-        const replacementRequired = isEditing ? replaceProtection : Boolean(notes)
-        if (!organizationId || isSaving || (!notesLocked && replacementRequired && notePhrase.phrase === null)) return
+        if (!organizationId || isSaving) return
+        if (needsEncryptionChoice && choice === null) {
+            setSaveAfterChoice(true)
+            setProtectionOpen(true)
+            return
+        }
+        if (choice?.mode === 'encrypted' && !choice.phrase.length) return
         setIsSaving(true)
         try {
-            const nextStoredNotes = isEditing
-                ? await protectedTextForSave({
-                      stored: storedNotes,
-                      originalPlaintext: originalNotes,
-                      editedPlaintext: notes,
-                      unlockPhrase,
-                      replaceProtection,
-                      replacementPhrase: notePhrase.phrase,
-                      organizationId,
-                  })
-                : notes
-                  ? await encryptNotes(notes, notePhrase.phrase ?? '', organizationId)
-                  : ''
+            // Preserve untouched/locked ciphertext. Plaintext is written only after
+            // the user explicitly confirms that encryption should be turned off.
+            let nextStoredNotes = storedNotes
+            if (!notesLocked && choice !== null) {
+                nextStoredNotes =
+                    choice.mode === 'none' ? notes : await encryptNotes(notes, choice.phrase, organizationId)
+            }
             const payload = {
                 caseId,
                 date: eventDate,
@@ -535,10 +529,9 @@ export function AddEntry() {
                                                 organizationId={caseRes.data?.organizationId ?? ''}
                                                 emptyText="No notes recorded."
                                                 unlockLabel="Unlock notes"
-                                                onDecrypted={(plaintext, phraseUsed) => {
+                                                onDecrypted={(plaintext) => {
                                                     setNotes(plaintext)
                                                     setOriginalNotes(plaintext)
-                                                    setUnlockPhrase(phraseUsed)
                                                     setNotesLocked(false)
                                                 }}
                                             />
@@ -569,150 +562,62 @@ export function AddEntry() {
                                 </Box>
                                 {!notesLocked && (
                                     <Box className="case-note-protection">
-                                        {isEditing && !notesNeedProtection && !changeNoteProtection ? (
+                                        <Stack
+                                            direction="row"
+                                            useFlexGap
+                                            spacing={1}
+                                            sx={{
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
                                             <Stack
                                                 direction="row"
-                                                useFlexGap
                                                 spacing={1}
-                                                sx={{
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    flexWrap: 'wrap',
+                                                sx={{ alignItems: 'center' }}
+                                            >
+                                                {encryptionOff ? (
+                                                    <LockOpenOutlined sx={{ fontSize: 18, color: 'warning.main' }} />
+                                                ) : (
+                                                    <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
+                                                )}
+                                                <Typography variant="body2">
+                                                    {encryptionOff
+                                                        ? 'Encryption off'
+                                                        : encryptionChoice?.mode === 'encrypted'
+                                                          ? 'Encryption phrase selected'
+                                                          : needsEncryptionChoice
+                                                            ? 'Choose encryption before saving'
+                                                            : 'Encryption unchanged'}
+                                                </Typography>
+                                            </Stack>
+                                            <Button
+                                                size="small"
+                                                disabled={isSaving}
+                                                onClick={() => {
+                                                    setSaveAfterChoice(false)
+                                                    setProtectionOpen(true)
                                                 }}
                                             >
-                                                <Stack
-                                                    direction="row"
-                                                    spacing={1}
-                                                    sx={{ alignItems: 'center' }}
-                                                >
-                                                    <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                                    <Typography variant="body2">Protection unchanged</Typography>
-                                                </Stack>
-                                                <Button
-                                                    size="small"
-                                                    onClick={() => setChangeNoteProtection(true)}
-                                                >
-                                                    Change protection phrase
-                                                </Button>
-                                            </Stack>
-                                        ) : (
-                                            <>
-                                                <Stack
-                                                    direction="row"
-                                                    useFlexGap
-                                                    spacing={1}
-                                                    sx={{
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        flexWrap: 'wrap',
-                                                    }}
-                                                >
-                                                    <Stack
-                                                        direction="row"
-                                                        spacing={1}
-                                                        sx={{ alignItems: 'center' }}
-                                                    >
-                                                        <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                                        <Typography variant="body2">
-                                                            {notePhrase.source === 'blank'
-                                                                ? 'Blank phrase'
-                                                                : notePhrase.source === 'custom'
-                                                                  ? 'Phrase for this note'
-                                                                  : 'Default Encryption Phrase'}
-                                                        </Typography>
-                                                    </Stack>
-                                                    <Stack
-                                                        direction="row"
-                                                        useFlexGap
-                                                        spacing={1}
-                                                        sx={{ flexWrap: 'wrap' }}
-                                                    >
-                                                        {notePhrase.source === 'default' &&
-                                                            notePhrase.defaultPhrase &&
-                                                            !notePhrase.defaultConfirmed && (
-                                                                <Button
-                                                                    size="small"
-                                                                    variant="outlined"
-                                                                    onClick={notePhrase.confirmDefault}
-                                                                >
-                                                                    Use this phrase
-                                                                </Button>
-                                                            )}
-                                                        {!changeNoteProtection && !notesNeedProtection && (
-                                                            <Button
-                                                                size="small"
-                                                                aria-expanded={
-                                                                    protectionOpen ||
-                                                                    changeNoteProtection ||
-                                                                    notesNeedProtection
-                                                                }
-                                                                aria-controls="note-protection-controls"
-                                                                onClick={() => setProtectionOpen((open) => !open)}
-                                                            >
-                                                                {protectionOpen ? 'Done' : 'Change'}
-                                                            </Button>
-                                                        )}
-                                                    </Stack>
-                                                </Stack>
-                                                {notePhrase.phrase === null &&
-                                                    !changeNoteProtection &&
-                                                    !notesNeedProtection && (
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{ display: 'block', mt: 0.5 }}
-                                                        >
-                                                            {notePhrase.source === 'default' && notePhrase.defaultPhrase
-                                                                ? 'Confirm this phrase to protect the note.'
-                                                                : 'Choose a phrase before saving text.'}
-                                                        </Typography>
-                                                    )}
-                                                <Collapse
-                                                    in={protectionOpen || changeNoteProtection || notesNeedProtection}
-                                                >
-                                                    <Stack
-                                                        spacing={1.5}
-                                                        id="note-protection-controls"
-                                                        sx={{ pt: 2 }}
-                                                    >
-                                                        {changeNoteProtection && (
-                                                            <Alert severity="warning">
-                                                                Changing this phrase replaces the only phrase that can
-                                                                recover this note. Confirm it carefully; exact spaces
-                                                                count.
-                                                            </Alert>
-                                                        )}
-                                                        {notesNeedProtection && (
-                                                            <Alert severity="warning">
-                                                                This text was not previously protected. Choose how to
-                                                                protect it before saving; it will not be stored as
-                                                                plaintext.
-                                                            </Alert>
-                                                        )}
-                                                        <PhraseSourceControl
-                                                            source={notePhrase.source}
-                                                            onSourceChange={notePhrase.setSource}
-                                                            customPhrase={notePhrase.customPhrase}
-                                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                            defaultConfirmed={notePhrase.defaultConfirmed}
-                                                            onConfirmDefault={notePhrase.confirmDefault}
-                                                            purpose="encrypt"
-                                                            compact
-                                                        />
-                                                        {changeNoteProtection && (
-                                                            <Button
-                                                                size="small"
-                                                                onClick={() => setChangeNoteProtection(false)}
-                                                                sx={{ alignSelf: 'flex-start' }}
-                                                            >
-                                                                Keep existing protection
-                                                            </Button>
-                                                        )}
-                                                    </Stack>
-                                                </Collapse>
-                                            </>
-                                        )}
+                                                {needsEncryptionChoice && encryptionChoice === null
+                                                    ? 'Choose Encryption Phrase'
+                                                    : 'Change encryption'}
+                                            </Button>
+                                        </Stack>
                                     </Box>
+                                )}
+                                {protectionOpen && (
+                                    <NoteEncryptionDialog
+                                        choice={encryptionChoice}
+                                        saveOnConfirm={saveAfterChoice}
+                                        onClose={() => setProtectionOpen(false)}
+                                        onConfirm={(choice) => {
+                                            setEncryptionChoice(choice)
+                                            setProtectionOpen(false)
+                                            if (saveAfterChoice) void save(choice)
+                                        }}
+                                    />
                                 )}
                                 <Stack
                                     component="footer"
@@ -729,16 +634,8 @@ export function AddEntry() {
                                     <Button
                                         variant="contained"
                                         startIcon={<SaveOutlined />}
-                                        onClick={save}
-                                        disabled={
-                                            isSaving ||
-                                            !caseRes.data?.organizationId ||
-                                            Boolean(
-                                                !notesLocked &&
-                                                (isEditing ? changeNoteProtection || notesNeedProtection : notes) &&
-                                                notePhrase.phrase === null,
-                                            )
-                                        }
+                                        onClick={() => void save()}
+                                        disabled={isSaving || !caseRes.data?.organizationId}
                                     >
                                         {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Save entry'}
                                     </Button>

@@ -8,7 +8,7 @@
  * decrypted even with the correct salt phrase inside org B.
  *
  * Detection: strings starting with ENC_PREFIX are encrypted; everything else
- * is treated as legacy plaintext (backward compat for existing dev data).
+ * is treated as plaintext (legacy data or explicitly disabled note encryption).
  */
 
 const ENC_PREFIX = 'ombuddi_enc_v1:'
@@ -61,7 +61,7 @@ export async function encryptProtectedText(plaintext: string, saltPhrase: string
  * Throws only on unexpected errors.
  */
 export async function decryptProtectedText(stored: string, saltPhrase: string, orgId: string): Promise<string | null> {
-    if (!stored.startsWith(ENC_PREFIX)) return stored  // legacy plaintext
+    if (!stored.startsWith(ENC_PREFIX)) return stored  // legacy or explicitly unencrypted text
     try {
         const raw = Uint8Array.from(atob(stored.slice(ENC_PREFIX.length)), (c) => c.charCodeAt(0))
         const iv = raw.slice(0, IV_LENGTH)

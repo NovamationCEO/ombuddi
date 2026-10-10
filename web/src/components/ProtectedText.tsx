@@ -1,4 +1,4 @@
-import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material'
+import { LockOpenOutlined, LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material'
 import {
     Box,
     Button,
@@ -64,7 +64,22 @@ export function ProtectedText(props: {
     }
 
     if (result.plaintext !== null) {
-        return <Typography sx={{ whiteSpace: 'pre-wrap' }}>{result.plaintext || emptyText}</Typography>
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+                <Tooltip title="Decrypted for viewing. Stored encrypted.">
+                    <Box
+                        component="span"
+                        role="img"
+                        aria-label="Decrypted for viewing. Stored encrypted."
+                        tabIndex={0}
+                        sx={{ display: 'inline-flex', color: 'text.secondary', flexShrink: 0, mt: 0.5 }}
+                    >
+                        <LockOpenOutlined sx={{ fontSize: 16 }} />
+                    </Box>
+                </Tooltip>
+                <Typography sx={{ whiteSpace: 'pre-wrap', minWidth: 0 }}>{result.plaintext || emptyText}</Typography>
+            </Box>
+        )
     }
 
     const attemptFailed = attempted && result.status === 'failed'

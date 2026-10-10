@@ -71,6 +71,7 @@ describe('ProtectedText', () => {
 
         expect(container.textContent).toContain('First decrypted message')
         expect(container.textContent).not.toContain('Second decrypted message')
+        expect(container.querySelectorAll('[aria-label="Decrypted for viewing. Stored encrypted."]')).toHaveLength(1)
 
         await act(async () => useSessionSalt.getState().setSessionSalt('second phrase'))
         await settleEncryption()
@@ -78,6 +79,7 @@ describe('ProtectedText', () => {
         expect(useSessionSalt.getState().sessionSalt).toBe('second phrase')
         expect(container.textContent).toContain('First decrypted message')
         expect(container.textContent).toContain('Second decrypted message')
+        expect(container.querySelectorAll('[aria-label="Decrypted for viewing. Stored encrypted."]')).toHaveLength(2)
     })
 
     it('retries a changed default after an unsuccessful item-specific phrase', async () => {
@@ -120,6 +122,7 @@ describe('ProtectedText', () => {
 
         expect(container.textContent).toContain('Existing plaintext description')
         expect(container.textContent).not.toContain('Default Salt')
+        expect(container.querySelector('[aria-label="Decrypted for viewing. Stored encrypted."]')).toBeNull()
     })
 
     it('silently preserves access to legacy text saved with a blank phrase', async () => {
@@ -212,6 +215,7 @@ describe('ProtectedText', () => {
             await settleEncryption()
 
             expect(container.textContent).toContain('One-time message')
+            expect(container.querySelector('[aria-label="Decrypted for viewing. Stored encrypted."]')).not.toBeNull()
             expect(useSessionSalt.getState().sessionSalt).toBe('wrong session phrase')
         },
     )

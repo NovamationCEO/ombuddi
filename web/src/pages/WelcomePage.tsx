@@ -300,9 +300,8 @@ export function WelcomePage() {
                             A safer record of the work.
                         </Typography>
                         <Typography sx={{ color: palette.muted }}>
-                            Visitor information is kept private by design: names are never stored in plaintext, and case
-                            notes are encrypted before they leave your browser. Only you can read what you&apos;ve
-                            recorded.
+                            Visitor information is kept private by design: names are never stored in plaintext, and you
+                            can encrypt case notes before they leave your browser using a phrase you choose.
                         </Typography>
                     </Grid2>
                     <Grid2 size={{ xs: 12, md: 6 }}>
@@ -358,7 +357,7 @@ export function WelcomePage() {
                             number="02"
                             title="Local encryption"
                         >
-                            Case notes are encrypted with AES-256-GCM before they leave your browser.
+                            Protect case notes with AES-256-GCM encryption before they leave your browser.
                         </PrivacyCard>
                     </Grid2>
                     <Grid2 size={{ xs: 12, md: 4 }}>
@@ -367,7 +366,8 @@ export function WelcomePage() {
                             number="03"
                             title="Practitioner access"
                         >
-                            Ombuddi staff cannot access visitor data. There is no support backdoor.
+                            Ombuddi staff cannot unlock phrase-encrypted notes. There is no support backdoor to your
+                            encryption phrase.
                         </PrivacyCard>
                     </Grid2>
                 </Grid2>

@@ -89,7 +89,28 @@ vi.mock('../libraries/useSnack', () => ({
 vi.mock('../components/PersonFinder', () => ({ PersonFinder: () => <span /> }))
 vi.mock('../components/AddPerson/PersonForm', () => ({ PersonForm: () => <span /> }))
 vi.mock('../components/PersonAvatar', () => ({ PersonAvatar: () => <span /> }))
-vi.mock('../components/ProtectedText', () => ({ ProtectedText: () => <span>Locked note</span> }))
+vi.mock('../components/ProtectedText', () => ({
+    ProtectedText: ({ onDecrypted }: { onDecrypted: (text: string, phrase: string) => void }) => (
+        <button onClick={() => onDecrypted('Original text', 'original phrase')}>Locked note</button>
+    ),
+}))
+
+function button(text: string) {
+    return [...document.body.querySelectorAll('button')].find((button) => button.textContent === text)!
+}
+async function click(text: string) {
+    await act(async () => {
+        button(text).click()
+        await new Promise((resolve) => setTimeout(resolve, 150))
+    })
+}
+async function writeNotes(text: string) {
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entry notes"]')!
+    await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, text)
+        textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+}
 
 describe('AddEntry edit mode', () => {
     let container: HTMLDivElement
@@ -142,36 +163,102 @@ describe('AddEntry edit mode', () => {
         expect(mocks.navigate).toHaveBeenCalledWith('/case/case-1')
     })
 
-    it('requires explicit phrase confirmation before saving a new encrypted note', async () => {
+    it('requires a phrase dialog and does not accept a copied default until confirmed', async () => {
         mocks.params.entryId = undefined
         useSessionSalt.getState().setSessionSalt('sample phrase')
         await act(async () => root.render(<AddEntry />))
-        expect(container.textContent).toContain('New case note')
-        const textarea = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entry notes"]')!
+        await writeNotes('A sample interaction')
+        await click('Save entry')
+        expect(mocks.creator).not.toHaveBeenCalled()
+        expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
+        const field = document.body.querySelector<HTMLInputElement>('input[type="password"]')!
+        expect(field.value).toBe('')
+        expect(button('Encrypt and save').disabled).toBe(true)
+        expect(document.body.textContent).not.toContain('Blank')
+        await click('Copy default phrase')
+        expect(field.value).toBe('sample phrase')
+        expect(field.type).toBe('password')
+        expect(mocks.creator).not.toHaveBeenCalled()
+        await act(async () => useSessionSalt.getState().setSessionSalt('another default'))
+        await click('Encrypt and save')
         await act(async () => {
-            Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
-                textarea,
-                'A sample interaction',
-            )
-            textarea.dispatchEvent(new Event('input', { bubbles: true }))
-        })
-        const saveButton = [...container.querySelectorAll('button')].find(
-            (button) => button.textContent === 'Save entry',
-        )!
-        expect(saveButton.disabled).toBe(true)
-        await act(async () =>
-            [...container.querySelectorAll('button')]
-                .find((button) => button.textContent === 'Use this phrase')
-                ?.click(),
-        )
-        expect(saveButton.disabled).toBe(false)
-        await act(async () => {
-            saveButton.click()
-            await new Promise((resolve) => setTimeout(resolve, 250))
+            await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/case/case-1'))
         })
         const payload = mocks.creator.mock.calls[0][1]
         expect(payload).toMatchObject({ caseId: 'case-1', medium: 'Phone', duration: 30, personIds: [] })
         expect(await decryptNotes(payload.notes, 'sample phrase', 'org-1')).toBe('A sample interaction')
+    })
+
+    it('discards canceled phrase drafts and still requires a choice on the next save', async () => {
+        mocks.params.entryId = undefined
+        useSessionSalt.getState().setSessionSalt('sample phrase')
+        await act(async () => root.render(<AddEntry />))
+        await writeNotes('A sample interaction')
+        await click('Save entry')
+        await click('Copy default phrase')
+        await act(async () =>
+            document.body.querySelector<HTMLButtonElement>('button[aria-label="Show phrase"]')?.click(),
+        )
+        const dialog = document.body.querySelector('[role="dialog"]')!
+        const cancel = [...dialog.querySelectorAll('button')].find((button) => button.textContent === 'Cancel')!
+        await act(async () => cancel.click())
+        expect(mocks.creator).not.toHaveBeenCalled()
+        await click('Save entry')
+        expect(document.body.querySelector<HTMLInputElement>('input[type="password"]')?.value).toBe('')
+        expect(button('Encrypt and save').disabled).toBe(true)
+    })
+
+    it('stores plaintext only after the explicit turn-off confirmation', async () => {
+        mocks.params.entryId = undefined
+        await act(async () => root.render(<AddEntry />))
+        await writeNotes('Deliberately unencrypted text')
+        await click('Save entry')
+        expect(button('Copy default phrase').disabled).toBe(true)
+        await click('Turn off encryption')
+        expect(document.body.textContent).toContain('stored without phrase encryption')
+        expect(mocks.creator).not.toHaveBeenCalled()
+        await click('Save without encryption')
+        expect(mocks.creator).toHaveBeenCalledWith(
+            'add_entry',
+            expect.objectContaining({ notes: 'Deliberately unencrypted text' }),
+        )
+    })
+
+    it('requires a new encryption choice for edited text without silently reusing its unlocking phrase', async () => {
+        await act(async () => root.render(<AddEntry />))
+        await click('Locked note')
+        await writeNotes('Edited text')
+        await click('Save changes')
+        expect(mocks.updater).not.toHaveBeenCalled()
+        const field = document.body.querySelector<HTMLInputElement>('input[type="password"]')!
+        expect(field.value).toBe('')
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, 'custom phrase')
+            field.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        await click('Encrypt and save')
+        await act(async () => {
+            await vi.waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/case/case-1'))
+        })
+        expect(await decryptNotes(mocks.updater.mock.calls[0][1].notes, 'custom phrase', 'org-1')).toBe('Edited text')
+    })
+
+    it('keeps existing ciphertext unchanged after unlocking when only metadata is saved', async () => {
+        await act(async () => root.render(<AddEntry />))
+        await click('Locked note')
+        await click('Save changes')
+        expect(mocks.updater).toHaveBeenCalledWith(
+            'update_entry',
+            expect.objectContaining({ notes: 'ombuddi_enc_v1:unchanged-ciphertext' }),
+        )
+    })
+
+    it('records an explicit encryption choice even for a new empty note', async () => {
+        mocks.params.entryId = undefined
+        await act(async () => root.render(<AddEntry />))
+        await click('Save entry')
+        expect(mocks.creator).not.toHaveBeenCalled()
+        expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     })
 
     it('calculates people additions and removals without duplicating unchanged people', () => {
