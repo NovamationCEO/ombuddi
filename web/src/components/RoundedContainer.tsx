@@ -14,7 +14,7 @@ export function RoundedContainer(props: { title: string; children?: ReactNode })
                 borderColor: 'divider',
                 borderRadius: 3,
                 overflow: 'hidden',
-                boxShadow: (theme) => `0 5px 16px ${theme.vars.palette.app.shadow}`,
+                boxShadow: (theme) => `0 5px 16px ${(theme.vars || theme).palette.app.shadow}`,
                 position: 'relative',
             }}
         >

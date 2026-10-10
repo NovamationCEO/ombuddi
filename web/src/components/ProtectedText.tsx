@@ -21,9 +21,10 @@ export function ProtectedText(props: {
     organizationId: string
     emptyText?: string
     compact?: boolean
+    unlockLabel?: string
     onDecrypted?: (plaintext: string, phraseUsed: string) => void
 }) {
-    const { stored, organizationId, emptyText = 'No text recorded.', compact = false, onDecrypted } = props
+    const { stored, organizationId, emptyText = 'No text recorded.', compact = false, unlockLabel, onDecrypted } = props
     const phrase = usePhraseSelection()
     const recoveryId = React.useId()
     const setSessionSalt = useSessionSalt((state) => state.setSessionSalt)
@@ -81,29 +82,52 @@ export function ProtectedText(props: {
 
     return (
         <Box sx={{ display: 'inline-flex' }}>
-            <Tooltip title="Unlock protected text">
-                <span>
-                    <IconButton
-                        size={compact ? 'small' : 'medium'}
-                        onClick={openRecovery}
-                        aria-label="Unlock protected text"
-                        aria-haspopup="dialog"
-                        aria-expanded={Boolean(anchorElement)}
-                        aria-controls={anchorElement ? recoveryId : undefined}
-                        disabled={result.status === 'decrypting'}
-                        sx={{ color: 'inherit' }}
-                    >
-                        {result.status === 'decrypting' ? (
+            {unlockLabel ? (
+                <Button
+                    onClick={openRecovery}
+                    startIcon={
+                        result.status === 'decrypting' ? (
                             <CircularProgress
-                                size={20}
+                                size={18}
                                 color="inherit"
                             />
                         ) : (
                             <LockOutlined />
-                        )}
-                    </IconButton>
-                </span>
-            </Tooltip>
+                        )
+                    }
+                    aria-haspopup="dialog"
+                    aria-expanded={Boolean(anchorElement)}
+                    aria-controls={anchorElement ? recoveryId : undefined}
+                    disabled={result.status === 'decrypting'}
+                    sx={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                >
+                    {result.status === 'decrypting' ? 'Unlocking…' : unlockLabel}
+                </Button>
+            ) : (
+                <Tooltip title="Unlock protected text">
+                    <span>
+                        <IconButton
+                            size={compact ? 'small' : 'medium'}
+                            onClick={openRecovery}
+                            aria-label="Unlock protected text"
+                            aria-haspopup="dialog"
+                            aria-expanded={Boolean(anchorElement)}
+                            aria-controls={anchorElement ? recoveryId : undefined}
+                            disabled={result.status === 'decrypting'}
+                            sx={{ color: 'inherit' }}
+                        >
+                            {result.status === 'decrypting' ? (
+                                <CircularProgress
+                                    size={20}
+                                    color="inherit"
+                                />
+                            ) : (
+                                <LockOutlined />
+                            )}
+                        </IconButton>
+                    </span>
+                </Tooltip>
+            )}
 
             <Popover
                 open={Boolean(anchorElement)}
@@ -193,8 +217,8 @@ export function ProtectedText(props: {
                                 variant="caption"
                                 color="text.secondary"
                             >
-                                This changes the phrase used for future protected notes and person lookups until
-                                refresh or logout. It does not re-encrypt existing records. Spaces are significant.
+                                This changes the phrase used for future protected notes and person lookups until refresh
+                                or logout. It does not re-encrypt existing records. Spaces are significant.
                             </Typography>
                             <TextField
                                 type="text"

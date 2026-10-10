@@ -134,6 +134,7 @@ A university ombuds. Defaults should reflect higher-ed reality: primary roles al
 ## Settled decisions (track here so we don't re-relitigate)
 
 - **Add New Case uses a physical folder metaphor.** The white paper and manila folder stay light in both site themes; the surrounding page background and navigation retain the chosen theme. IOA and organization codes appear as removable colored flags, while referral choices and description protection settings expand from compact summaries. Missing protection phrases and invalid referral details remain visible when action is needed.
+- **Case review uses the Open Folder layout.** A white cover sheet holds case context, an activity index sits beside the selected entry sheet, and IOA/organization codes appear as taped flags on the manila margin. Shared folder surfaces remain light in either site theme. Existing protected-text recovery, author-only entry editing, and General activity ownership rules are preserved.
 - **Org name is decorative.** Hashing, lookups, and any "is this row mine" checks key off `organization_id` (UUID). Org names are display-only and can be changed at any time.
 - **Reports run in two modes**, toggled per render:
   - *Full mode* (ombuds-only): every bucket visible, no suppression. The ombuds can see narrow bands their own memory might be missing.

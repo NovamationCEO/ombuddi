@@ -1,0 +1,192 @@
+.case-review-folder {
+    padding: 18px;
+    margin-top: 40px;
+}
+.case-review-cover {
+    background: #fff;
+    color: #273334;
+    padding: 24px;
+    box-shadow: 0 3px 9px rgba(77, 57, 23, 0.17);
+    border-radius: 2px;
+    margin-bottom: 12px;
+}
+.case-review-heading {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+.case-review-folder .case-review-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.case-review-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 16px;
+}
+.case-review-context--general {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.case-review-context > * {
+    overflow-wrap: anywhere;
+}
+.case-review-context > * + * {
+    border-left: 1px solid #ddd;
+    padding-left: 24px;
+}
+.case-review-folder .case-review-label {
+    font-size: 0.8rem;
+    color: #62696a;
+    font-weight: 650;
+    margin-bottom: 8px;
+}
+.case-review-folder .case-review-section-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.7rem;
+    line-height: 1.3;
+}
+.case-review-body {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr) 200px;
+    align-items: start;
+    gap: 12px;
+}
+.case-review-body--general {
+    grid-template-columns: 250px minmax(0, 1fr);
+}
+.case-review-index,
+.case-review-entry {
+    min-width: 0;
+    background: white;
+    box-shadow: 0 3px 9px rgba(77, 57, 23, 0.12);
+}
+.case-review-index {
+    min-height: 440px;
+    position: sticky;
+    top: 24px;
+}
+.case-review-activity {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+.case-review-folder .case-review-activity-button {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 12px 20px 12px 23px;
+    text-align: left;
+    border-bottom: 1px solid #e2e3de;
+    color: #273334;
+}
+.case-review-folder .case-review-activity-button:hover {
+    background: #f4f5f0;
+}
+.case-review-folder .case-review-activity-button.is-selected {
+    background: #e5ecdf;
+}
+.case-review-activity-button.is-selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-left: 9px solid #875177;
+}
+.case-review-folder .case-review-activity-button:focus-visible {
+    outline-offset: -3px;
+}
+.case-review-entry {
+    padding: 24px;
+    min-height: 440px;
+}
+.case-review-codes {
+    padding: 18px 0 18px 20px;
+    min-width: 0;
+    display: grid;
+    gap: 24px;
+}
+.case-review-codes > section + section {
+    border-top: 1px solid #ccbc9b;
+    padding-top: 18px;
+}
+.case-review-codes .case-review-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #39413b;
+}
+@media (max-width: 1150px) {
+    .case-review-body {
+        grid-template-columns: 210px minmax(0, 1fr);
+    }
+    .case-review-codes {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 20px 12px 12px;
+    }
+    .case-review-codes > section + section {
+        border-top: 0;
+        padding-top: 0;
+    }
+    .case-review-actions {
+        width: 100%;
+    }
+}
+@media (max-width: 800px) {
+    .case-review-folder {
+        padding: 12px;
+    }
+    .case-review-cover {
+        padding: 24px;
+    }
+    .case-review-context,
+    .case-review-context--general {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+    .case-review-context > * + * {
+        padding-left: 0;
+        padding-top: 16px;
+        border-left: 0;
+        border-top: 1px solid #ddd;
+    }
+    .case-review-body,
+    .case-review-body--general {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+    .case-review-index {
+        min-height: 0;
+        position: static;
+        border-right: 0;
+    }
+    .case-review-activity {
+        max-height: 240px;
+    }
+    .case-review-entry {
+        padding: 24px;
+        min-height: 360px;
+    }
+}
+@media (max-width: 450px) {
+    .case-review-folder {
+        padding: 10px;
+    }
+    .case-review-cover,
+    .case-review-entry {
+        padding: 20px 16px;
+    }
+    .case-review-heading {
+        gap: 12px;
+    }
+    .case-review-codes {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

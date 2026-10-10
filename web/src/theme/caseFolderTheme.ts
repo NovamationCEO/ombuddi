@@ -1,5 +1,5 @@
 import { createTheme } from '@mui/material/styles'
-import { appTheme, lightPalette } from '../../theme/appTheme'
+import { appTheme, lightPalette } from './appTheme'
 
 // This physical writing surface stays light inside either site color scheme.
 // A non-variable theme also keeps inputs, dialogs and focus states legible on it.

@@ -135,48 +135,54 @@ describe('ProtectedText', () => {
         expect(buttonWithText('Blank')).toBeUndefined()
     })
 
-    it('uses a one-time phrase without changing the session default', async () => {
-        const organizationId = 'organization-1'
-        const stored = await encryptNotes('One-time message', 'item phrase', organizationId)
-        useSessionSalt.getState().setSessionSalt('wrong session phrase')
+    it.each([undefined, 'Unlock notes'])(
+        'uses a one-time phrase without changing the session default (label: %s)',
+        async (unlockLabel) => {
+            const organizationId = 'organization-1'
+            const stored = await encryptNotes('One-time message', 'item phrase', organizationId)
+            useSessionSalt.getState().setSessionSalt('wrong session phrase')
 
-        await act(async () => {
-            root.render(
-                <ThemeProvider
-                    theme={appTheme}
-                    defaultMode="dark"
-                >
-                    <ProtectedText
-                        stored={stored}
-                        organizationId={organizationId}
-                    />
-                </ThemeProvider>,
-            )
-        })
-        await settleEncryption()
+            await act(async () => {
+                root.render(
+                    <ThemeProvider
+                        theme={appTheme}
+                        defaultMode="dark"
+                    >
+                        <ProtectedText
+                            stored={stored}
+                            unlockLabel={unlockLabel}
+                            organizationId={organizationId}
+                        />
+                    </ThemeProvider>,
+                )
+            })
+            await settleEncryption()
 
-        const unlockButton = container.querySelector<HTMLButtonElement>('button[aria-label="Unlock protected text"]')
-        expect(unlockButton).not.toBeNull()
-        expect(container.textContent).not.toContain('One-time message')
-        await act(async () => unlockButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+            const unlockButton = unlockLabel
+                ? buttonWithText(unlockLabel)
+                : container.querySelector<HTMLButtonElement>('button[aria-label="Unlock protected text"]')
+            expect(unlockButton).not.toBeNull()
+            expect(container.textContent).not.toContain('One-time message')
+            await act(async () => unlockButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
 
-        expect(buttonWithText('Blank')).toBeUndefined()
-        expect(buttonWithText('Default Salt')).toBeUndefined()
-        const recoveryInputs = [...document.body.querySelectorAll('input')]
-        expect(recoveryInputs).toHaveLength(2)
-        for (const input of recoveryInputs) {
-            expect(input.hasAttribute('data-1p-ignore')).toBe(true)
-            expect(input.hasAttribute('data-op-ignore')).toBe(true)
-            expect(input.autocomplete).toBe('off')
-        }
-        const oneTimeInput = document.body.querySelector<HTMLInputElement>('input[aria-label="One-time phrase"]')
-        await act(async () => setInputValue(oneTimeInput, 'item phrase'))
-        const tryButton = buttonWithText('Try phrase')
-        expect(tryButton).toBeDefined()
-        await act(async () => tryButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-        await settleEncryption()
+            expect(buttonWithText('Blank')).toBeUndefined()
+            expect(buttonWithText('Default Salt')).toBeUndefined()
+            const recoveryInputs = [...document.body.querySelectorAll('input')]
+            expect(recoveryInputs).toHaveLength(2)
+            for (const input of recoveryInputs) {
+                expect(input.hasAttribute('data-1p-ignore')).toBe(true)
+                expect(input.hasAttribute('data-op-ignore')).toBe(true)
+                expect(input.autocomplete).toBe('off')
+            }
+            const oneTimeInput = document.body.querySelector<HTMLInputElement>('input[aria-label="One-time phrase"]')
+            await act(async () => setInputValue(oneTimeInput, 'item phrase'))
+            const tryButton = buttonWithText('Try phrase')
+            expect(tryButton).toBeDefined()
+            await act(async () => tryButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+            await settleEncryption()
 
-        expect(container.textContent).toContain('One-time message')
-        expect(useSessionSalt.getState().sessionSalt).toBe('wrong session phrase')
-    })
+            expect(container.textContent).toContain('One-time message')
+            expect(useSessionSalt.getState().sessionSalt).toBe('wrong session phrase')
+        },
+    )
 })

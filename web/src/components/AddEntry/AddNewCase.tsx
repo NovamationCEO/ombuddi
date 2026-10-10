@@ -8,9 +8,9 @@ import { LockOutlined, Shuffle } from '@mui/icons-material'
 import { useSnack } from '../../libraries/useSnack'
 import { creator } from '../../tools/db_tools/creator'
 import { CaseCodeFlags } from './CaseCodeFlags'
-import { caseFolderTheme } from './caseFolderTheme'
+import { caseFolderTheme } from '../../theme/caseFolderTheme'
 import { usePicklists } from '../../tools/usePicklists'
-import './CaseFolder.css'
+import '../../theme/caseFolder.css'
 import { useOrganization } from '../../tools/useOrganization'
 import { ReferralSourceSelector } from '../ReferralSourceSelector'
 import { ReferralSourceSelectionType } from '../../types/majorTypes'
@@ -373,6 +373,7 @@ export function AddNewCase() {
                                 aria-label="Case codes"
                             >
                                 <CaseCodeFlags
+                                    caseId={newId}
                                     source={{ kind: 'ioa' }}
                                     activeCodes={activeIoaCodes}
                                     setActiveCodes={setActiveIoaCodes}
@@ -380,6 +381,7 @@ export function AddNewCase() {
                                 />
                                 <Box sx={{ my: 3, borderTop: '1px solid #CCBC9B' }} />
                                 <CaseCodeFlags
+                                    caseId={newId}
                                     source={{ kind: 'org', organizationId }}
                                     activeCodes={activeOrgCodes}
                                     setActiveCodes={setActiveOrgCodes}

@@ -1,5 +1,5 @@
-import { pagePadding, pageTitleStyle } from '../theme/pageLayout'
-import { Add, ArrowBack, CalendarMonthOutlined, EditOutlined, ScheduleOutlined } from '@mui/icons-material'
+import { pageLayoutStyle } from '../theme/pageLayout'
+import { Add, ArrowBack, CalendarMonthOutlined, EditOutlined } from '@mui/icons-material'
 import {
     Box,
     Alert,
@@ -12,17 +12,15 @@ import {
     DialogContent,
     DialogTitle,
     Divider,
-    IconButton,
     MenuItem,
-    Paper,
     Stack,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material'
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CaseSceneThumbnail } from '../components/CaseSceneThumbnail'
+import { caseCodeFlagStyle } from '../components/caseCodeFlagStyle'
 import { EditCodeDialog } from '../components/EditCodeDialog'
 import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
 import { ProtectedText } from '../components/ProtectedText'
@@ -44,41 +42,25 @@ import { EntryPersonMarker } from '../components/EntryPersonMarker'
 import { uniquePeopleById } from '../components/personDisplay'
 import { formatCalendarDate } from '../tools/calendarDate'
 import { useResolvedCaseCodes } from '../tools/useResolvedCaseCodes'
-import { CaseCodeTooltip } from '../components/CaseCodeTooltip'
+import { ioaCodeIdSet } from '../constants/ioaConstants'
+import { ThemeProvider } from '@mui/material/styles'
+import { caseFolderTheme } from '../theme/caseFolderTheme'
+import '../theme/caseFolder.css'
+import './CaseSummary.css'
 import { protectedTextForSave } from '../tools/protectedTextEdit'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 
 const workspace = {
-    paper: 'var(--mui-palette-background-paper)',
-    raised: 'var(--mui-palette-app-surfaceRaised)',
-    ink: 'var(--mui-palette-text-primary)',
-    muted: 'var(--mui-palette-text-secondary)',
-    teal: 'var(--mui-palette-secondary-main)',
-    tealDark: 'var(--mui-palette-secondary-dark)',
-    tealPale: 'var(--mui-palette-app-surfaceTint)',
-    border: 'var(--mui-palette-divider)',
-    purple: 'var(--mui-palette-primary-main)',
+    ink: 'text.primary',
+    muted: 'text.secondary',
+    teal: 'secondary.main',
+    tealDark: 'secondary.dark',
 } as const
 
 const statusStyles = {
-    active: {
-        label: 'Active',
-        color: 'var(--mui-palette-secondary-main)',
-        background: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.14)',
-        border: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.42)',
-    },
-    monitoring: {
-        label: 'Monitoring',
-        color: 'var(--mui-palette-warning-main)',
-        background: 'rgba(var(--mui-palette-warning-mainChannel) / 0.14)',
-        border: 'rgba(var(--mui-palette-warning-mainChannel) / 0.4)',
-    },
-    closed: {
-        label: 'Closed',
-        color: 'var(--mui-palette-text-secondary)',
-        background: 'var(--mui-palette-action-hover)',
-        border: 'var(--mui-palette-divider)',
-    },
+    active: { label: 'Active', color: '#315B40', background: '#E2EDDF' },
+    monitoring: { label: 'Monitoring', color: '#775418', background: '#F5EAD0' },
+    closed: { label: 'Closed', color: '#596361', background: '#E8ECE9' },
 } as const
 
 function formatDate(value?: Date) {
@@ -279,850 +261,673 @@ export function CaseSummary() {
     const status = isGeneral
         ? {
               label: 'General',
-              color: 'var(--mui-palette-primary-light)',
-              background: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',
-              border: 'rgba(var(--mui-palette-primary-mainChannel) / 0.42)',
+              color: '#743D68',
+              background: '#EFE5EE',
           }
         : (statusStyles[normalizedStatus] ?? statusStyles.active)
 
     return (
-        <Box
-            sx={{
-                minHeight: '100%',
-                boxSizing: 'border-box',
-                bgcolor: 'transparent',
-                color: workspace.ink,
-            }}
-        >
-            <EditCodeDialog
-                open={showEditCodes}
-                onClose={() => {
-                    setShowEditCodes(false)
-                    caseRes.refetch()
-                }}
-            />
-
-            <Dialog
-                open={editingReferrals}
-                onClose={() => !savingReferrals && setEditingReferrals(false)}
-                maxWidth="sm"
-                fullWidth
+        <Box sx={pageLayoutStyle}>
+            <Button
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/cases')}
+                sx={{ mb: 0.5 }}
             >
-                <DialogTitle>Edit referral sources</DialogTitle>
-                <DialogContent>
-                    <Box sx={{ pt: 0.5 }}>
-                        <ReferralSourceSelector
-                            value={editReferralSources}
-                            onChange={(value) => {
-                                setEditReferralSources(value)
-                                setShowReferralErrors(false)
-                            }}
-                            retainedSources={referralSourcesRes.data ?? []}
-                            disabled={savingReferrals}
-                            showErrors={showReferralErrors}
-                        />
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        onClick={() => setEditingReferrals(false)}
-                        disabled={savingReferrals}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => void saveReferralSources()}
-                        disabled={savingReferrals}
-                    >
-                        {savingReferrals ? 'Saving…' : 'Save referral sources'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog
-                open={editing}
-                onClose={() => !saving && setEditing(false)}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle sx={{ color: workspace.ink, fontWeight: 700 }}>Edit case details</DialogTitle>
-                <DialogContent>
-                    <Stack
-                        spacing={2.25}
-                        sx={{ pt: 1 }}
-                    >
-                        <TextField
-                            label="Case name"
-                            value={editName}
-                            onChange={(event) => setEditName(event.target.value)}
-                            fullWidth
-                        />
-                        <TextField
-                            label="Description"
-                            value={editDescription}
-                            onChange={(event) => setEditDescription(event.target.value)}
-                            fullWidth
-                            multiline
-                            minRows={4}
-                            disabled={descriptionLocked}
-                        />
-                        {descriptionLocked ? (
-                            <Alert severity="warning">
-                                Unlock the case description on the case page before editing it. Saving other case
-                                details will preserve the encrypted description unchanged.
-                            </Alert>
-                        ) : descriptionNeedsProtection ? (
-                            <Stack spacing={1.25}>
-                                <Alert severity="warning">
-                                    This text was not previously protected. Choose how to protect it before saving; it
-                                    will not be stored as plaintext.
-                                </Alert>
-                                <PhraseSourceControl
-                                    source={editDescriptionPhrase.source}
-                                    onSourceChange={editDescriptionPhrase.setSource}
-                                    customPhrase={editDescriptionPhrase.customPhrase}
-                                    onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
-                                    purpose="encrypt"
-                                />
-                            </Stack>
-                        ) : !changeDescriptionProtection ? (
-                            <Stack spacing={1}>
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                >
-                                    Saving keeps the existing description protection. Changing the case name or status
-                                    will not rotate its phrase.
-                                </Typography>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => setChangeDescriptionProtection(true)}
-                                    sx={{ alignSelf: 'flex-start' }}
-                                >
-                                    Change description phrase
-                                </Button>
-                            </Stack>
-                        ) : (
-                            <Stack spacing={1.25}>
-                                <Alert severity="warning">
-                                    Changing this phrase replaces the only phrase that can recover this description.
-                                    Confirm it carefully; exact spaces count.
-                                </Alert>
-                                <PhraseSourceControl
-                                    source={editDescriptionPhrase.source}
-                                    onSourceChange={editDescriptionPhrase.setSource}
-                                    customPhrase={editDescriptionPhrase.customPhrase}
-                                    onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
-                                    purpose="encrypt"
-                                />
-                                <Button
-                                    size="small"
-                                    onClick={() => setChangeDescriptionProtection(false)}
-                                    sx={{ alignSelf: 'flex-start' }}
-                                >
-                                    Keep existing protection
-                                </Button>
-                            </Stack>
-                        )}
-                        <TextField
-                            select
-                            label="Status"
-                            value={editStatus}
-                            onChange={(event) => setEditStatus(event.target.value)}
-                            fullWidth
-                        >
-                            <MenuItem value="active">Active</MenuItem>
-                            <MenuItem value="monitoring">Monitoring</MenuItem>
-                            <MenuItem value="closed">Closed</MenuItem>
-                        </TextField>
-                    </Stack>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                    <Button
-                        onClick={() => setEditing(false)}
-                        disabled={saving}
-                        sx={{ color: workspace.muted }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={saveEdit}
-                        disabled={
-                            saving ||
-                            !editName.trim() ||
-                            (!descriptionLocked &&
-                                (changeDescriptionProtection || descriptionNeedsProtection) &&
-                                editDescriptionPhrase.phrase === null)
-                        }
-                        sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
-                    >
-                        {saving ? 'Saving…' : 'Save changes'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Box sx={{ width: '100%' }}>
-                <Paper
-                    elevation={0}
-                    sx={{
-                        color: 'var(--mui-palette-app-headerText)',
-                        background:
-                            'linear-gradient(135deg, var(--mui-palette-app-headerStart) 0%, var(--mui-palette-app-headerEnd) 100%)',
-                        border: 0,
-                        borderBottom: '1px solid var(--mui-palette-app-headerBorder)',
-                        borderRadius: 0,
-                        boxShadow: '0 10px 26px var(--mui-palette-app-shadow)',
+                All cases
+            </Button>
+            <ThemeProvider theme={caseFolderTheme}>
+                <EditCodeDialog
+                    open={showEditCodes}
+                    onClose={() => {
+                        setShowEditCodes(false)
+                        caseRes.refetch()
                     }}
-                >
-                    <Box
-                        sx={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            px: pagePadding,
-                            pt: pagePadding,
-                            pb: 2.5,
-                        }}
-                    >
-                        <Button
-                            startIcon={<ArrowBack />}
-                            onClick={() => navigate('/cases')}
-                            sx={{
-                                mb: 0.75,
-                                px: 0.5,
-                                py: 0.25,
-                                color: 'var(--mui-palette-app-headerMuted)',
-                                textTransform: 'none',
-                                fontWeight: 650,
-                                fontSize: '0.8rem',
-                                '&:hover': {
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    bgcolor: 'var(--mui-palette-app-headerHover)',
-                                },
-                            }}
-                        >
-                            All cases
-                        </Button>
+                />
 
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: { xs: '54px minmax(0, 1fr)', sm: '68px minmax(0, 1fr) auto' },
-                                gap: { xs: 1.25, sm: 1.75 },
-                                alignItems: 'start',
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    width: { xs: 54, sm: 68 },
-                                    height: { xs: 54, sm: 68 },
-                                    borderRadius: 2,
-                                    boxShadow: '0 7px 18px var(--mui-palette-app-shadow)',
-                                    overflow: 'hidden',
+                <Dialog
+                    open={editingReferrals}
+                    onClose={() => !savingReferrals && setEditingReferrals(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle>Edit referral sources</DialogTitle>
+                    <DialogContent>
+                        <Box sx={{ pt: 0.5 }}>
+                            <ReferralSourceSelector
+                                value={editReferralSources}
+                                onChange={(value) => {
+                                    setEditReferralSources(value)
+                                    setShowReferralErrors(false)
                                 }}
+                                retainedSources={referralSourcesRes.data ?? []}
+                                disabled={savingReferrals}
+                                showErrors={showReferralErrors}
+                            />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => setEditingReferrals(false)}
+                            disabled={savingReferrals}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => void saveReferralSources()}
+                            disabled={savingReferrals}
+                        >
+                            {savingReferrals ? 'Saving…' : 'Save referral sources'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog
+                    open={editing}
+                    onClose={() => !saving && setEditing(false)}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ color: workspace.ink, fontWeight: 700 }}>Edit case details</DialogTitle>
+                    <DialogContent>
+                        <Stack
+                            spacing={2.25}
+                            sx={{ pt: 1 }}
+                        >
+                            <TextField
+                                label="Case name"
+                                value={editName}
+                                onChange={(event) => setEditName(event.target.value)}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Description"
+                                value={editDescription}
+                                onChange={(event) => setEditDescription(event.target.value)}
+                                fullWidth
+                                multiline
+                                minRows={4}
+                                disabled={descriptionLocked}
+                            />
+                            {descriptionLocked ? (
+                                <Alert severity="warning">
+                                    Unlock the case description on the case page before editing it. Saving other case
+                                    details will preserve the encrypted description unchanged.
+                                </Alert>
+                            ) : descriptionNeedsProtection ? (
+                                <Stack spacing={1.25}>
+                                    <Alert severity="warning">
+                                        This text was not previously protected. Choose how to protect it before saving;
+                                        it will not be stored as plaintext.
+                                    </Alert>
+                                    <PhraseSourceControl
+                                        source={editDescriptionPhrase.source}
+                                        onSourceChange={editDescriptionPhrase.setSource}
+                                        customPhrase={editDescriptionPhrase.customPhrase}
+                                        onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                        purpose="encrypt"
+                                    />
+                                </Stack>
+                            ) : !changeDescriptionProtection ? (
+                                <Stack spacing={1}>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        Saving keeps the existing description protection. Changing the case name or
+                                        status will not rotate its phrase.
+                                    </Typography>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={() => setChangeDescriptionProtection(true)}
+                                        sx={{ alignSelf: 'flex-start' }}
+                                    >
+                                        Change description phrase
+                                    </Button>
+                                </Stack>
+                            ) : (
+                                <Stack spacing={1.25}>
+                                    <Alert severity="warning">
+                                        Changing this phrase replaces the only phrase that can recover this description.
+                                        Confirm it carefully; exact spaces count.
+                                    </Alert>
+                                    <PhraseSourceControl
+                                        source={editDescriptionPhrase.source}
+                                        onSourceChange={editDescriptionPhrase.setSource}
+                                        customPhrase={editDescriptionPhrase.customPhrase}
+                                        onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                        purpose="encrypt"
+                                    />
+                                    <Button
+                                        size="small"
+                                        onClick={() => setChangeDescriptionProtection(false)}
+                                        sx={{ alignSelf: 'flex-start' }}
+                                    >
+                                        Keep existing protection
+                                    </Button>
+                                </Stack>
+                            )}
+                            <TextField
+                                select
+                                label="Status"
+                                value={editStatus}
+                                onChange={(event) => setEditStatus(event.target.value)}
+                                fullWidth
                             >
+                                <MenuItem value="active">Active</MenuItem>
+                                <MenuItem value="monitoring">Monitoring</MenuItem>
+                                <MenuItem value="closed">Closed</MenuItem>
+                            </TextField>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                        <Button
+                            onClick={() => setEditing(false)}
+                            disabled={saving}
+                            sx={{ color: workspace.muted }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={saveEdit}
+                            disabled={
+                                saving ||
+                                !editName.trim() ||
+                                (!descriptionLocked &&
+                                    (changeDescriptionProtection || descriptionNeedsProtection) &&
+                                    editDescriptionPhrase.phrase === null)
+                            }
+                            sx={{ bgcolor: workspace.teal, '&:hover': { bgcolor: workspace.tealDark } }}
+                        >
+                            {saving ? 'Saving…' : 'Save changes'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Box className="case-folder case-review-folder">
+                    <Box
+                        className="case-folder-tab"
+                        aria-hidden="true"
+                    >
+                        {isGeneral ? 'General activity' : `${status.label} case`}
+                    </Box>
+                    <Box
+                        component="section"
+                        className="case-review-cover"
+                        aria-labelledby="case-title"
+                    >
+                        <Box className="case-review-heading">
+                            <Box sx={{ width: { xs: 52, sm: 88 }, height: { xs: 52, sm: 88 }, flexShrink: 0 }}>
                                 <CaseSceneThumbnail seed={caseItem.id} />
                             </Box>
-
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography
+                                    component="h1"
+                                    id="case-title"
+                                    className="case-review-title"
+                                >
+                                    {caseItem.name}
+                                </Typography>
                                 <Stack
                                     direction="row"
-                                    sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mb: 0.35 }}
+                                    useFlexGap
+                                    spacing={1.5}
+                                    sx={{ alignItems: 'center', flexWrap: 'wrap', mt: 1 }}
                                 >
-                                    <Typography
-                                        variant="h4"
-                                        component="h1"
-                                        sx={{ ...pageTitleStyle, color: 'var(--mui-palette-app-headerText)' }}
-                                    >
-                                        {caseItem.name}
-                                    </Typography>
                                     <Chip
                                         label={status.label}
                                         size="small"
-                                        sx={{
-                                            color: status.color,
-                                            bgcolor: status.background,
-                                            border: `1px solid ${status.border}`,
-                                            fontWeight: 700,
-                                        }}
+                                        sx={{ color: status.color, bgcolor: status.background, fontWeight: 650 }}
                                     />
-                                </Stack>
-                                {caseItem.description ? (
-                                    <Box
-                                        sx={{
-                                            color: 'var(--mui-palette-app-headerMuted)',
-                                            fontSize: '0.88rem',
-                                            lineHeight: 1.45,
-                                            maxWidth: 920,
-                                        }}
-                                    >
-                                        <ProtectedText
-                                            stored={caseItem.description}
-                                            organizationId={organizationId}
-                                            emptyText="No case description"
-                                            compact
-                                            onDecrypted={rememberDescription}
-                                        />
-                                    </Box>
-                                ) : (
                                     <Typography
-                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontStyle: 'italic' }}
-                                    >
-                                        No case description
-                                    </Typography>
-                                )}
-                                <Stack
-                                    direction="row"
-                                    sx={{ mt: 0.65, flexWrap: 'wrap', gap: { xs: 1.25, sm: 2 } }}
-                                >
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.72rem' }}
+                                        variant="caption"
+                                        color="text.secondary"
                                     >
                                         Created {formatDate(caseItem.createdAt)}
                                     </Typography>
                                     <Typography
-                                        variant="body2"
-                                        sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.72rem' }}
+                                        variant="caption"
+                                        color="text.secondary"
                                     >
                                         Updated {formatDate(caseItem.updatedAt)}
                                     </Typography>
                                 </Stack>
                             </Box>
-
-                            {!isGeneral && (
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<EditOutlined />}
-                                    onClick={openEdit}
-                                    sx={{
-                                        gridColumn: { xs: '1 / -1', sm: 'auto' },
-                                        justifySelf: { xs: 'stretch', sm: 'end' },
-                                        color: 'var(--mui-palette-app-headerText)',
-                                        borderColor: 'var(--mui-palette-secondary-main)',
-                                        textTransform: 'none',
-                                        fontWeight: 700,
-                                        fontSize: '0.78rem',
-                                        py: 0.6,
-                                        whiteSpace: 'nowrap',
-                                        '&:hover': {
-                                            color: 'var(--mui-palette-app-headerText)',
-                                            borderColor: 'var(--mui-palette-app-headerMuted)',
-                                            bgcolor: 'var(--mui-palette-app-headerHover)',
-                                        },
-                                    }}
-                                >
-                                    Edit case details
-                                </Button>
-                            )}
-                        </Box>
-
-                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
-
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: 0.75,
-                                minHeight: 30,
-                                '&& .MuiChip-root': {
-                                    height: 28,
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    border: '1px solid var(--mui-palette-app-headerBorder)',
-                                    fontSize: '0.72rem',
-                                },
-                                '&& .MuiChip-root:hover': { bgcolor: 'var(--mui-palette-app-headerHover)' },
-                            }}
-                        >
-                            <Typography
-                                sx={{
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    mr: 0.25,
-                                }}
+                            <Stack
+                                className="case-review-actions"
+                                direction="row"
+                                useFlexGap
+                                spacing={1}
+                                sx={{ flexWrap: 'wrap', alignItems: 'center' }}
                             >
-                                Codes
-                            </Typography>
-                            {isGeneral ? (
+                                {canAddEntry && (
+                                    <Button
+                                        variant="contained"
+                                        disableElevation
+                                        startIcon={<Add />}
+                                        onClick={() => navigate(`/case/${caseId}/add_entry`)}
+                                    >
+                                        Add entry
+                                    </Button>
+                                )}
+                                {!isGeneral && (
+                                    <Button
+                                        startIcon={<EditOutlined />}
+                                        onClick={openEdit}
+                                    >
+                                        Edit case details
+                                    </Button>
+                                )}
+                            </Stack>
+                        </Box>
+                        <Box className={`case-review-context${isGeneral ? ' case-review-context--general' : ''}`}>
+                            <Box sx={{ minWidth: 0 }}>
                                 <Typography
-                                    variant="body2"
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
+                                    component="h2"
+                                    className="case-review-label"
                                 >
-                                    Not used for general activity
+                                    Description
                                 </Typography>
-                            ) : caseItem.codes?.length ? (
-                                <CaseCodeTooltip
-                                    codes={resolvedCaseCodes}
-                                    placement="top-start"
+                                <ProtectedText
+                                    key={caseId}
+                                    stored={caseItem.description ?? ''}
+                                    organizationId={organizationId}
+                                    emptyText="No case description"
+                                    compact
+                                    unlockLabel="Unlock description"
+                                    onDecrypted={rememberDescription}
+                                />
+                            </Box>
+                            {!isGeneral && (
+                                <Box sx={{ minWidth: 0 }}>
+                                    <Stack
+                                        direction="row"
+                                        sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+                                    >
+                                        <Typography
+                                            component="h2"
+                                            className="case-review-label"
+                                        >
+                                            Referral sources
+                                        </Typography>
+                                        <Button
+                                            size="small"
+                                            onClick={openReferralEditor}
+                                            aria-label="Edit referral sources"
+                                        >
+                                            Edit
+                                        </Button>
+                                    </Stack>
+                                    {referralSourcesRes.isLoading ? (
+                                        <CircularProgress
+                                            size={18}
+                                            aria-label="Loading referral sources"
+                                        />
+                                    ) : referralSourcesRes.data?.length ? (
+                                        <Stack spacing={0.5}>
+                                            {referralSourcesRes.data.map((source) => (
+                                                <Typography
+                                                    key={source.id}
+                                                    variant="body2"
+                                                    sx={{ overflowWrap: 'anywhere' }}
+                                                >
+                                                    {source.name}
+                                                    {source.detail ? ` — ${source.detail}` : ''}
+                                                </Typography>
+                                            ))}
+                                        </Stack>
+                                    ) : (
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >
+                                            None recorded
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )}
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography
+                                    component="h2"
+                                    className="case-review-label"
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
-                                        {resolvedCaseCodes.map((code) => (
-                                            <Chip
-                                                key={code.id}
-                                                label={code.shortName}
+                                    People{casePeople.length ? ` (${casePeople.length})` : ''}
+                                </Typography>
+                                {casePeopleRes.isLoading ? (
+                                    <CircularProgress
+                                        size={18}
+                                        aria-label="Loading case people"
+                                    />
+                                ) : casePeople.length ? (
+                                    <Stack
+                                        direction="row"
+                                        useFlexGap
+                                        spacing={1}
+                                        sx={{ flexWrap: 'wrap' }}
+                                    >
+                                        {casePeople.map((person) => (
+                                            <EntryPersonMarker
+                                                key={person.id}
+                                                person={person}
                                             />
                                         ))}
-                                    </Box>
-                                </CaseCodeTooltip>
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
-                                >
-                                    No codes assigned
-                                </Typography>
-                            )}
-                            {!isGeneral && (
-                                <Button
-                                    startIcon={<EditOutlined />}
-                                    onClick={() => setShowEditCodes(true)}
-                                    sx={{
-                                        ml: { xs: 0, sm: 'auto' },
-                                        px: 0.75,
-                                        py: 0.35,
-                                        color: 'var(--mui-palette-app-headerText)',
-                                        textTransform: 'none',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        whiteSpace: 'nowrap',
-                                        '&:hover': {
-                                            color: 'var(--mui-palette-app-headerText)',
-                                            bgcolor: 'var(--mui-palette-app-headerHover)',
-                                        },
-                                    }}
-                                >
-                                    Manage codes
-                                </Button>
-                            )}
+                                    </Stack>
+                                ) : (
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        None recorded
+                                    </Typography>
+                                )}
+                            </Box>
                         </Box>
-
-                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
-
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: 0.75,
-                                minHeight: 30,
-                                '&& .MuiChip-root': {
-                                    height: 28,
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    border: '1px solid var(--mui-palette-app-headerBorder)',
-                                    fontSize: '0.72rem',
-                                },
-                            }}
-                        >
+                        {!canAddEntry && (
                             <Typography
-                                sx={{
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    mr: 0.25,
-                                }}
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mt: 2 }}
                             >
-                                Referral sources
+                                This General record belongs to another ombuds.
                             </Typography>
-                            {isGeneral ? (
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
-                                >
-                                    Not used for general activity
-                                </Typography>
-                            ) : referralSourcesRes.isLoading ? (
-                                <CircularProgress
-                                    size={18}
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)' }}
-                                />
-                            ) : referralSourcesRes.data?.length ? (
-                                referralSourcesRes.data.map((source) => (
-                                    <Chip
-                                        key={source.id}
-                                        label={source.detail ? `${source.name} — ${source.detail}` : source.name}
-                                        size="small"
-                                    />
-                                ))
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
-                                >
-                                    None recorded
-                                </Typography>
-                            )}
-                            {!isGeneral && (
-                                <Button
-                                    startIcon={<EditOutlined />}
-                                    onClick={openReferralEditor}
-                                    sx={{
-                                        ml: { xs: 0, sm: 'auto' },
-                                        px: 0.75,
-                                        py: 0.35,
-                                        color: 'var(--mui-palette-app-headerText)',
-                                        textTransform: 'none',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        whiteSpace: 'nowrap',
-                                        '&:hover': {
-                                            color: 'var(--mui-palette-app-headerText)',
-                                            bgcolor: 'var(--mui-palette-app-headerHover)',
-                                        },
-                                    }}
-                                >
-                                    Manage referral sources
-                                </Button>
-                            )}
-                        </Box>
-
-                        <Divider sx={{ my: 1.1, borderColor: 'var(--mui-palette-app-headerBorder)' }} />
-
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: 0.75,
-                                minHeight: 54,
-                            }}
-                        >
-                            <Typography
-                                sx={{
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    mr: 0.25,
-                                }}
-                            >
-                                People
-                            </Typography>
-                            {casePeopleRes.isLoading ? (
-                                <CircularProgress
-                                    size={18}
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)' }}
-                                />
-                            ) : casePeople.length ? (
-                                casePeople.map((person) => (
-                                    <EntryPersonMarker
-                                        key={person.id}
-                                        person={person}
-                                    />
-                                ))
-                            ) : (
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: 'var(--mui-palette-app-headerMuted)', fontSize: '0.78rem' }}
-                                >
-                                    None recorded
-                                </Typography>
-                            )}
-                        </Box>
+                        )}
                     </Box>
-                </Paper>
 
-                <Box
-                    sx={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        px: pagePadding,
-                        pt: { xs: 1.5, sm: 2 },
-                        pb: { xs: 2, sm: 3, lg: 4 },
-                        display: 'grid',
-                        gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(300px, 0.8fr) minmax(0, 1.45fr)' },
-                        gap: 2.5,
-                        alignItems: 'start',
-                    }}
-                >
-                    <Paper
-                        component="section"
-                        elevation={0}
-                        sx={{
-                            bgcolor: workspace.paper,
-                            border: `1px solid ${workspace.border}`,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                        }}
-                    >
+                    <Box className={`case-review-body${isGeneral ? ' case-review-body--general' : ''}`}>
                         <Box
-                            sx={{
-                                minHeight: 72,
-                                px: { xs: 2, sm: 2.5 },
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 1.5,
-                                borderBottom: `1px solid ${workspace.border}`,
-                            }}
+                            component="section"
+                            className="case-review-index"
+                            aria-labelledby="activity-title"
                         >
-                            <Box>
+                            <Box sx={{ px: 2.5, py: 2 }}>
                                 <Typography
-                                    variant="h6"
-                                    sx={{ color: workspace.ink, fontWeight: 700 }}
+                                    component="h2"
+                                    id="activity-title"
+                                    className="case-review-section-title"
                                 >
                                     Activity
                                 </Typography>
                                 <Typography
                                     variant="body2"
-                                    sx={{ color: workspace.muted }}
+                                    color="text.secondary"
                                 >
                                     {sortedEntries.length} {sortedEntries.length === 1 ? 'entry' : 'entries'}
                                 </Typography>
                             </Box>
-                            {canAddEntry ? (
-                                <Button
-                                    variant="contained"
-                                    startIcon={<Add />}
-                                    onClick={() => navigate(`/case/${caseId}/add_entry`)}
-                                    sx={{
-                                        bgcolor: workspace.purple,
-                                        color: 'primary.contrastText',
-                                        textTransform: 'none',
-                                        fontWeight: 700,
-                                        whiteSpace: 'nowrap',
-                                        '&:hover': { bgcolor: 'primary.dark', color: 'primary.contrastText' },
-                                    }}
-                                >
-                                    Add entry
-                                </Button>
+                            {entriesRes.isLoading ? (
+                                <Box sx={{ p: 4, textAlign: 'center' }}>
+                                    <CircularProgress
+                                        size={24}
+                                        aria-label="Loading activity"
+                                    />
+                                </Box>
+                            ) : !sortedEntries.length ? (
+                                <Box sx={{ px: 2.5, pb: 3 }}>
+                                    <Typography sx={{ fontWeight: 650 }}>No activity yet</Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mt: 1 }}
+                                    >
+                                        {canAddEntry
+                                            ? 'Add the first entry to begin the case record.'
+                                            : 'No entries have been recorded.'}
+                                    </Typography>
+                                </Box>
                             ) : (
-                                <Typography
-                                    variant="caption"
-                                    sx={{ color: workspace.muted, textAlign: 'right' }}
+                                <Box
+                                    component="ul"
+                                    className="case-review-activity"
+                                    aria-label="Case activity"
                                 >
-                                    This General record belongs to another ombuds.
-                                </Typography>
+                                    {sortedEntries.map((entry) => (
+                                        <Box
+                                            component="li"
+                                            key={entry.id}
+                                        >
+                                            <ButtonBase
+                                                className={`case-review-activity-button${entry.id === highlightedId ? ' is-selected' : ''}`}
+                                                aria-pressed={entry.id === highlightedId}
+                                                aria-controls="case-entry-details"
+                                                onClick={() => setHighlightedId(entry.id)}
+                                            >
+                                                <Typography
+                                                    component="span"
+                                                    sx={{ display: 'block', fontWeight: 700, fontSize: '0.95rem' }}
+                                                >
+                                                    {formatCalendarDate(entry.date)}
+                                                </Typography>
+                                                <Typography
+                                                    component="span"
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    sx={{ display: 'block', mt: 0.25, fontSize: '0.85rem' }}
+                                                >
+                                                    {entry.medium || 'Method not recorded'} ·{' '}
+                                                    {formatMinutes(entry.duration)}
+                                                </Typography>
+                                            </ButtonBase>
+                                        </Box>
+                                    ))}
+                                </Box>
                             )}
                         </Box>
 
-                        {entriesRes.isLoading ? (
-                            <Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}>
-                                <CircularProgress
-                                    size={28}
-                                    sx={{ color: workspace.teal }}
-                                />
-                            </Box>
-                        ) : !sortedEntries.length ? (
-                            <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                                <CalendarMonthOutlined sx={{ color: 'text.disabled', fontSize: 34, mb: 1 }} />
-                                <Typography sx={{ color: workspace.ink, fontWeight: 650 }}>No activity yet</Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: workspace.muted, mt: 0.5 }}
-                                >
-                                    Add the first entry to begin the case record.
-                                </Typography>
-                            </Box>
-                        ) : (
-                            <Box
-                                role="list"
-                                aria-label="Case activity"
+                        <Box
+                            component="section"
+                            className="case-review-entry"
+                            id="case-entry-details"
+                            aria-labelledby="entry-title"
+                        >
+                            <Stack
+                                direction="row"
+                                sx={{
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'space-between',
+                                    gap: 2,
+                                    flexWrap: 'wrap',
+                                    mb: 2,
+                                }}
                             >
-                                {sortedEntries.map((entry) => {
-                                    const selected = entry.id === highlightedId
-                                    return (
-                                        <ButtonBase
-                                            key={entry.id}
-                                            role="listitem"
-                                            onClick={() => setHighlightedId(entry.id)}
-                                            sx={{
-                                                width: '100%',
-                                                px: { xs: 2, sm: 2.5 },
-                                                py: 1.75,
-                                                display: 'block',
-                                                textAlign: 'left',
-                                                borderBottom: `1px solid ${workspace.border}`,
-                                                borderLeft: '4px solid',
-                                                borderLeftColor: selected ? workspace.purple : 'transparent',
-                                                bgcolor: selected ? workspace.tealPale : workspace.paper,
-                                                transition: 'background-color 150ms ease, border-color 150ms ease',
-                                                '&:hover': {
-                                                    bgcolor: selected ? workspace.tealPale : workspace.raised,
-                                                },
-                                                '&:focus-visible': {
-                                                    outline: `3px solid ${workspace.purple}`,
-                                                    outlineOffset: -3,
-                                                },
-                                                '&:last-child': { borderBottom: 0 },
-                                            }}
+                                <Box>
+                                    <Typography className="case-review-label">Entry details</Typography>
+                                    <Typography
+                                        component="h2"
+                                        id="entry-title"
+                                        className="case-review-section-title"
+                                    >
+                                        {highlightedEntry
+                                            ? formatCalendarDate(highlightedEntry.date)
+                                            : 'Select an activity entry'}
+                                    </Typography>
+                                </Box>
+                                {highlightedEntry && highlightedEntry.ombudsId === currentOmbudsRes.data?.id && (
+                                    <Button
+                                        startIcon={<EditOutlined />}
+                                        onClick={() => navigate(`/case/${caseId}/entry/${highlightedEntry.id}/edit`)}
+                                        sx={{ textDecoration: 'underline' }}
+                                    >
+                                        Edit entry
+                                    </Button>
+                                )}
+                            </Stack>
+                            {!highlightedEntry ? (
+                                <Box
+                                    sx={{
+                                        minHeight: 220,
+                                        display: 'grid',
+                                        placeContent: 'center',
+                                        textAlign: 'center',
+                                        color: 'text.secondary',
+                                    }}
+                                >
+                                    <CalendarMonthOutlined sx={{ mx: 'auto', mb: 2, fontSize: 32 }} />
+                                    <Typography>
+                                        {sortedEntries.length
+                                            ? 'Select an activity entry to see its details.'
+                                            : 'Your case activity will appear here.'}
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                <>
+                                    <Stack
+                                        direction="row"
+                                        useFlexGap
+                                        spacing={4}
+                                        sx={{ flexWrap: 'wrap', mb: 2 }}
+                                    >
+                                        <DetailFact
+                                            label="Method"
+                                            value={highlightedEntry.medium || '—'}
+                                        />
+                                        <DetailFact
+                                            label="Duration"
+                                            value={formatMinutes(highlightedEntry.duration)}
+                                        />
+                                    </Stack>
+                                    <Divider />
+                                    <Box sx={{ py: 2, minHeight: 140, overflowWrap: 'anywhere' }}>
+                                        <Typography
+                                            component="h3"
+                                            className="case-review-label"
                                         >
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    gap: 2,
-                                                }}
+                                            Notes
+                                        </Typography>
+                                        <ProtectedText
+                                            key={highlightedEntry.id}
+                                            stored={highlightedEntry.notes ?? ''}
+                                            organizationId={organizationId}
+                                            emptyText="No notes recorded."
+                                            unlockLabel="Unlock notes"
+                                        />
+                                    </Box>
+                                    <Divider />
+                                    <Box sx={{ pt: 2 }}>
+                                        <Typography
+                                            component="h3"
+                                            className="case-review-label"
+                                        >
+                                            People in this entry
+                                        </Typography>
+                                        {highlightedPeopleRes.isLoading ? (
+                                            <CircularProgress
+                                                size={22}
+                                                aria-label="Loading entry people"
+                                            />
+                                        ) : highlightedPeopleRes.data?.length ? (
+                                            <Stack
+                                                direction="row"
+                                                useFlexGap
+                                                spacing={1}
+                                                sx={{ flexWrap: 'wrap' }}
                                             >
-                                                <Box sx={{ minWidth: 0 }}>
-                                                    <Typography sx={{ color: workspace.ink, fontWeight: 700 }}>
-                                                        {formatCalendarDate(entry.date)}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{ color: workspace.muted, mt: 0.25 }}
+                                                {highlightedPeopleRes.data.map((person) => (
+                                                    <EntryPersonMarker
+                                                        key={person.id}
+                                                        person={person}
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        ) : (
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                No people associated with this entry.
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </>
+                            )}
+                        </Box>
+
+                        {!isGeneral && (
+                            <Box
+                                component="aside"
+                                className="case-review-codes"
+                                aria-label="Case codes"
+                            >
+                                {[
+                                    { title: 'IOA Codes', ioa: true },
+                                    { title: 'Organization Codes', ioa: false },
+                                ].map((group) => {
+                                    const codes = resolvedCaseCodes.filter(
+                                        (code) => ioaCodeIdSet.has(code.id) === group.ioa,
+                                    )
+                                    return (
+                                        <Box
+                                            component="section"
+                                            key={group.title}
+                                            aria-label={group.title}
+                                        >
+                                            <Typography
+                                                component="h2"
+                                                className="case-review-label"
+                                            >
+                                                {group.title}
+                                            </Typography>
+                                            <Stack
+                                                spacing={1.5}
+                                                sx={{ mt: 1.5, mb: 0.5 }}
+                                            >
+                                                {codes.map((code) => (
+                                                    <Box
+                                                        key={code.id}
+                                                        className={`case-code-flag${group.ioa ? '' : ' case-code-flag--org'}`}
+                                                        style={caseCodeFlagStyle(caseItem.id, code.id)}
                                                     >
-                                                        {entry.medium || 'Method not recorded'}
-                                                    </Typography>
-                                                </Box>
-                                                <Chip
-                                                    icon={<ScheduleOutlined />}
-                                                    label={formatMinutes(entry.duration)}
-                                                    size="small"
-                                                    sx={{
-                                                        flexShrink: 0,
-                                                        color: selected ? workspace.tealDark : workspace.muted,
-                                                        bgcolor: selected ? 'action.selected' : 'action.hover',
-                                                        '& .MuiChip-icon': { color: 'inherit' },
-                                                    }}
-                                                />
-                                            </Box>
-                                        </ButtonBase>
+                                                        <Button
+                                                            onClick={() => setShowEditCodes(true)}
+                                                            aria-label={`Edit ${group.title}: ${code.shortName} ${code.description}`}
+                                                            sx={{
+                                                                width: '100%',
+                                                                display: 'block',
+                                                                color: 'text.primary',
+                                                                textAlign: 'left',
+                                                                py: 0.75,
+                                                                minHeight: 44,
+                                                                overflowWrap: 'anywhere',
+                                                            }}
+                                                        >
+                                                            <Typography
+                                                                component="span"
+                                                                sx={{
+                                                                    display: 'block',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.95rem',
+                                                                }}
+                                                            >
+                                                                {code.shortName}
+                                                            </Typography>
+                                                            <Typography
+                                                                component="span"
+                                                                variant="body2"
+                                                                sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}
+                                                            >
+                                                                {code.description}
+                                                            </Typography>
+                                                        </Button>
+                                                    </Box>
+                                                ))}
+                                            </Stack>
+                                            <Button
+                                                startIcon={<Add />}
+                                                onClick={() => setShowEditCodes(true)}
+                                                aria-label={`Add ${group.ioa ? 'IOA' : 'organization'} code`}
+                                                sx={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                                            >
+                                                Add code
+                                            </Button>
+                                        </Box>
                                     )
                                 })}
                             </Box>
                         )}
-                    </Paper>
-
-                    <Paper
-                        component="section"
-                        elevation={0}
-                        sx={{
-                            bgcolor: workspace.paper,
-                            border: `1px solid ${workspace.border}`,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            position: { md: 'sticky' },
-                            top: { md: 24 },
-                        }}
-                    >
-                        <Box
-                            sx={{
-                                minHeight: 72,
-                                px: { xs: 2, sm: 3 },
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 2,
-                                borderBottom: `1px solid ${workspace.border}`,
-                            }}
-                        >
-                            <Box>
-                                <Typography
-                                    variant="h6"
-                                    sx={{ color: workspace.ink, fontWeight: 700 }}
-                                >
-                                    Entry details
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{ color: workspace.muted }}
-                                >
-                                    {highlightedEntry
-                                        ? formatCalendarDate(highlightedEntry.date)
-                                        : 'Select an activity entry'}
-                                </Typography>
-                            </Box>
-                            {highlightedEntry && highlightedEntry.ombudsId === currentOmbudsRes.data?.id && (
-                                <Tooltip title="Edit entry">
-                                    <IconButton
-                                        aria-label="Edit entry"
-                                        onClick={() => navigate(`/case/${caseId}/entry/${highlightedEntry.id}/edit`)}
-                                        sx={{ color: workspace.teal }}
-                                    >
-                                        <EditOutlined />
-                                    </IconButton>
-                                </Tooltip>
-                            )}
-                        </Box>
-
-                        {!highlightedEntry ? (
-                            <Box
-                                sx={{
-                                    minHeight: 310,
-                                    px: 3,
-                                    py: 7,
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    textAlign: 'center',
-                                }}
-                            >
-                                <Box>
-                                    <CalendarMonthOutlined sx={{ color: 'text.disabled', fontSize: 38 }} />
-                                    <Typography sx={{ mt: 1, color: workspace.muted }}>
-                                        Select an activity entry to see its details.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        ) : (
-                            <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                                <Stack
-                                    direction="row"
-                                    sx={{ flexWrap: 'wrap', gap: { xs: 2, sm: 4 }, mb: 3 }}
-                                >
-                                    <DetailFact
-                                        label="Date"
-                                        value={formatCalendarDate(highlightedEntry.date)}
-                                    />
-                                    <DetailFact
-                                        label="Method"
-                                        value={highlightedEntry.medium || '—'}
-                                    />
-                                    <DetailFact
-                                        label="Duration"
-                                        value={formatMinutes(highlightedEntry.duration)}
-                                    />
-                                </Stack>
-                                <Divider sx={{ borderColor: workspace.border }} />
-
-                                <Box sx={{ py: 3 }}>
-                                    <Typography sx={{ color: workspace.ink, fontWeight: 700, mb: 1 }}>Notes</Typography>
-                                    <ProtectedText
-                                        key={highlightedEntry.id}
-                                        stored={highlightedEntry.notes ?? ''}
-                                        organizationId={organizationId}
-                                        emptyText="No notes recorded."
-                                    />
-                                </Box>
-
-                                <Divider sx={{ borderColor: workspace.border }} />
-                                <Box sx={{ pt: 3 }}>
-                                    <Typography sx={{ color: workspace.ink, fontWeight: 700, mb: 1.25 }}>
-                                        People
-                                    </Typography>
-                                    {highlightedPeopleRes.isLoading ? (
-                                        <CircularProgress
-                                            size={22}
-                                            sx={{ color: workspace.teal }}
-                                        />
-                                    ) : !(highlightedPeopleRes.data ?? []).length ? (
-                                        <Typography sx={{ color: workspace.muted, fontStyle: 'italic' }}>
-                                            No people associated with this entry.
-                                        </Typography>
-                                    ) : (
-                                        <Stack
-                                            direction="row"
-                                            sx={{ flexWrap: 'wrap', gap: 0.75 }}
-                                        >
-                                            {(highlightedPeopleRes.data ?? []).map((person) => (
-                                                <EntryPersonMarker
-                                                    key={person.id}
-                                                    person={person}
-                                                />
-                                            ))}
-                                        </Stack>
-                                    )}
-                                </Box>
-                            </Box>
-                        )}
-                    </Paper>
+                    </Box>
                 </Box>
-            </Box>
+            </ThemeProvider>
         </Box>
     )
 }
@@ -1130,19 +935,8 @@ export function CaseSummary() {
 function DetailFact({ label, value }: { label: string; value: string }) {
     return (
         <Box>
-            <Typography
-                variant="caption"
-                sx={{
-                    display: 'block',
-                    color: workspace.muted,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.7,
-                }}
-            >
-                {label}
-            </Typography>
-            <Typography sx={{ color: workspace.ink, mt: 0.25 }}>{value}</Typography>
+            <Typography className="case-review-label">{label}</Typography>
+            <Typography>{value}</Typography>
         </Box>
     )
 }

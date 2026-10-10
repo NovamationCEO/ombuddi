@@ -3,13 +3,16 @@ import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import React from 'react'
 import { CodeSource, useCodeSource } from '../../tools/useCodeSource'
 import { OrgCodeSetter } from '../OrgCodeSetter'
+import { caseCodeFlagStyle } from '../caseCodeFlagStyle'
 
 export function CaseCodeFlags({
+    caseId,
     source,
     activeCodes,
     setActiveCodes,
     disabled,
 }: {
+    caseId: string
     source: CodeSource
     activeCodes: string[]
     setActiveCodes: (codes: string[]) => void
@@ -43,6 +46,7 @@ export function CaseCodeFlags({
                     <Box
                         key={code.id}
                         className={`case-code-flag${isIoa ? '' : ' case-code-flag--org'}`}
+                        style={caseCodeFlagStyle(caseId, code.id)}
                     >
                         <Button
                             disabled={disabled}
