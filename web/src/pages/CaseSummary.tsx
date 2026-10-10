@@ -724,9 +724,9 @@ export function CaseSummary() {
                             <Stack
                                 direction="row"
                                 sx={{
-                                    alignItems: 'flex-start',
-                                    justifyContent: 'space-between',
-                                    gap: 2,
+                                    alignItems: 'flex-end',
+                                    columnGap: 3,
+                                    rowGap: 2,
                                     flexWrap: 'wrap',
                                     mb: 2,
                                 }}
@@ -743,11 +743,23 @@ export function CaseSummary() {
                                             : 'Select an activity entry'}
                                     </Typography>
                                 </Box>
+                                {highlightedEntry && (
+                                    <>
+                                        <DetailFact
+                                            label="Method"
+                                            value={highlightedEntry.medium || '—'}
+                                        />
+                                        <DetailFact
+                                            label="Duration"
+                                            value={formatMinutes(highlightedEntry.duration)}
+                                        />
+                                    </>
+                                )}
                                 {highlightedEntry && highlightedEntry.ombudsId === currentOmbudsRes.data?.id && (
                                     <Button
                                         startIcon={<EditOutlined />}
                                         onClick={() => navigate(`/case/${caseId}/entry/${highlightedEntry.id}/edit`)}
-                                        sx={{ textDecoration: 'underline' }}
+                                        sx={{ textDecoration: 'underline', ml: 'auto' }}
                                     >
                                         Edit entry
                                     </Button>
@@ -772,21 +784,6 @@ export function CaseSummary() {
                                 </Box>
                             ) : (
                                 <>
-                                    <Stack
-                                        direction="row"
-                                        useFlexGap
-                                        spacing={4}
-                                        sx={{ flexWrap: 'wrap', mb: 2 }}
-                                    >
-                                        <DetailFact
-                                            label="Method"
-                                            value={highlightedEntry.medium || '—'}
-                                        />
-                                        <DetailFact
-                                            label="Duration"
-                                            value={formatMinutes(highlightedEntry.duration)}
-                                        />
-                                    </Stack>
                                     <Divider />
                                     <Box sx={{ py: 2, minHeight: 140, overflowWrap: 'anywhere' }}>
                                         <Typography
@@ -894,7 +891,9 @@ export function CaseSummary() {
                                                             <Typography
                                                                 component="span"
                                                                 sx={{
-                                                                    display: 'block',
+                                                                    display: group.ioa ? 'inline' : 'block',
+                                                                    mr: group.ioa ? 0.75 : 0,
+                                                                    whiteSpace: group.ioa ? 'nowrap' : 'normal',
                                                                     fontWeight: 700,
                                                                     fontSize: '0.95rem',
                                                                 }}
