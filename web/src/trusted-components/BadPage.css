@@ -1,0 +1,117 @@
+.not-found-page {
+    min-height: 100vh;
+    min-height: 100svh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    color: #fff0d0;
+    color-scheme: dark;
+    background-color: #102d31;
+    background-image:
+        radial-gradient(circle at 100% 0, rgba(109, 159, 155, 0.055) 0 60px, transparent 61px),
+        linear-gradient(135deg, rgba(109, 159, 155, 0.04) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(109, 159, 155, 0.035) 25%, transparent 25%);
+    background-size: 180px 180px;
+    padding: 24px clamp(20px, 4vw, 64px) 36px;
+}
+.not-found-header a {
+    display: inline-block;
+    color: #f5f4ef;
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: -0.06em;
+    text-decoration: none;
+}
+.not-found-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding-top: 12px;
+}
+.not-found-code {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(6rem, 16vw, 10rem);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+    margin: 0;
+}
+.not-found-mascot {
+    display: block;
+    width: min(300px, 65vw);
+    height: auto;
+    margin: 8px 0 12px;
+}
+.not-found-content h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.2;
+    font-weight: 500;
+    margin: 0 0 12px;
+}
+.not-found-content p {
+    color: #bdd0ce;
+    font-size: 1.05rem;
+    margin: 0;
+}
+.not-found-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+}
+.not-found-home {
+    background: #875c9b;
+    color: #fff;
+    padding: 12px 36px;
+    min-height: 48px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 650;
+}
+.not-found-home:hover {
+    background: #70477f;
+}
+.not-found-back {
+    border: 0;
+    background: transparent;
+    color: #d1b6de;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    min-height: 44px;
+    padding: 8px 16px;
+}
+.not-found-back:hover {
+    color: #fff;
+}
+.not-found-page :focus-visible {
+    outline: 3px solid #eddcb7;
+    outline-offset: 5px;
+}
+.not-found-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+@media (max-height: 750px) {
+    .not-found-code {
+        font-size: 6rem;
+    }
+    .not-found-mascot {
+        width: min(220px, 60vw);
+    }
+}

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { WorkspaceLayout } from './components/WorkspaceLayout'
 import { Page } from './components/Page'
 import { ErrorElement } from './trusted-components/ErrorElement'
+import { BadPage } from './trusted-components/BadPage'
 import { PageAlternate } from './components/PageAlternate'
 import {
     AcceptInvitation,
@@ -177,10 +178,11 @@ const workspaceRoutes = [
     },
 ]
 
-// Public routes render standalone; everything else sits inside the authenticated
-// workspace shell, which keeps the rail and background mounted across navigation.
+// Public and unmatched routes render standalone. Known workspace routes keep
+// the authenticated rail and background mounted across navigation.
 export const router = createBrowserRouter([
     ...publicRoutes,
+    { path: '*', element: <BadPage /> },
     {
         element: <WorkspaceLayout />,
         errorElement: <ErrorElement />,

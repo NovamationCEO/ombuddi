@@ -159,3 +159,5 @@ The working decision queue is maintained in `docs/OPEN_DECISIONS.md`.
 ## Submission target
 
 Once functional, submit to IOA for feedback / informal blessing. That means we should be able to walk an IOA reviewer through how each Standard of Practice is honored — confidentiality, independence, neutrality, informality, and especially record-retention practices.
+
+- **404 — Off the map.** Unknown URLs render a standalone dark-teal patterned page with the Ombuddi monster consulting a map. Home routes to the workspace (or welcome when signed out); Go back uses prior app history when present and otherwise replaces the missing URL with Home. The page is noindex. Artwork and its generation prompt are documented in `docs/design/404-off-the-map.md`.
