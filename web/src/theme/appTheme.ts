@@ -25,7 +25,7 @@ declare module '@mui/material/styles' {
     }
 }
 
-const lightPalette = {
+export const lightPalette = {
     mode: 'light' as const,
     background: {
         default: '#F2F6F5',

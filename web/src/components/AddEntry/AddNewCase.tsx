@@ -1,15 +1,16 @@
-import { pageLayoutStyle, pageTitleStyle, pageContentStyle } from '../../theme/pageLayout'
-import { Button, TextField, Tooltip, Typography } from '@mui/material'
+import { pageLayoutStyle, pageContentStyle } from '../../theme/pageLayout'
+import { Button, Chip, Collapse, TextField, Tooltip, Typography } from '@mui/material'
+import { ThemeProvider } from '@mui/material/styles'
 import { Box, Stack } from '@mui/system'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RoundButton } from '../../trusted-components/RoundButton'
-import { Lock } from '@mui/icons-material'
-import { SaveCancel } from '../../trusted-components/SaveCancel'
+import { LockOutlined, Shuffle } from '@mui/icons-material'
 import { useSnack } from '../../libraries/useSnack'
 import { creator } from '../../tools/db_tools/creator'
-import { CodeSetterBox } from '../CodeSetterBox'
-import { RoundedContainer } from '../RoundedContainer'
+import { CaseCodeFlags } from './CaseCodeFlags'
+import { caseFolderTheme } from './caseFolderTheme'
+import { usePicklists } from '../../tools/usePicklists'
+import './CaseFolder.css'
 import { useOrganization } from '../../tools/useOrganization'
 import { ReferralSourceSelector } from '../ReferralSourceSelector'
 import { ReferralSourceSelectionType } from '../../types/majorTypes'
@@ -19,24 +20,15 @@ import { PhraseSourceControl } from '../PhraseSourceControl'
 import { encryptProtectedText } from '../../tools/notesCrypto'
 import { CaseSceneThumbnail } from '../CaseSceneThumbnail'
 
-const fieldStyle = {
-    '& .MuiInputLabel-root': { color: 'text.secondary' },
-    '& .MuiInputLabel-root.Mui-focused': { color: 'secondary.main' },
-    '& .MuiOutlinedInput-root': {
-        color: 'text.primary',
-        bgcolor: 'background.paper',
-        '& fieldset': { borderColor: 'divider' },
-        '&:hover fieldset': { borderColor: 'secondary.main' },
-        '&.Mui-focused fieldset': { borderColor: 'secondary.main' },
-    },
-} as const
-
 export function AddNewCase() {
     const [caseName, setCaseName] = React.useState('')
     const [activeIoaCodes, setActiveIoaCodes] = React.useState<string[]>([])
     const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
     const [referralSources, setReferralSources] = React.useState<ReferralSourceSelectionType[]>([])
     const [showReferralErrors, setShowReferralErrors] = React.useState(false)
+    const [referralsOpen, setReferralsOpen] = React.useState(false)
+    const [protectionOpen, setProtectionOpen] = React.useState(false)
+    const referralOptions = usePicklists('referral_source')
     const setSnack = useSnack((state) => state.setSnack)
     const navigate = useNavigate()
     const [description, setDescription] = React.useState('')
@@ -46,13 +38,6 @@ export function AddNewCase() {
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
     const newId = React.useMemo(() => crypto.randomUUID(), [])
-
-    // const [personName, setPersonName] = React.useState('')
-    // const [hash, setHash] = React.useState('')
-
-    // const hashedName = personName + hash
-
-    // const personRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', hashedName])
 
     async function getRandomName() {
         const newRandomName = await fetch('https://random-word-api.herokuapp.com/word?number=3')
@@ -76,10 +61,12 @@ export function AddNewCase() {
         }
         if (!referralSelectionsAreValid(referralSources)) {
             setShowReferralErrors(true)
+            setReferralsOpen(true)
             setSnack({ message: 'Specify the Other referral source before saving.', severity: 'error' })
             return
         }
         if (description && descriptionPhrase.phrase === null) {
+            setProtectionOpen(true)
             setSnack({
                 message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
                 severity: 'error',
@@ -133,187 +120,297 @@ export function AddNewCase() {
         navigate('/cases')
     }
 
+    const needsPhrase = !!description && descriptionPhrase.phrase === null
+    const protectionExpanded = protectionOpen || needsPhrase
+    const phraseLabel = { blank: 'Blank', default: 'Default Salt', custom: 'Free text' }[descriptionPhrase.source]
+    const phraseStatus =
+        descriptionPhrase.source === 'blank'
+            ? 'No phrase-based protection beyond organization separation.'
+            : descriptionPhrase.phrase === null
+              ? 'Choose a phrase before saving a description.'
+              : descriptionPhrase.source === 'default'
+                ? 'Using session default'
+                : 'Using a phrase for this description only.'
+
     return (
         <Box sx={pageLayoutStyle}>
-            <Stack
-                spacing={2}
-                sx={{ width: '100%', minWidth: 0 }}
-            >
-                <Box>
-                    <Typography
-                        component="h1"
-                        variant="h4"
-                        sx={pageTitleStyle}
-                    >
-                        Add New Case
-                    </Typography>
-                </Box>
-                <Stack
-                    spacing={2}
-                    sx={pageContentStyle}
-                >
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                        }}
-                    >
-                        <TextField
-                            value={caseName}
-                            onChange={(e) => setCaseName(e.target.value)}
-                            label={'Case Name'}
-                            fullWidth
-                            sx={fieldStyle}
-                        />
-                        <Box>
-                            <Tooltip
-                                title={
-                                    <Box>
+            <ThemeProvider theme={caseFolderTheme}>
+                <Box sx={pageContentStyle}>
+                    <Box className="case-folder">
+                        <Box
+                            className="case-folder-tab"
+                            aria-hidden="true"
+                        >
+                            New case
+                        </Box>
+                        <Box className="case-folder-body">
+                            <Box
+                                component="section"
+                                className="case-folder-paper"
+                                aria-labelledby="new-case-title"
+                            >
+                                <Typography
+                                    component="h1"
+                                    id="new-case-title"
+                                    sx={{
+                                        fontFamily: "Georgia, 'Times New Roman', serif",
+                                        fontSize: '1.4rem',
+                                        mb: 4,
+                                    }}
+                                >
+                                    <Box
+                                        component="span"
+                                        sx={{ color: 'text.secondary', fontWeight: 400 }}
+                                    >
+                                        Cases /{' '}
+                                    </Box>
+                                    Add New Case
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 4 }}>
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <TextField
+                                            id="case-name"
+                                            value={caseName}
+                                            onChange={(e) => setCaseName(e.target.value)}
+                                            label="Case Name"
+                                            required
+                                            fullWidth
+                                            variant="standard"
+                                            placeholder="Give this case a name"
+                                            disabled={isSaving}
+                                            slotProps={{ inputLabel: { shrink: true } }}
+                                            helperText="Visible within your organization. Avoid sensitive details."
+                                            sx={{
+                                                '& .MuiInputBase-input': {
+                                                    fontFamily: "Georgia, 'Times New Roman', serif",
+                                                    fontSize: { xs: '1.45rem', sm: '1.9rem' },
+                                                    py: 1.5,
+                                                },
+                                                '& .MuiInputLabel-root': { color: 'text.primary' },
+                                                '& .MuiFormHelperText-root': { mt: 1 },
+                                            }}
+                                        />
+                                        <Button
+                                            startIcon={<Shuffle />}
+                                            onClick={getRandomName}
+                                            disabled={isSaving}
+                                            sx={{ mt: 0.75 }}
+                                        >
+                                            Randomize
+                                        </Button>
+                                    </Box>
+                                    <Tooltip title="A stable abstract scene that helps visually distinguish this case without describing it.">
                                         <Box
                                             sx={{
-                                                fontWeight: 'bold',
+                                                width: { xs: 48, sm: 72 },
+                                                height: { xs: 48, sm: 72 },
+                                                flexShrink: 0,
+                                                mt: 2,
                                             }}
                                         >
-                                            Choose a name to identify this case.
+                                            <CaseSceneThumbnail seed={newId} />
                                         </Box>
-                                        <Box>
-                                            Security:{' '}
-                                            <em>
-                                                This name is visible within your organization. It is saved in plaintext.
-                                            </em>
-                                        </Box>
-                                        <Box>Security 0: Choose a descriptive name.</Box>
-                                        <Box>Security +1: Choose a name without sensitive information.</Box>
-                                        <Box>
-                                            Security +2: Randomize the title; it will be recognizable to you but
-                                            meaningless to anyone else.
-                                        </Box>
-                                    </Box>
-                                }
-                            >
-                                <Box>
-                                    <RoundButton bgcolor="background.paper">
-                                        <Lock sx={{ color: 'secondary.main' }} />
-                                    </RoundButton>
+                                    </Tooltip>
                                 </Box>
-                            </Tooltip>
-                        </Box>
-                        <Button
-                            variant={'outlined'}
-                            onClick={getRandomName}
-                        >
-                            Randomize
-                        </Button>
-                        <Tooltip
-                            title={
-                                'A stable abstract scene that helps visually distinguish this case without describing it.'
-                            }
-                        >
-                            <Box
-                                sx={{
-                                    padding: 1,
-                                    width: 60,
-                                    height: 60,
-                                    boxSizing: 'content-box',
-                                    bgcolor: 'background.paper',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                }}
-                            >
-                                <CaseSceneThumbnail seed={newId} />
+                                <TextField
+                                    id="case-description"
+                                    value={description}
+                                    onChange={(e) => {
+                                        setDescription(e.target.value)
+                                        if (e.target.value && descriptionPhrase.phrase === null) setProtectionOpen(true)
+                                    }}
+                                    label="Description"
+                                    placeholder="Write a brief description…"
+                                    fullWidth
+                                    multiline
+                                    minRows={5}
+                                    variant="standard"
+                                    disabled={isSaving}
+                                    slotProps={{ inputLabel: { shrink: true } }}
+                                    sx={{
+                                        '& .MuiInputLabel-root': { color: 'text.primary' },
+                                        '& .MuiInputBase-root': { mt: 3, px: 1, pb: 2 },
+                                        '& .MuiInputBase-input': { lineHeight: 1.8 },
+                                        '& .MuiInput-underline:before': { borderColor: 'divider' },
+                                    }}
+                                />
+                                <Box sx={{ py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                    <Stack
+                                        direction="row"
+                                        spacing={1.5}
+                                        sx={{ alignItems: 'flex-start' }}
+                                    >
+                                        <LockOutlined
+                                            sx={{
+                                                color:
+                                                    descriptionPhrase.source === 'blank' || needsPhrase
+                                                        ? 'warning.main'
+                                                        : 'secondary.main',
+                                                mt: 0.25,
+                                            }}
+                                        />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Typography variant="body2">
+                                                Description protection: <b>{phraseLabel}</b>
+                                            </Typography>
+                                            <Typography
+                                                variant="caption"
+                                                color={
+                                                    descriptionPhrase.source === 'blank' || needsPhrase
+                                                        ? 'warning.main'
+                                                        : 'text.secondary'
+                                                }
+                                            >
+                                                {phraseStatus}
+                                            </Typography>
+                                        </Box>
+                                        <Button
+                                            size="small"
+                                            disabled={isSaving}
+                                            aria-expanded={protectionExpanded}
+                                            aria-controls="case-protection-controls"
+                                            onClick={() => setProtectionOpen(!protectionExpanded)}
+                                            sx={{ minWidth: 0, textDecoration: 'underline' }}
+                                        >
+                                            {protectionExpanded ? (needsPhrase ? 'Set phrase' : 'Done') : 'Change'}
+                                        </Button>
+                                    </Stack>
+                                    <Collapse in={protectionExpanded}>
+                                        <Box
+                                            id="case-protection-controls"
+                                            sx={{ pt: 2 }}
+                                        >
+                                            <PhraseSourceControl
+                                                source={descriptionPhrase.source}
+                                                onSourceChange={descriptionPhrase.setSource}
+                                                customPhrase={descriptionPhrase.customPhrase}
+                                                onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
+                                                purpose="encrypt"
+                                                compact
+                                            />
+                                        </Box>
+                                    </Collapse>
+                                </Box>
+                                <Box sx={{ pt: 3 }}>
+                                    <Stack
+                                        direction="row"
+                                        sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+                                    >
+                                        <Typography
+                                            component="h2"
+                                            variant="subtitle1"
+                                        >
+                                            Referral Sources
+                                        </Typography>
+                                        <Button
+                                            size="small"
+                                            disabled={isSaving}
+                                            aria-expanded={referralsOpen}
+                                            aria-controls="case-referral-controls"
+                                            onClick={() => setReferralsOpen(!referralsOpen)}
+                                            sx={{ textDecoration: 'underline', flexShrink: 0 }}
+                                        >
+                                            {referralsOpen ? 'Done' : 'Edit sources'}
+                                        </Button>
+                                    </Stack>
+                                    {!referralsOpen && (
+                                        <Box sx={{ mt: 1 }}>
+                                            {referralSources.length === 0 ? (
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    No sources selected
+                                                </Typography>
+                                            ) : (
+                                                <Stack
+                                                    direction="row"
+                                                    useFlexGap
+                                                    spacing={1}
+                                                    sx={{ flexWrap: 'wrap' }}
+                                                >
+                                                    {referralSources.map((selection) => (
+                                                        <Chip
+                                                            key={selection.id}
+                                                            size="small"
+                                                            label={
+                                                                referralOptions.items.find(
+                                                                    (option) => option.id === selection.id,
+                                                                )?.name ?? 'Selected source'
+                                                            }
+                                                            sx={{
+                                                                maxWidth: '100%',
+                                                                height: 'auto',
+                                                                '& .MuiChip-label': { whiteSpace: 'normal', py: 0.5 },
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Stack>
+                                            )}
+                                        </Box>
+                                    )}
+                                    <Collapse in={referralsOpen}>
+                                        <Box
+                                            id="case-referral-controls"
+                                            sx={{ pt: 1 }}
+                                        >
+                                            <ReferralSourceSelector
+                                                value={referralSources}
+                                                onChange={(value) => {
+                                                    setReferralSources(value)
+                                                    setShowReferralErrors(false)
+                                                }}
+                                                showErrors={showReferralErrors}
+                                                disabled={isSaving}
+                                            />
+                                        </Box>
+                                    </Collapse>
+                                </Box>
                             </Box>
-                        </Tooltip>
-                    </Box>
-                    <Box>
-                        <TextField
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            label={'Description'}
-                            fullWidth
-                            multiline
-                            rows={3}
-                            sx={fieldStyle}
-                        />
-                        <Box sx={{ mt: 1.5 }}>
-                            <PhraseSourceControl
-                                source={descriptionPhrase.source}
-                                onSourceChange={descriptionPhrase.setSource}
-                                customPhrase={descriptionPhrase.customPhrase}
-                                onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
-                                purpose="encrypt"
-                            />
+                            <Box
+                                component="aside"
+                                className="case-folder-flags"
+                                aria-label="Case codes"
+                            >
+                                <CaseCodeFlags
+                                    source={{ kind: 'ioa' }}
+                                    activeCodes={activeIoaCodes}
+                                    setActiveCodes={setActiveIoaCodes}
+                                    disabled={isSaving}
+                                />
+                                <Box sx={{ my: 3, borderTop: '1px solid #CCBC9B' }} />
+                                <CaseCodeFlags
+                                    source={{ kind: 'org', organizationId }}
+                                    activeCodes={activeOrgCodes}
+                                    setActiveCodes={setActiveOrgCodes}
+                                    disabled={isSaving}
+                                />
+                            </Box>
                         </Box>
-                    </Box>
-                    <Stack
-                        spacing={2}
-                        direction={'row'}
-                        sx={{
-                            display: 'flex',
-                        }}
-                    >
-                        <CodeSetterBox
-                            activeCodeIds={activeIoaCodes}
-                            setActiveCodeIds={setActiveIoaCodes}
-                            source={{ kind: 'ioa' }}
-                        />
-                        <CodeSetterBox
-                            activeCodeIds={activeOrgCodes}
-                            setActiveCodeIds={setActiveOrgCodes}
-                            source={{ kind: 'org', organizationId }}
-                        />
-                    </Stack>
-                    <Stack spacing={2}>
-                        <RoundedContainer title={'Referral Sources'}>
-                            <ReferralSourceSelector
-                                value={referralSources}
-                                onChange={(value) => {
-                                    setReferralSources(value)
-                                    setShowReferralErrors(false)
-                                }}
-                                showErrors={showReferralErrors}
-                                disabled={isSaving}
-                            />
-                        </RoundedContainer>
-                    </Stack>
-                    {/* <RoundedContainer title={'Associated People'}>
-                <Box>
-                    <Stack spacing={2}>
-                        <TextField
-                            value={personName}
-                            onChange={(e) => setPersonName(e.target.value)}
-                            label={'Person Name'}
-                            fullWidth
-                        />
-                        <TextField
-                            value={hash}
-                            onChange={(e) => setHash(e.target.value)}
-                            label={'Hash'}
-                            fullWidth
-                        />
-                        <Button
-                            onClick={search}
-                            variant={'contained'}
+                        <Stack
+                            direction="row"
+                            sx={{ justifyContent: 'space-between', alignItems: 'center', pt: 3, px: { xs: 1, sm: 2 } }}
                         >
-                            Search
-                        </Button>
-
-                        <Box>
-                            <RoundButton onClick={() => navigate('/add_person')}>
-                                <Add />
-                            </RoundButton>
-                        </Box>
-                    </Stack>
+                            <Button
+                                onClick={cancel}
+                                disabled={isSaving}
+                                sx={{ color: 'text.primary' }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="contained"
+                                disableElevation
+                                onClick={save}
+                                disabled={isSaving}
+                                sx={{ px: 4, py: 1.25 }}
+                            >
+                                {isSaving ? 'Creating…' : 'Create case'}
+                            </Button>
+                        </Stack>
+                    </Box>
                 </Box>
-            </RoundedContainer> */}
-                    <SaveCancel
-                        onSave={save}
-                        onCancel={cancel}
-                        saving={isSaving}
-                    />
-                </Stack>
-            </Stack>
+            </ThemeProvider>
         </Box>
     )
 }
