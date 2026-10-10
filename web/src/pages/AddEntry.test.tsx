@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 
 import { act } from 'react'
+import { webcrypto } from 'node:crypto'
+import { useSessionSalt } from '../libraries/useSessionSalt'
+import { decryptNotes } from '../tools/notesCrypto'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PersonType } from '../types/majorTypes'
@@ -8,7 +11,10 @@ import { entryPersonChanges } from '../tools/entryPersonChanges'
 import { AddEntry } from './AddEntry'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true })
+
 const mocks = vi.hoisted(() => ({
+    params: { caseId: 'case-1', entryId: 'entry-1' as string | undefined },
     creator: vi.fn(),
     updater: vi.fn(),
     deleter: vi.fn(),
@@ -35,7 +41,7 @@ const existingPerson: PersonType = {
 }
 
 vi.mock('react-router-dom', () => ({
-    useParams: () => ({ caseId: 'case-1', entryId: 'entry-1' }),
+    useParams: () => mocks.params,
     useNavigate: () => mocks.navigate,
 }))
 
@@ -90,6 +96,8 @@ describe('AddEntry edit mode', () => {
     let root: Root
 
     beforeEach(() => {
+        mocks.params.entryId = 'entry-1'
+        useSessionSalt.getState().clearSessionSalt()
         container = document.createElement('div')
         document.body.append(container)
         root = createRoot(container)
@@ -104,6 +112,7 @@ describe('AddEntry edit mode', () => {
     afterEach(async () => {
         await act(async () => root.unmount())
         container.remove()
+        useSessionSalt.getState().clearSessionSalt()
     })
 
     it('preserves locked note bytes while saving other entry fields', async () => {
@@ -131,6 +140,38 @@ describe('AddEntry edit mode', () => {
         expect(mocks.creator).not.toHaveBeenCalled()
         expect(mocks.deleter).not.toHaveBeenCalled()
         expect(mocks.navigate).toHaveBeenCalledWith('/case/case-1')
+    })
+
+    it('requires explicit phrase confirmation before saving a new encrypted note', async () => {
+        mocks.params.entryId = undefined
+        useSessionSalt.getState().setSessionSalt('sample phrase')
+        await act(async () => root.render(<AddEntry />))
+        expect(container.textContent).toContain('New case note')
+        const textarea = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Entry notes"]')!
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+                textarea,
+                'A sample interaction',
+            )
+            textarea.dispatchEvent(new Event('input', { bubbles: true }))
+        })
+        const saveButton = [...container.querySelectorAll('button')].find(
+            (button) => button.textContent === 'Save entry',
+        )!
+        expect(saveButton.disabled).toBe(true)
+        await act(async () =>
+            [...container.querySelectorAll('button')]
+                .find((button) => button.textContent === 'Use this phrase')
+                ?.click(),
+        )
+        expect(saveButton.disabled).toBe(false)
+        await act(async () => {
+            saveButton.click()
+            await new Promise((resolve) => setTimeout(resolve, 250))
+        })
+        const payload = mocks.creator.mock.calls[0][1]
+        expect(payload).toMatchObject({ caseId: 'case-1', medium: 'Phone', duration: 30, personIds: [] })
+        expect(await decryptNotes(payload.notes, 'sample phrase', 'org-1')).toBe('A sample interaction')
     })
 
     it('calculates people additions and removals without duplicating unchanged people', () => {

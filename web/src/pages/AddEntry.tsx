@@ -1,19 +1,17 @@
-import { pagePadding, pageTitleStyle } from '../theme/pageLayout'
+import { pageLayoutStyle } from '../theme/pageLayout'
 import {
     Alert,
     Box,
     Button,
     Chip,
     CircularProgress,
+    Collapse,
+    MenuItem,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     Divider,
-    FormControlLabel,
-    Paper,
-    Radio,
-    RadioGroup,
     Stack,
     TextField,
     Typography,
@@ -42,31 +40,10 @@ import { entryPersonChanges } from '../tools/entryPersonChanges'
 import { calendarDateInputValue, localCalendarDateInputValue } from '../tools/calendarDate'
 import { protectedTextForSave } from '../tools/protectedTextEdit'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
-
-const entryWorkspace = {
-    paper: 'var(--mui-palette-background-paper)',
-    ink: 'var(--mui-palette-text-primary)',
-    muted: 'var(--mui-palette-text-secondary)',
-    teal: 'var(--mui-palette-secondary-main)',
-    tealDark: 'var(--mui-palette-secondary-dark)',
-    tealPale: 'var(--mui-palette-app-surfaceTint)',
-    border: 'var(--mui-palette-divider)',
-    borderStrong: 'var(--mui-palette-app-borderStrong)',
-    purple: 'var(--mui-palette-primary-main)',
-    purpleDark: 'var(--mui-palette-primary-dark)',
-} as const
-
-const fieldStyle = {
-    '& .MuiInputLabel-root': { color: entryWorkspace.muted },
-    '& .MuiInputLabel-root.Mui-focused': { color: entryWorkspace.teal },
-    '& .MuiOutlinedInput-root': {
-        color: entryWorkspace.ink,
-        bgcolor: entryWorkspace.paper,
-        '& fieldset': { borderColor: entryWorkspace.borderStrong },
-        '&:hover fieldset': { borderColor: entryWorkspace.teal },
-        '&.Mui-focused fieldset': { borderColor: entryWorkspace.teal },
-    },
-} as const
+import { ThemeProvider } from '@mui/material/styles'
+import { caseFolderTheme } from '../theme/caseFolderTheme'
+import '../theme/caseFolder.css'
+import './AddEntry.css'
 
 /** Compact label for a Person chip — demographics only, no identity. */
 function personLabel(p: PersonType): string {
@@ -96,6 +73,7 @@ export function AddEntry() {
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => localCalendarDateInputValue())
     const notePhrase = usePhraseSelection('default', true)
+    const [protectionOpen, setProtectionOpen] = useState(false)
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
     const initializedEntryId = React.useRef<string | null>(null)
@@ -476,274 +454,252 @@ export function AddEntry() {
                 </DialogActions>
             </Dialog>
 
-            <Box sx={{ minHeight: '100%', bgcolor: 'transparent', color: entryWorkspace.ink }}>
-                <Box
-                    component="header"
-                    sx={{
-                        color: 'var(--mui-palette-app-headerText)',
-                        background:
-                            'linear-gradient(135deg, var(--mui-palette-app-headerStart) 0%, var(--mui-palette-app-headerEnd) 100%)',
-                        borderBottom: '1px solid var(--mui-palette-app-headerBorder)',
-                        boxShadow: '0 8px 22px var(--mui-palette-app-shadow)',
-                    }}
-                >
+            <Box sx={pageLayoutStyle}>
+                <ThemeProvider theme={caseFolderTheme}>
                     <Box
-                        sx={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            px: pagePadding,
-                            pt: pagePadding,
-                            pb: 2.5,
-                            display: 'flex',
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            alignItems: { xs: 'stretch', sm: 'center' },
-                            justifyContent: 'space-between',
-                            gap: 1.5,
-                        }}
+                        component="main"
+                        className="case-folder case-note-folder"
+                        aria-labelledby="case-note-title"
                     >
-                        <Box>
-                            <Button
-                                startIcon={<ArrowBack />}
-                                onClick={() => navigate(`/case/${caseId}`)}
-                                sx={{
-                                    px: 0.25,
-                                    py: 0.2,
-                                    mb: 0.3,
-                                    color: 'var(--mui-palette-primary-light)',
-                                    textTransform: 'none',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    '&:hover': {
-                                        color: 'var(--mui-palette-app-headerText)',
-                                        bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    },
-                                }}
-                            >
-                                {caseRes.data?.name ?? 'Back to case'}
-                            </Button>
-                            <Typography
-                                variant="h4"
-                                component="h1"
-                                sx={{ ...pageTitleStyle, color: 'var(--mui-palette-app-headerText)' }}
-                            >
-                                {isEditing ? 'Edit case note' : 'New case note'}
-                            </Typography>
-                        </Box>
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
-                        >
-                            <Button
-                                variant="outlined"
-                                onClick={() => navigate(`/case/${caseId}`)}
-                                disabled={isSaving}
-                                sx={{
-                                    flex: { xs: 1, sm: 'initial' },
-                                    color: 'var(--mui-palette-app-headerText)',
-                                    borderColor: 'var(--mui-palette-secondary-main)',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    '&:hover': {
-                                        color: 'var(--mui-palette-app-headerText)',
-                                        borderColor: 'var(--mui-palette-app-headerMuted)',
-                                        bgcolor: 'var(--mui-palette-app-headerHover)',
-                                    },
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="contained"
-                                startIcon={<SaveOutlined />}
-                                onClick={save}
-                                disabled={
-                                    isSaving ||
-                                    !caseRes.data?.organizationId ||
-                                    Boolean(
-                                        !notesLocked &&
-                                        (isEditing ? changeNoteProtection || notesNeedProtection : notes) &&
-                                        notePhrase.phrase === null,
-                                    )
-                                }
-                                sx={{
-                                    flex: { xs: 1, sm: 'initial' },
-                                    color: 'var(--mui-palette-primary-contrastText)',
-                                    bgcolor: entryWorkspace.purple,
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    '&:hover': {
-                                        color: 'var(--mui-palette-primary-contrastText)',
-                                        bgcolor: entryWorkspace.purpleDark,
-                                    },
-                                }}
-                            >
-                                {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Save entry'}
-                            </Button>
-                        </Stack>
-                    </Box>
-                </Box>
-
-                <Box
-                    component="main"
-                    sx={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        p: pagePadding,
-                        display: 'grid',
-                        gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.45fr) minmax(300px, 0.72fr)' },
-                        gap: 2.5,
-                        alignItems: 'start',
-                    }}
-                >
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            bgcolor: entryWorkspace.paper,
-                            color: entryWorkspace.ink,
-                            border: `1px solid ${entryWorkspace.border}`,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                        }}
-                    >
-                        <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                            <Box
-                                sx={{
-                                    mb: 1.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    flexWrap: 'wrap',
-                                    gap: 1,
-                                }}
-                            >
-                                <Box>
+                        <Box className="case-folder-tab">Case note</Box>
+                        <Box className="case-folder-body">
+                            <Box className="case-folder-paper case-note-paper">
+                                <Box component="header">
+                                    <Button
+                                        startIcon={<ArrowBack />}
+                                        onClick={() => navigate(`/case/${caseId}`)}
+                                        sx={{ px: 0, mb: 1, textAlign: 'left', overflowWrap: 'anywhere' }}
+                                    >
+                                        {caseRes.data?.name ?? 'Back to case'}
+                                    </Button>
                                     <Typography
-                                        variant="h6"
-                                        sx={{ color: entryWorkspace.ink, fontWeight: 700 }}
+                                        component="h1"
+                                        id="case-note-title"
+                                        className="case-note-title"
+                                    >
+                                        {isEditing ? 'Edit case note' : 'New case note'}
+                                    </Typography>
+                                </Box>
+                                <Box className="case-note-details">
+                                    <TextField
+                                        type="date"
+                                        value={eventDate}
+                                        onChange={(event) => setEventDate(event.target.value)}
+                                        label="Event date"
+                                        variant="standard"
+                                        fullWidth
+                                        disabled={isSaving}
+                                        slotProps={{ inputLabel: { shrink: true } }}
+                                    />
+                                    <NoteChoice
+                                        label="Method"
+                                        value={medium}
+                                        onChange={setMedium}
+                                        items={mediums.items}
+                                        disabled={isSaving}
+                                    />
+                                    <TextField
+                                        type="number"
+                                        label="Duration (minutes)"
+                                        value={duration}
+                                        onChange={(event) => setDuration(Number(event.target.value))}
+                                        variant="standard"
+                                        fullWidth
+                                        disabled={isSaving}
+                                        slotProps={{ htmlInput: { min: 0, step: 1 }, inputLabel: { shrink: true } }}
+                                    />
+                                </Box>
+                                <Box
+                                    component="section"
+                                    aria-labelledby="note-writing-label"
+                                    className="case-note-writing"
+                                >
+                                    <Typography
+                                        component="h2"
+                                        id="note-writing-label"
+                                        sx={{ fontSize: '0.9rem', fontWeight: 700, mb: 1.5 }}
                                     >
                                         Notes
                                     </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ color: entryWorkspace.muted }}
-                                    >
-                                        Capture the interaction while it is fresh.
-                                    </Typography>
-                                </Box>
-                                <Stack
-                                    direction="row"
-                                    spacing={0.75}
-                                    sx={{ alignItems: 'center', color: entryWorkspace.tealDark }}
-                                >
-                                    <LockOutlined sx={{ fontSize: 17 }} />
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ fontWeight: 650 }}
-                                    >
-                                        Encrypted when saved
-                                    </Typography>
-                                </Stack>
-                            </Box>
-                            {notesLocked ? (
-                                <Box
-                                    sx={{
-                                        minHeight: 180,
-                                        display: 'grid',
-                                        placeItems: 'center',
-                                        border: '1px solid',
-                                        borderColor: entryWorkspace.border,
-                                        borderRadius: 2,
-                                        bgcolor: entryWorkspace.tealPale,
-                                    }}
-                                >
-                                    <Stack
-                                        spacing={1}
-                                        sx={{ alignItems: 'center', textAlign: 'center', p: 3 }}
-                                    >
-                                        <Typography
-                                            variant="body2"
-                                            sx={{ color: entryWorkspace.muted }}
-                                        >
-                                            Unlock this note to edit its text or change the phrase used to protect it.
-                                        </Typography>
-                                        <ProtectedText
-                                            stored={storedNotes}
-                                            organizationId={caseRes.data?.organizationId ?? ''}
-                                            emptyText="No notes recorded."
-                                            onDecrypted={(plaintext, phraseUsed) => {
-                                                setNotes(plaintext)
-                                                setOriginalNotes(plaintext)
-                                                setUnlockPhrase(phraseUsed)
-                                                setNotesLocked(false)
+                                    {notesLocked ? (
+                                        <Box className="case-note-locked">
+                                            <LockOutlined sx={{ color: 'text.secondary', fontSize: 28 }} />
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Unlock this note to edit its text.
+                                            </Typography>
+                                            <ProtectedText
+                                                stored={storedNotes}
+                                                organizationId={caseRes.data?.organizationId ?? ''}
+                                                emptyText="No notes recorded."
+                                                unlockLabel="Unlock notes"
+                                                onDecrypted={(plaintext, phraseUsed) => {
+                                                    setNotes(plaintext)
+                                                    setOriginalNotes(plaintext)
+                                                    setUnlockPhrase(phraseUsed)
+                                                    setNotesLocked(false)
+                                                }}
+                                            />
+                                        </Box>
+                                    ) : (
+                                        <TextField
+                                            value={notes}
+                                            onChange={(event) => setNotes(event.target.value)}
+                                            multiline
+                                            minRows={10}
+                                            fullWidth
+                                            variant="standard"
+                                            disabled={isSaving}
+                                            placeholder="Record the interaction, options discussed, and any planned follow-up…"
+                                            slotProps={{
+                                                input: { disableUnderline: true },
+                                                htmlInput: { 'aria-label': 'Entry notes' },
+                                            }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    p: 0,
+                                                    lineHeight: 1.8,
+                                                    alignItems: 'flex-start',
+                                                },
                                             }}
                                         />
-                                    </Stack>
+                                    )}
                                 </Box>
-                            ) : (
-                                <>
-                                    <TextField
-                                        aria-label="Entry notes"
-                                        value={notes}
-                                        onChange={(event) => setNotes(event.target.value)}
-                                        multiline
-                                        minRows={12}
-                                        fullWidth
-                                        placeholder="Record the interaction, options discussed, and any planned follow-up…"
-                                        sx={fieldStyle}
-                                    />
-                                    <Box sx={{ mt: 1.5 }}>
-                                        {isEditing ? (
-                                            notesNeedProtection ? (
-                                                <Stack spacing={1.25}>
-                                                    <Alert severity="warning">
-                                                        This text was not previously protected. Choose how to protect it
-                                                        before saving; it will not be stored as plaintext.
-                                                    </Alert>
-                                                    <PhraseSourceControl
-                                                        source={notePhrase.source}
-                                                        onSourceChange={notePhrase.setSource}
-                                                        customPhrase={notePhrase.customPhrase}
-                                                        onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                        defaultConfirmed={notePhrase.defaultConfirmed}
-                                                        onConfirmDefault={notePhrase.confirmDefault}
-                                                        purpose="encrypt"
-                                                    />
+                                {!notesLocked && (
+                                    <Box className="case-note-protection">
+                                        {isEditing && !notesNeedProtection && !changeNoteProtection ? (
+                                            <Stack
+                                                direction="row"
+                                                useFlexGap
+                                                spacing={1}
+                                                sx={{
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    flexWrap: 'wrap',
+                                                }}
+                                            >
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    sx={{ alignItems: 'center' }}
+                                                >
+                                                    <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
+                                                    <Typography variant="body2">Protection unchanged</Typography>
                                                 </Stack>
-                                            ) : (
-                                                <Stack spacing={1.25}>
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{ color: entryWorkspace.muted }}
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => setChangeNoteProtection(true)}
+                                                >
+                                                    Change protection phrase
+                                                </Button>
+                                            </Stack>
+                                        ) : (
+                                            <>
+                                                <Stack
+                                                    direction="row"
+                                                    useFlexGap
+                                                    spacing={1}
+                                                    sx={{
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        flexWrap: 'wrap',
+                                                    }}
+                                                >
+                                                    <Stack
+                                                        direction="row"
+                                                        spacing={1}
+                                                        sx={{ alignItems: 'center' }}
                                                     >
-                                                        Saving keeps the note’s existing protection. Its phrase changes
-                                                        only if you explicitly choose to replace it.
-                                                    </Typography>
-                                                    {!changeNoteProtection ? (
-                                                        <Button
-                                                            variant="outlined"
-                                                            size="small"
-                                                            onClick={() => setChangeNoteProtection(true)}
-                                                            sx={{ alignSelf: 'flex-start' }}
+                                                        <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
+                                                        <Typography variant="body2">
+                                                            {notePhrase.source === 'blank'
+                                                                ? 'Blank phrase'
+                                                                : notePhrase.source === 'custom'
+                                                                  ? 'Phrase for this note'
+                                                                  : 'Default Encryption Phrase'}
+                                                        </Typography>
+                                                    </Stack>
+                                                    <Stack
+                                                        direction="row"
+                                                        useFlexGap
+                                                        spacing={1}
+                                                        sx={{ flexWrap: 'wrap' }}
+                                                    >
+                                                        {notePhrase.source === 'default' &&
+                                                            notePhrase.defaultPhrase &&
+                                                            !notePhrase.defaultConfirmed && (
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    onClick={notePhrase.confirmDefault}
+                                                                >
+                                                                    Use this phrase
+                                                                </Button>
+                                                            )}
+                                                        {!changeNoteProtection && !notesNeedProtection && (
+                                                            <Button
+                                                                size="small"
+                                                                aria-expanded={
+                                                                    protectionOpen ||
+                                                                    changeNoteProtection ||
+                                                                    notesNeedProtection
+                                                                }
+                                                                aria-controls="note-protection-controls"
+                                                                onClick={() => setProtectionOpen((open) => !open)}
+                                                            >
+                                                                {protectionOpen ? 'Done' : 'Change'}
+                                                            </Button>
+                                                        )}
+                                                    </Stack>
+                                                </Stack>
+                                                {notePhrase.phrase === null &&
+                                                    !changeNoteProtection &&
+                                                    !notesNeedProtection && (
+                                                        <Typography
+                                                            variant="caption"
+                                                            color="text.secondary"
+                                                            sx={{ display: 'block', mt: 0.5 }}
                                                         >
-                                                            Change protection phrase
-                                                        </Button>
-                                                    ) : (
-                                                        <>
+                                                            {notePhrase.source === 'default' && notePhrase.defaultPhrase
+                                                                ? 'Confirm this phrase to protect the note.'
+                                                                : 'Choose a phrase before saving text.'}
+                                                        </Typography>
+                                                    )}
+                                                <Collapse
+                                                    in={protectionOpen || changeNoteProtection || notesNeedProtection}
+                                                >
+                                                    <Stack
+                                                        spacing={1.5}
+                                                        id="note-protection-controls"
+                                                        sx={{ pt: 2 }}
+                                                    >
+                                                        {changeNoteProtection && (
                                                             <Alert severity="warning">
                                                                 Changing this phrase replaces the only phrase that can
                                                                 recover this note. Confirm it carefully; exact spaces
                                                                 count.
                                                             </Alert>
-                                                            <PhraseSourceControl
-                                                                source={notePhrase.source}
-                                                                onSourceChange={notePhrase.setSource}
-                                                                customPhrase={notePhrase.customPhrase}
-                                                                onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                                defaultConfirmed={notePhrase.defaultConfirmed}
-                                                                onConfirmDefault={notePhrase.confirmDefault}
-                                                                purpose="encrypt"
-                                                            />
+                                                        )}
+                                                        {notesNeedProtection && (
+                                                            <Alert severity="warning">
+                                                                This text was not previously protected. Choose how to
+                                                                protect it before saving; it will not be stored as
+                                                                plaintext.
+                                                            </Alert>
+                                                        )}
+                                                        <PhraseSourceControl
+                                                            source={notePhrase.source}
+                                                            onSourceChange={notePhrase.setSource}
+                                                            customPhrase={notePhrase.customPhrase}
+                                                            onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                            defaultConfirmed={notePhrase.defaultConfirmed}
+                                                            onConfirmDefault={notePhrase.confirmDefault}
+                                                            purpose="encrypt"
+                                                            compact
+                                                        />
+                                                        {changeNoteProtection && (
                                                             <Button
                                                                 size="small"
                                                                 onClick={() => setChangeNoteProtection(false)}
@@ -751,226 +707,162 @@ export function AddEntry() {
                                                             >
                                                                 Keep existing protection
                                                             </Button>
-                                                        </>
-                                                    )}
-                                                </Stack>
-                                            )
-                                        ) : (
-                                            <PhraseSourceControl
-                                                source={notePhrase.source}
-                                                onSourceChange={notePhrase.setSource}
-                                                customPhrase={notePhrase.customPhrase}
-                                                onCustomPhraseChange={notePhrase.setCustomPhrase}
-                                                defaultConfirmed={notePhrase.defaultConfirmed}
-                                                onConfirmDefault={notePhrase.confirmDefault}
-                                                purpose="encrypt"
-                                            />
+                                                        )}
+                                                    </Stack>
+                                                </Collapse>
+                                            </>
                                         )}
                                     </Box>
-                                </>
-                            )}
-                        </Box>
-
-                        <Divider sx={{ borderColor: entryWorkspace.border }} />
-
-                        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+                                )}
+                                <Stack
+                                    component="footer"
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{ justifyContent: 'flex-end', mt: 3 }}
+                                >
+                                    <Button
+                                        onClick={() => navigate(`/case/${caseId}`)}
+                                        disabled={isSaving}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<SaveOutlined />}
+                                        onClick={save}
+                                        disabled={
+                                            isSaving ||
+                                            !caseRes.data?.organizationId ||
+                                            Boolean(
+                                                !notesLocked &&
+                                                (isEditing ? changeNoteProtection || notesNeedProtection : notes) &&
+                                                notePhrase.phrase === null,
+                                            )
+                                        }
+                                    >
+                                        {isSaving ? 'Saving…' : isEditing ? 'Save changes' : 'Save entry'}
+                                    </Button>
+                                </Stack>
+                            </Box>
                             <Box
-                                sx={{
-                                    mb: entryPeople.length ? 1.5 : 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    flexWrap: 'wrap',
-                                    gap: 1.5,
-                                }}
+                                component="aside"
+                                className="case-note-margin"
+                                aria-label="People and priority"
                             >
-                                <Box>
+                                <Box
+                                    component="section"
+                                    aria-labelledby="note-people-title"
+                                >
                                     <Typography
-                                        variant="h6"
-                                        sx={{ color: entryWorkspace.ink, fontWeight: 700 }}
+                                        component="h2"
+                                        id="note-people-title"
+                                        sx={{ fontSize: '1rem', fontWeight: 700, mb: 1.5 }}
                                     >
                                         People
                                     </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ color: entryWorkspace.muted }}
+                                    {entryPeople.length ? (
+                                        <Stack
+                                            spacing={1}
+                                            sx={{ alignItems: 'flex-start', mb: 1 }}
+                                        >
+                                            {entryPeople.map((person) => (
+                                                <Chip
+                                                    key={person.id}
+                                                    avatar={<PersonAvatar person={person} />}
+                                                    label={personLabel(person)}
+                                                    onDelete={isSaving ? undefined : () => removePerson(person.id)}
+                                                    sx={{
+                                                        maxWidth: '100%',
+                                                        bgcolor: 'rgba(255,255,255,0.5)',
+                                                        '& .MuiChip-label': {
+                                                            whiteSpace: 'normal',
+                                                            overflowWrap: 'anywhere',
+                                                        },
+                                                        height: 'auto',
+                                                        minHeight: 36,
+                                                        py: 0.5,
+                                                    }}
+                                                />
+                                            ))}
+                                        </Stack>
+                                    ) : (
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{ mb: 1 }}
+                                        >
+                                            No people added yet.
+                                        </Typography>
+                                    )}
+                                    <Button
+                                        startIcon={<PersonAddOutlined />}
+                                        disabled={isSaving}
+                                        onClick={() => setShowPeopleDialog(true)}
+                                        sx={{ px: 0 }}
                                     >
-                                        {entryPeople.length
-                                            ? `${entryPeople.length} associated with this entry`
-                                            : 'No people associated with this entry.'}
-                                    </Typography>
+                                        {isEditing ? 'Manage people' : 'Add people'}
+                                    </Button>
                                 </Box>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<PersonAddOutlined />}
-                                    onClick={() => setShowPeopleDialog(true)}
-                                    sx={{
-                                        color: entryWorkspace.teal,
-                                        borderColor: entryWorkspace.borderStrong,
-                                        textTransform: 'none',
-                                        fontWeight: 700,
-                                        '&:hover': {
-                                            borderColor: entryWorkspace.teal,
-                                            bgcolor: entryWorkspace.tealPale,
-                                        },
-                                    }}
-                                >
-                                    {isEditing ? 'Manage people' : 'Add people'}
-                                </Button>
+                                <Divider sx={{ my: 3, borderColor: '#ccbc9b' }} />
+                                <NoteChoice
+                                    label="Priority"
+                                    value={entryPriority}
+                                    onChange={setEntryPriority}
+                                    items={priorities.items}
+                                    disabled={isSaving}
+                                />
                             </Box>
-                            {!!entryPeople.length && (
-                                <Stack
-                                    direction="row"
-                                    sx={{ flexWrap: 'wrap', gap: 0.75 }}
-                                >
-                                    {entryPeople.map((person) => (
-                                        <Chip
-                                            key={person.id}
-                                            avatar={<PersonAvatar person={person} />}
-                                            label={personLabel(person)}
-                                            onDelete={() => removePerson(person.id)}
-                                            sx={{
-                                                color: entryWorkspace.tealDark,
-                                                bgcolor: entryWorkspace.tealPale,
-                                                '& .MuiChip-deleteIcon': { color: entryWorkspace.teal },
-                                            }}
-                                        />
-                                    ))}
-                                </Stack>
-                            )}
                         </Box>
-                    </Paper>
-
-                    <Paper
-                        component="aside"
-                        elevation={0}
-                        sx={{
-                            bgcolor: entryWorkspace.paper,
-                            color: entryWorkspace.ink,
-                            border: `1px solid ${entryWorkspace.border}`,
-                            borderRadius: 3,
-                            overflow: 'hidden',
-                            position: { md: 'sticky' },
-                            top: { md: 24 },
-                        }}
-                    >
-                        <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-                            <Typography
-                                variant="h6"
-                                sx={{ color: entryWorkspace.ink, fontWeight: 700, mb: 0.25 }}
-                            >
-                                Entry details
-                            </Typography>
-                            <Typography
-                                variant="body2"
-                                sx={{ color: entryWorkspace.muted, mb: 2 }}
-                            >
-                                When and how the interaction occurred.
-                            </Typography>
-                            <Stack spacing={2}>
-                                <TextField
-                                    type="date"
-                                    value={eventDate}
-                                    onChange={(event) => setEventDate(event.target.value)}
-                                    label="Event date"
-                                    fullWidth
-                                    slotProps={{ inputLabel: { shrink: true } }}
-                                    sx={fieldStyle}
-                                />
-                                <TextField
-                                    type="number"
-                                    label="Duration (minutes)"
-                                    value={duration}
-                                    onChange={(event) => setDuration(Number(event.target.value))}
-                                    fullWidth
-                                    slotProps={{ htmlInput: { min: 0, step: 1 } }}
-                                    sx={fieldStyle}
-                                />
-                            </Stack>
-                        </Box>
-
-                        <Divider sx={{ borderColor: entryWorkspace.border }} />
-
-                        <ChoiceTiles
-                            label="Method"
-                            value={medium}
-                            onChange={setMedium}
-                            items={mediums.items}
-                        />
-
-                        <Divider sx={{ borderColor: entryWorkspace.border }} />
-
-                        <ChoiceTiles
-                            label="Priority"
-                            value={entryPriority}
-                            onChange={setEntryPriority}
-                            items={priorities.items}
-                        />
-                    </Paper>
-                </Box>
+                    </Box>
+                </ThemeProvider>
             </Box>
         </Box>
     )
 }
 
-function ChoiceTiles(props: {
+function NoteChoice({
+    label,
+    value,
+    onChange,
+    items,
+    disabled,
+}: {
     label: string
     value: string
     onChange: (value: string) => void
     items: { id: string; name: string }[]
+    disabled: boolean
 }) {
-    const { label, value, onChange, items } = props
-
+    // Preserve a saved value even when its organization picklist has changed.
+    const options = [...new Set([...items.map((item) => item.name), ...(value ? [value] : [])])]
     return (
-        <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Typography sx={{ color: entryWorkspace.ink, fontWeight: 700, mb: 1.25 }}>{label}</Typography>
-            {items.length ? (
-                <RadioGroup
-                    value={value}
-                    onChange={(event) => onChange(event.target.value)}
-                    sx={{ gap: 0.75 }}
+        <TextField
+            select
+            label={label}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            variant="standard"
+            fullWidth
+            disabled={disabled || !options.length}
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText={options.length ? undefined : `No ${label.toLowerCase()} options configured.`}
+        >
+            {!value && (
+                <MenuItem
+                    value=""
+                    disabled
                 >
-                    {items.map((item) => {
-                        const selected = item.name === value
-                        return (
-                            <FormControlLabel
-                                key={item.id}
-                                value={item.name}
-                                control={
-                                    <Radio
-                                        size="small"
-                                        sx={{
-                                            color: 'text.disabled',
-                                            '&.Mui-checked': { color: entryWorkspace.teal },
-                                        }}
-                                    />
-                                }
-                                label={item.name}
-                                sx={{
-                                    m: 0,
-                                    px: 1,
-                                    py: 0.25,
-                                    width: '100%',
-                                    boxSizing: 'border-box',
-                                    color: selected ? entryWorkspace.tealDark : entryWorkspace.ink,
-                                    bgcolor: selected ? entryWorkspace.tealPale : entryWorkspace.paper,
-                                    border: '1px solid',
-                                    borderColor: selected ? entryWorkspace.teal : entryWorkspace.borderStrong,
-                                    borderRadius: 2,
-                                    '& .MuiFormControlLabel-label': { fontWeight: selected ? 700 : 500 },
-                                }}
-                            />
-                        )
-                    })}
-                </RadioGroup>
-            ) : (
-                <Typography
-                    variant="body2"
-                    sx={{ color: entryWorkspace.muted, fontStyle: 'italic' }}
-                >
-                    No {label.toLowerCase()} options configured.
-                </Typography>
+                    Choose {label.toLowerCase()}
+                </MenuItem>
             )}
-        </Box>
+            {options.map((name) => (
+                <MenuItem
+                    key={name}
+                    value={name}
+                >
+                    {name}
+                </MenuItem>
+            ))}
+        </TextField>
     )
 }

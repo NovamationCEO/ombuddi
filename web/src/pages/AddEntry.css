@@ -1,0 +1,55 @@
+.case-note-folder {
+    max-width: 1280px;
+    box-sizing: border-box;
+}
+.case-note-paper {
+    border-radius: 2px;
+}
+.case-note-paper .case-note-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+    line-height: 1.2;
+    margin-bottom: 28px;
+}
+.case-note-details {
+    display: grid;
+    grid-template-columns: minmax(145px, 1fr) minmax(120px, 1fr) minmax(120px, 0.9fr);
+    gap: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #dddfdb;
+}
+.case-note-writing {
+    padding-top: 24px;
+    padding-bottom: 28px;
+}
+.case-note-locked {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+}
+.case-note-protection {
+    border-top: 1px solid #dddfdb;
+    padding-top: 18px;
+}
+.case-note-margin {
+    min-width: 0;
+    padding: 30px 4px 12px;
+}
+@media (max-width: 1100px) and (min-width: 801px), (max-width: 600px) {
+    .case-note-details {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 20px;
+    }
+    .case-note-details > :first-child {
+        grid-column: 1 / -1;
+    }
+}
+@media (max-width: 800px) {
+    .case-note-margin {
+        padding: 8px;
+    }
+}
