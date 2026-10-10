@@ -4,16 +4,19 @@ import {
     BusinessRounded,
     FolderRounded,
     HomeRounded,
+    LockOutlined,
     ManageAccountsRounded,
     PersonRounded,
 } from '@mui/icons-material'
-import { Box, ButtonBase, Tooltip, useMediaQuery, useTheme } from '@mui/material'
+import { Box, ButtonBase, IconButton, Tooltip, useMediaQuery, useTheme } from '@mui/material'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import mascot from '../assets/images/mascot.webp'
 import { institutionalPalette as palette } from '../theme/institutionalPalette'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
 import { AccountButton } from './AccountButton'
+import { DefaultPhraseDialog } from './DefaultPhraseDialog'
 
 type RailLinkProps = {
     icon: ReactNode
@@ -55,6 +58,7 @@ function RailLink({ icon, label, path, selected }: RailLinkProps) {
 }
 
 export function AppRail() {
+    const [phraseOpen, setPhraseOpen] = useState(false)
     const location = useLocation()
     const navigate = useNavigate()
     const theme = useTheme()
@@ -193,6 +197,10 @@ export function AppRail() {
                     flexShrink: 0,
                     mt: { xs: 0, md: 'auto' },
                     ml: { xs: 0.75, md: 0 },
+                    display: 'flex',
+                    flexDirection: { xs: 'row', md: 'column' },
+                    alignItems: 'center',
+                    gap: 1,
                     '& > div': {
                         borderColor: 'primary.light',
                         bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',
@@ -200,8 +208,29 @@ export function AppRail() {
                     '& .MuiIconButton-root': { color: palette.purpleLight },
                 }}
             >
+                <Tooltip
+                    title="Default Encryption Phrase"
+                    placement={isDesktop ? 'right' : 'top'}
+                >
+                    <IconButton
+                        aria-label="Default Encryption Phrase"
+                        aria-haspopup="dialog"
+                        onClick={() => setPhraseOpen(true)}
+                        sx={{
+                            width: 41,
+                            height: 41,
+                            borderRadius: '50%',
+                            border: '1px solid',
+                            borderColor: 'primary.light',
+                            bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.16)',
+                        }}
+                    >
+                        <LockOutlined />
+                    </IconButton>
+                </Tooltip>
                 <AccountButton placement={isDesktop ? 'right-end' : 'top-end'} />
             </Box>
+            {phraseOpen && <DefaultPhraseDialog onClose={() => setPhraseOpen(false)} />}
         </Box>
     )
 }

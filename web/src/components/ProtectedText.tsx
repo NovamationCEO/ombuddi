@@ -1,10 +1,10 @@
-import { LockOutlined } from '@mui/icons-material'
+import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material'
 import {
     Box,
     Button,
     CircularProgress,
-    Divider,
     IconButton,
+    InputAdornment,
     Popover,
     Stack,
     TextField,
@@ -14,7 +14,6 @@ import {
 import React from 'react'
 import { usePhraseSelection } from '../tools/phraseSource'
 import { useProtectedText } from '../tools/useProtectedText'
-import { useSessionSalt } from '../libraries/useSessionSalt'
 
 export function ProtectedText(props: {
     stored: string
@@ -27,12 +26,11 @@ export function ProtectedText(props: {
     const { stored, organizationId, emptyText = 'No text recorded.', compact = false, unlockLabel, onDecrypted } = props
     const phrase = usePhraseSelection()
     const recoveryId = React.useId()
-    const setSessionSalt = useSessionSalt((state) => state.setSessionSalt)
     const [anchorElement, setAnchorElement] = React.useState<HTMLElement | null>(null)
     const [oneTimeDraft, setOneTimeDraft] = React.useState('')
-    const [defaultDraft, setDefaultDraft] = React.useState('')
+    const [showPhrase, setShowPhrase] = React.useState(false)
     const [attemptKey, setAttemptKey] = React.useState(0)
-    const [attemptedMode, setAttemptedMode] = React.useState<'one-time' | 'default' | null>(null)
+    const [attempted, setAttempted] = React.useState(false)
     const result = useProtectedText(stored, organizationId, phrase.source, phrase.customPhrase, {
         tryLegacyBlank: true,
         attemptKey,
@@ -47,8 +45,8 @@ export function ProtectedText(props: {
 
     function openRecovery(event: React.MouseEvent<HTMLElement>) {
         setOneTimeDraft('')
-        setDefaultDraft('')
-        setAttemptedMode(null)
+        setShowPhrase(false)
+        setAttempted(false)
         setAnchorElement(event.currentTarget)
     }
 
@@ -57,16 +55,7 @@ export function ProtectedText(props: {
         if (!oneTimeDraft) return
         phrase.setCustomPhrase(oneTimeDraft)
         phrase.setSource('custom')
-        setAttemptedMode('one-time')
-        setAttemptKey((key) => key + 1)
-    }
-
-    function replaceDefaultPhrase(event: React.FormEvent) {
-        event.preventDefault()
-        if (!defaultDraft) return
-        setSessionSalt(defaultDraft)
-        phrase.setSource('default')
-        setAttemptedMode('default')
+        setAttempted(true)
         setAttemptKey((key) => key + 1)
     }
 
@@ -78,7 +67,7 @@ export function ProtectedText(props: {
         return <Typography sx={{ whiteSpace: 'pre-wrap' }}>{result.plaintext || emptyText}</Typography>
     }
 
-    const attemptFailed = attemptedMode !== null && result.status === 'failed'
+    const attemptFailed = attempted && result.status === 'failed'
 
     return (
         <Box sx={{ display: 'inline-flex' }}>
@@ -139,22 +128,20 @@ export function ProtectedText(props: {
                     paper: {
                         id: recoveryId,
                         role: 'dialog',
-                        'aria-label': 'Unlock protected text',
+                        'aria-label': 'Protected Text',
                         sx: { width: 'min(380px, calc(100vw - 32px))', p: 2.25, borderRadius: 2 },
                     },
                 }}
             >
                 <Stack spacing={2}>
                     <Box>
-                        <Typography sx={{ fontWeight: 700 }}>Unlock protected text</Typography>
+                        <Typography sx={{ fontWeight: 700 }}>Protected Text</Typography>
                         <Typography
                             variant="body2"
                             color="text.secondary"
                             sx={{ mt: 0.4 }}
                         >
-                            {phrase.defaultPhrase
-                                ? 'The current session default did not unlock this item.'
-                                : 'No session default is set for this protected item.'}
+                            This text is encrypted. Enter the phrase used to protect it to read it.
                         </Typography>
                     </Box>
 
@@ -163,27 +150,37 @@ export function ProtectedText(props: {
                         onSubmit={tryOneTimePhrase}
                     >
                         <Stack spacing={1}>
-                            <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 650 }}
-                            >
-                                Try once
-                            </Typography>
                             <TextField
-                                type="password"
+                                type={showPhrase ? 'text' : 'password'}
                                 size="small"
-                                label="One-time phrase"
+                                label="Phrase"
                                 value={oneTimeDraft}
                                 onChange={(event) => {
                                     setOneTimeDraft(event.target.value)
-                                    setAttemptedMode(null)
+                                    setAttempted(false)
                                 }}
                                 autoComplete="off"
                                 autoFocus
                                 fullWidth
                                 slotProps={{
+                                    input: {
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    type="button"
+                                                    size="small"
+                                                    aria-label={showPhrase ? 'Hide phrase' : 'Show phrase'}
+                                                    onClick={() => setShowPhrase((shown) => !shown)}
+                                                    onMouseDown={(event) => event.preventDefault()}
+                                                    edge="end"
+                                                >
+                                                    {showPhrase ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    },
                                     htmlInput: {
-                                        'aria-label': 'One-time phrase',
+                                        'aria-label': 'Phrase',
                                         'data-1p-ignore': '',
                                         'data-op-ignore': '',
                                     },
@@ -195,57 +192,7 @@ export function ProtectedText(props: {
                                 size="small"
                                 disabled={!oneTimeDraft || result.status === 'decrypting'}
                             >
-                                Try phrase
-                            </Button>
-                        </Stack>
-                    </Box>
-
-                    <Divider>or</Divider>
-
-                    <Box
-                        component="form"
-                        onSubmit={replaceDefaultPhrase}
-                    >
-                        <Stack spacing={1}>
-                            <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 650 }}
-                            >
-                                Replace the session default
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                            >
-                                This changes the phrase used for future protected notes and person lookups until refresh
-                                or logout. It does not re-encrypt existing records. Spaces are significant.
-                            </Typography>
-                            <TextField
-                                type="text"
-                                size="small"
-                                label="New session default"
-                                value={defaultDraft}
-                                onChange={(event) => {
-                                    setDefaultDraft(event.target.value)
-                                    setAttemptedMode(null)
-                                }}
-                                autoComplete="off"
-                                fullWidth
-                                slotProps={{
-                                    htmlInput: {
-                                        'aria-label': 'New session default',
-                                        'data-1p-ignore': '',
-                                        'data-op-ignore': '',
-                                    },
-                                }}
-                            />
-                            <Button
-                                type="submit"
-                                variant="outlined"
-                                size="small"
-                                disabled={!defaultDraft || result.status === 'decrypting'}
-                            >
-                                Save and try
+                                {result.status === 'decrypting' ? 'Unlocking…' : 'Unlock'}
                             </Button>
                         </Stack>
                     </Box>

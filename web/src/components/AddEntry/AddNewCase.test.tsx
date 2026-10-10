@@ -285,9 +285,18 @@ describe('AddNewCase', () => {
                 </ThemeProvider>,
             ),
         )
-        expect(container.textContent).toContain('Using session default')
+        expect(container.textContent).toContain('Confirm the Default Encryption Phrase')
         expect(container.innerHTML).not.toContain('never-render-this-phrase')
-        await act(async () => buttonFor(container, 'Change')?.click())
+        await act(async () => {
+            setInputValue(fieldForLabel(container, 'Case Name') as HTMLInputElement, 'Test case')
+            setInputValue(fieldForLabel(container, 'Description') as HTMLTextAreaElement, 'Protected description')
+        })
+        await act(async () => buttonFor(container, 'Create case')?.click())
+        expect(mocks.creator).not.toHaveBeenCalled()
+        await act(async () => buttonFor(container, 'Use Default Encryption Phrase')?.click())
+        expect(container.textContent).toContain('Using Default Encryption Phrase')
+        await act(async () => buttonFor(container, 'Create case')?.click())
+        expect(mocks.encrypt).toHaveBeenCalledWith('Protected description', 'never-render-this-phrase', 'org-1')
         await act(async () => buttonFor(container, 'Blank')?.click())
         expect(container.textContent).toContain('No phrase-based protection beyond organization separation.')
     })

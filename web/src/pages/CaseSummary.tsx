@@ -96,7 +96,7 @@ export function CaseSummary() {
     const [decryptedDescription, setDecryptedDescription] = React.useState<string | null>(null)
     const [descriptionUnlockPhrase, setDescriptionUnlockPhrase] = React.useState<string | null>(null)
     const [changeDescriptionProtection, setChangeDescriptionProtection] = React.useState(false)
-    const editDescriptionPhrase = usePhraseSelection()
+    const editDescriptionPhrase = usePhraseSelection('default', true)
     const [editStatus, setEditStatus] = React.useState('')
     const [editingReferrals, setEditingReferrals] = React.useState(false)
     const [savingReferrals, setSavingReferrals] = React.useState(false)
@@ -160,7 +160,7 @@ export function CaseSummary() {
         const replaceProtection = changeDescriptionProtection || descriptionNeedsProtection
         if (!descriptionLocked && replaceProtection && editDescriptionPhrase.phrase === null) {
             setSnack({
-                message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
+                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
                 severity: 'error',
             })
             return
@@ -365,6 +365,8 @@ export function CaseSummary() {
                                         onSourceChange={editDescriptionPhrase.setSource}
                                         customPhrase={editDescriptionPhrase.customPhrase}
                                         onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                        defaultConfirmed={editDescriptionPhrase.defaultConfirmed}
+                                        onConfirmDefault={editDescriptionPhrase.confirmDefault}
                                         purpose="encrypt"
                                     />
                                 </Stack>
@@ -397,6 +399,8 @@ export function CaseSummary() {
                                         onSourceChange={editDescriptionPhrase.setSource}
                                         customPhrase={editDescriptionPhrase.customPhrase}
                                         onCustomPhraseChange={editDescriptionPhrase.setCustomPhrase}
+                                        defaultConfirmed={editDescriptionPhrase.defaultConfirmed}
+                                        onConfirmDefault={editDescriptionPhrase.confirmDefault}
                                         purpose="encrypt"
                                     />
                                     <Button

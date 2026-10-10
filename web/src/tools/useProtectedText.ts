@@ -32,14 +32,13 @@ export function useProtectedText(
     React.useEffect(() => {
         if (!encrypted || plaintext !== null || !organizationId) return
         const selectedPhrase = resolvePhrase(source, defaultPhrase, customPhrase)
-        const phrases =
-            tryLegacyBlank && source === 'default'
-                ? selectedPhrase === null
-                    ? ['']
-                    : [selectedPhrase, '']
-                : selectedPhrase === null
-                  ? []
-                  : [selectedPhrase]
+        const phrases = [
+            ...new Set([
+                ...(defaultPhrase ? [defaultPhrase] : []),
+                ...(selectedPhrase !== null ? [selectedPhrase] : []),
+                ...(tryLegacyBlank ? [''] : []),
+            ]),
+        ]
         if (!phrases.length) {
             setStatus('awaiting-phrase')
             return

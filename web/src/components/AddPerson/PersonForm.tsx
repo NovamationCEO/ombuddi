@@ -41,11 +41,7 @@ import { PhraseSourceControl } from '../PhraseSourceControl'
  * callers stage the new person immediately without an extra fetch.
  */
 
-function DemographicPicker(props: {
-    kind: string
-    value: string
-    onChange: (v: string) => void
-}) {
+function DemographicPicker(props: { kind: string; value: string; onChange: (v: string) => void }) {
     const { kind, value, onChange } = props
     const { items, isLoading } = usePicklists(kind)
     const knownValues = items.map((p) => p.name)
@@ -79,7 +75,11 @@ function DemographicPicker(props: {
             onChange={(e) => handleRadioChange(e.target.value)}
         >
             {items.map((item) => (
-                <Tooltip key={item.id} title={item.description || ''} placement="right">
+                <Tooltip
+                    key={item.id}
+                    title={item.description || ''}
+                    placement="right"
+                >
                     <FormControlLabel
                         value={item.name}
                         control={<Radio />}
@@ -159,7 +159,7 @@ export function PersonForm(props: {
 }) {
     const { initialName = '', onSaved, onCancel } = props
     const [name, setName] = React.useState(initialName)
-    const phraseChoice = usePhraseSelection()
+    const phraseChoice = usePhraseSelection('default', true)
     const [isSecure, setIsSecure] = React.useState(true)
     const [saltGuideOpen, setSaltGuideOpen] = React.useState(false)
     const [generation, setGeneration] = React.useState('unknown')
@@ -189,7 +189,7 @@ export function PersonForm(props: {
         }
         if (isSecure && phraseChoice.phrase === null) {
             setSnack({
-                message: 'Choose Blank, set the Default Salt, or provide free text before saving this person.',
+                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text before saving this person.',
                 severity: 'error',
             })
             return
@@ -284,6 +284,8 @@ export function PersonForm(props: {
                                     onSourceChange={phraseChoice.setSource}
                                     customPhrase={phraseChoice.customPhrase}
                                     onCustomPhraseChange={phraseChoice.setCustomPhrase}
+                                    defaultConfirmed={phraseChoice.defaultConfirmed}
+                                    onConfirmDefault={phraseChoice.confirmDefault}
                                     purpose="lookup"
                                     phraseIsNew
                                 />
@@ -355,16 +357,28 @@ export function PersonForm(props: {
                     >
                         <Box sx={{ flex: 1 }}>
                             <Title>Gender</Title>
-                            <DemographicPicker kind="gender" value={gender} onChange={setGender} />
+                            <DemographicPicker
+                                kind="gender"
+                                value={gender}
+                                onChange={setGender}
+                            />
                         </Box>
                     </Stack>
                     <Box sx={{ flex: 1 }}>
                         <Title>Generation</Title>
-                        <DemographicPicker kind="generation" value={generation} onChange={setGeneration} />
+                        <DemographicPicker
+                            kind="generation"
+                            value={generation}
+                            onChange={setGeneration}
+                        />
                     </Box>
                     <Box sx={{ flex: 1 }}>
                         <Title>Race</Title>
-                        <DemographicPicker kind="race" value={race} onChange={setRace} />
+                        <DemographicPicker
+                            kind="race"
+                            value={race}
+                            onChange={setRace}
+                        />
                     </Box>
                 </Box>
             </RoundedContainer>

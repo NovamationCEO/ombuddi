@@ -33,7 +33,7 @@ export function AddNewCase() {
     const navigate = useNavigate()
     const [description, setDescription] = React.useState('')
     const [isSaving, setIsSaving] = React.useState(false)
-    const descriptionPhrase = usePhraseSelection()
+    const descriptionPhrase = usePhraseSelection('default', true)
     const organizationId = useOrganization().id
     // crypto.randomUUID is available in all modern browsers (requires HTTPS or localhost).
     // useMemo so the id is stable across re-renders while the user is filling out the form.
@@ -68,7 +68,7 @@ export function AddNewCase() {
         if (description && descriptionPhrase.phrase === null) {
             setProtectionOpen(true)
             setSnack({
-                message: 'Choose Blank, set the Default Salt, or provide free text for the case description.',
+                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
                 severity: 'error',
             })
             return
@@ -122,14 +122,16 @@ export function AddNewCase() {
 
     const needsPhrase = !!description && descriptionPhrase.phrase === null
     const protectionExpanded = protectionOpen || needsPhrase
-    const phraseLabel = { blank: 'Blank', default: 'Default Salt', custom: 'Free text' }[descriptionPhrase.source]
+    const phraseLabel = { blank: 'Blank', default: 'Default Encryption Phrase', custom: 'Free text' }[descriptionPhrase.source]
     const phraseStatus =
         descriptionPhrase.source === 'blank'
             ? 'No phrase-based protection beyond organization separation.'
             : descriptionPhrase.phrase === null
-              ? 'Choose a phrase before saving a description.'
+              ? descriptionPhrase.source === 'default' && descriptionPhrase.defaultPhrase
+                  ? 'Confirm the Default Encryption Phrase before saving a description.'
+                  : 'Choose a phrase before saving a description.'
               : descriptionPhrase.source === 'default'
-                ? 'Using session default'
+                ? 'Using Default Encryption Phrase'
                 : 'Using a phrase for this description only.'
 
     return (
@@ -285,6 +287,8 @@ export function AddNewCase() {
                                                 onSourceChange={descriptionPhrase.setSource}
                                                 customPhrase={descriptionPhrase.customPhrase}
                                                 onCustomPhraseChange={descriptionPhrase.setCustomPhrase}
+                                                defaultConfirmed={descriptionPhrase.defaultConfirmed}
+                                                onConfirmDefault={descriptionPhrase.confirmDefault}
                                                 purpose="encrypt"
                                                 compact
                                             />

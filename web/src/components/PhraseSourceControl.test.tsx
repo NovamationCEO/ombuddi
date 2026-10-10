@@ -5,7 +5,6 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { PhraseSourceControl } from './PhraseSourceControl'
-
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('PhraseSourceControl', () => {
@@ -20,23 +19,26 @@ describe('PhraseSourceControl', () => {
         document.body.append(container)
         const root = createRoot(container)
 
-        await act(async () => root.render(
-            <PhraseSourceControl
-                source="default"
-                onSourceChange={() => undefined}
-                customPhrase=""
-                onCustomPhraseChange={() => undefined}
-                purpose="encrypt"
-            />,
-        ))
+        await act(async () =>
+            root.render(
+                <PhraseSourceControl
+                    source="default"
+                    onSourceChange={() => undefined}
+                    customPhrase=""
+                    onCustomPhraseChange={() => undefined}
+                    purpose="encrypt"
+                />,
+            ),
+        )
 
-        expect(container.textContent).toContain('Using session default')
+        expect(container.textContent).toContain('Using Default Encryption Phrase')
         expect(container.textContent).not.toContain('confidential semester phrase')
         expect(container.querySelector('input')).toBeNull()
 
         await act(async () => {
-            const replaceButton = [...container.querySelectorAll('button')]
-                .find((button) => button.textContent === 'Replace session default')
+            const replaceButton = [...container.querySelectorAll('button')].find(
+                (button) => button.textContent === 'Replace session default',
+            )
             replaceButton?.click()
         })
 

@@ -1,13 +1,4 @@
-import {
-    Alert,
-    Box,
-    Button,
-    Stack,
-    TextField,
-    ToggleButton,
-    ToggleButtonGroup,
-    Typography,
-} from '@mui/material'
+import { Alert, Box, Button, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
 import React from 'react'
 import { useSessionSalt } from '../libraries/useSessionSalt'
 import { PhraseSource } from '../tools/phraseSource'
@@ -21,6 +12,8 @@ export function PhraseSourceControl(props: {
     purpose?: 'encrypt' | 'decrypt' | 'lookup'
     phraseIsNew?: boolean
     compact?: boolean
+    defaultConfirmed?: boolean
+    onConfirmDefault?: () => void
 }) {
     const {
         source,
@@ -31,6 +24,8 @@ export function PhraseSourceControl(props: {
         purpose = 'encrypt',
         phraseIsNew = purpose === 'encrypt',
         compact = false,
+        defaultConfirmed = true,
+        onConfirmDefault,
     } = props
     const defaultPhrase = useSessionSalt((state) => state.sessionSalt)
     const setDefaultPhrase = useSessionSalt((state) => state.setSessionSalt)
@@ -41,7 +36,10 @@ export function PhraseSourceControl(props: {
     const visibilityGuidance = phraseIsNew ? 'Visible to prevent mistyping. ' : ''
 
     return (
-        <Box onClick={(event) => event.stopPropagation()} sx={{ minWidth: 0 }}>
+        <Box
+            onClick={(event) => event.stopPropagation()}
+            sx={{ minWidth: 0 }}
+        >
             <Stack spacing={compact ? 0.75 : 1}>
                 <ToggleButtonGroup
                     exclusive
@@ -54,18 +52,37 @@ export function PhraseSourceControl(props: {
                     sx={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}
                 >
                     <ToggleButton value="blank">Blank</ToggleButton>
-                    <ToggleButton value="default">Default Salt</ToggleButton>
+                    <ToggleButton value="default">Default Encryption Phrase</ToggleButton>
                     <ToggleButton value="custom">{customLabel}</ToggleButton>
                 </ToggleButtonGroup>
 
                 {source === 'default' && defaultPhrase && !replacingDefault && (
-                    <Stack spacing={0.5} sx={{ alignItems: 'flex-start' }}>
-                        <Typography variant="body2" sx={{ fontWeight: 650 }}>
-                            Using session default
+                    <Stack
+                        spacing={0.5}
+                        sx={{ alignItems: 'flex-start' }}
+                    >
+                        <Typography
+                            variant="body2"
+                            sx={{ fontWeight: 650 }}
+                        >
+                            {defaultConfirmed ? 'Using Default Encryption Phrase' : 'Default Encryption Phrase available'}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                        >
                             The saved phrase is not displayed. Spaces in it remain significant.
                         </Typography>
+                        {!defaultConfirmed && onConfirmDefault && (
+                            <Button
+                                type="button"
+                                size="small"
+                                variant="outlined"
+                                onClick={onConfirmDefault}
+                            >
+                                Use Default Encryption Phrase
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             size="small"
@@ -104,7 +121,10 @@ export function PhraseSourceControl(props: {
                                 },
                             }}
                         />
-                        <Stack direction="row" spacing={1}>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                        >
                             <Button
                                 type="button"
                                 variant="outlined"
@@ -155,7 +175,10 @@ export function PhraseSourceControl(props: {
                 )}
 
                 {source === 'blank' && (
-                    <Typography variant="caption" color="warning.main">
+                    <Typography
+                        variant="caption"
+                        color="warning.main"
+                    >
                         Blank is intentional and provides no phrase-based protection beyond organization separation.
                     </Typography>
                 )}

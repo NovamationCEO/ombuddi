@@ -95,7 +95,7 @@ export function AddEntry() {
     const setSnack = useSnack((state) => state.setSnack)
     const [duration, setDuration] = useState(30)
     const [eventDate, setEventDate] = useState(() => localCalendarDateInputValue())
-    const notePhrase = usePhraseSelection()
+    const notePhrase = usePhraseSelection('default', true)
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
     const initializedEntryId = React.useRef<string | null>(null)
@@ -705,6 +705,8 @@ export function AddEntry() {
                                                         onSourceChange={notePhrase.setSource}
                                                         customPhrase={notePhrase.customPhrase}
                                                         onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                        defaultConfirmed={notePhrase.defaultConfirmed}
+                                                        onConfirmDefault={notePhrase.confirmDefault}
                                                         purpose="encrypt"
                                                     />
                                                 </Stack>
@@ -738,6 +740,8 @@ export function AddEntry() {
                                                                 onSourceChange={notePhrase.setSource}
                                                                 customPhrase={notePhrase.customPhrase}
                                                                 onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                                defaultConfirmed={notePhrase.defaultConfirmed}
+                                                                onConfirmDefault={notePhrase.confirmDefault}
                                                                 purpose="encrypt"
                                                             />
                                                             <Button
@@ -757,6 +761,8 @@ export function AddEntry() {
                                                 onSourceChange={notePhrase.setSource}
                                                 customPhrase={notePhrase.customPhrase}
                                                 onCustomPhraseChange={notePhrase.setCustomPhrase}
+                                                defaultConfirmed={notePhrase.defaultConfirmed}
+                                                onConfirmDefault={notePhrase.confirmDefault}
                                                 purpose="encrypt"
                                             />
                                         )}

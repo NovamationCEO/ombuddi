@@ -50,7 +50,7 @@ Salt phrases are never stored or compared by themselves. Person lookup stores on
 - Trend reports must be derivable from non-identifying fields (demographics, codes, role, medium, duration). Aggregations should respect minimum-cell-size thresholds to prevent re-identification.
 - Notes are encrypted client-side with AES-256-GCM before being stored. The key is derived from the salt phrase and organization UUID; the server and Ombuddi administrators do not receive the plaintext key.
 - New or edited nonempty protected text must never fall back to plaintext storage. Unchanged ciphertext is preserved byte-for-byte; changed ciphertext is re-encrypted with the phrase that successfully opened it. Replacing that phrase is a separate, warned action.
-- An established session-default phrase is represented in the UI only as **Using session default**. It is not inserted into the DOM or shown on screen. Entering a replacement is deliberate and visible to prevent a hidden mistype.
+- The circular lock above the account/sign-out button opens **Default Encryption Phrase**. It is kept in memory until refresh, login, or logout. Its editor is masked by default with an explicit show/hide control; Save applies changes and Cancel discards them. Locked text tries this phrase first, including after an unsuccessful item-specific attempt. New protection suggests the default but requires **Use Default Encryption Phrase** before saving; changing the default invalidates that confirmation. Existing ciphertext and successfully unlocked text remain unchanged.
 
 ## Architecture (current)
 
