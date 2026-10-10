@@ -1,19 +1,5 @@
 import { pageLayoutStyle } from '../theme/pageLayout'
-import {
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    MenuItem,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    Stack,
-    TextField,
-    Typography,
-} from '@mui/material'
+import { Box, Button, Chip, CircularProgress, MenuItem, Divider, Stack, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -22,11 +8,9 @@ import { CaseType, EntryType, PersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { updater } from '../tools/db_tools/updater'
 import { deleter } from '../tools/db_tools/deleter'
-import { PersonFinder } from '../components/PersonFinder'
-import { PersonForm } from '../components/AddPerson/PersonForm'
+import { EntryPeopleDialog } from '../components/EntryPeopleDialog'
 import { ArrowBack, LockOutlined, LockOpenOutlined, PersonAddOutlined, SaveOutlined } from '@mui/icons-material'
 import React from 'react'
-import Grid2 from '@mui/material/Grid'
 import { usePicklists } from '../tools/usePicklists'
 import { encryptNotes, isEncrypted } from '../tools/notesCrypto'
 import { NoteEncryptionDialog, type NoteEncryptionChoice } from '../components/NoteEncryptionDialog'
@@ -121,13 +105,6 @@ export function AddEntry() {
         setEntryInitialized(true)
     }, [caseId, entryId, entryRes.data, existingEntryPeopleRes.data, isEditing])
 
-    // Inline "Create new user" dialog: triggered from PersonFinder when no
-    // search matches. The typed name pre-fills PersonForm so the ombuds
-    // doesn't retype it.
-    const [createPersonName, setCreatePersonName] = useState<string | null>(null)
-    const [finderClearTrigger, setFinderClearTrigger] = useState(0)
-    const showCreatePersonDialog = createPersonName !== null
-
     function addPerson(person: PersonType) {
         setEntryPeople((prev) => (prev.some((p) => p.id === person.id) ? prev : [...prev, person]))
     }
@@ -211,9 +188,6 @@ export function AddEntry() {
         }
     }
 
-    // People on the case but not yet staged for this entry.
-    const casePeopleNotStaged = (casePeopleRes.data ?? []).filter((cp) => !entryPeople.some((ep) => ep.id === cp.id))
-
     if (
         isEditing &&
         (entryRes.isError ||
@@ -263,191 +237,18 @@ export function AddEntry() {
 
     return (
         <Box>
-            {/*
-             * Inline "Create new user" dialog. Stacks on top of the People
-             * dialog (MUI handles z-ordering automatically) so the ombuds
-             * stays inside the AddEntry flow instead of being routed to
-             * /add_person and losing context.
-             */}
-            <Dialog
-                open={showCreatePersonDialog}
-                onClose={() => setCreatePersonName(null)}
-                maxWidth={'lg'}
-                fullWidth
-            >
-                <DialogTitle>Create New Person</DialogTitle>
-                <DialogContent>
-                    {showCreatePersonDialog && (
-                        <PersonForm
-                            initialName={createPersonName ?? ''}
-                            onSaved={(person) => {
-                                addPerson(person)
-                                setCreatePersonName(null)
-                                setFinderClearTrigger((n) => n + 1)
-                            }}
-                            onCancel={() => setCreatePersonName(null)}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
-            <Dialog
-                open={showPeopleDialog}
-                onClose={() => setShowPeopleDialog(false)}
-                fullScreen
-            >
-                <DialogTitle>Add People to Entry</DialogTitle>
-                <DialogContent>
-                    {/* Staged people — always visible so the layout doesn't jump */}
-                    <Box
-                        sx={{
-                            mb: 2,
-                            p: 1.5,
-                            borderRadius: 1,
-                            bgcolor: 'primary.50',
-                            border: '1px solid',
-                            borderColor: 'primary.100',
-                            minHeight: 56,
-                        }}
-                    >
-                        <Typography
-                            variant={'caption'}
-                            color={'text.secondary'}
-                            sx={{
-                                display: 'block',
-                                mb: 1,
-                                fontWeight: 600,
-                                letterSpacing: 0.5,
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            On this entry {entryPeople.length > 0 && `· ${entryPeople.length}`}
-                        </Typography>
-                        {entryPeople.length === 0 ? (
-                            <Typography
-                                variant={'body2'}
-                                color={'text.disabled'}
-                                sx={{ fontStyle: 'italic' }}
-                            >
-                                No one added yet
-                            </Typography>
-                        ) : (
-                            <Stack
-                                direction={'row'}
-                                sx={{ flexWrap: 'wrap', gap: 1 }}
-                            >
-                                {entryPeople.map((p) => (
-                                    <Chip
-                                        key={p.id}
-                                        avatar={<PersonAvatar person={p} />}
-                                        label={personLabel(p)}
-                                        sx={{
-                                            bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
-                                            color: 'success.main',
-                                            '& .MuiChip-deleteIcon': { color: 'success.main' },
-                                        }}
-                                        onDelete={() => removePerson(p.id)}
-                                    />
-                                ))}
-                            </Stack>
-                        )}
-                    </Box>
-
-                    <Divider sx={{ mb: 2 }} />
-
-                    <Grid2
-                        container
-                        spacing={3}
-                        sx={{ alignItems: 'flex-start' }}
-                    >
-                        {/* Left panel: people already on this case */}
-                        <Grid2 size={{ xs: 12, sm: 4, md: 3 }}>
-                            <Box
-                                sx={{
-                                    p: 1.5,
-                                    borderRadius: 1,
-                                    bgcolor: 'app.surfaceTint',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    height: '100%',
-                                }}
-                            >
-                                <Typography
-                                    variant={'subtitle2'}
-                                    sx={{ mb: 0.25 }}
-                                >
-                                    People On This Case
-                                </Typography>
-                                <Typography
-                                    variant={'caption'}
-                                    color={'text.secondary'}
-                                    sx={{ display: 'block', mb: 1.5 }}
-                                >
-                                    Click to add person to this entry
-                                </Typography>
-                                {casePeopleNotStaged.length === 0 ? (
-                                    <Typography
-                                        variant={'body2'}
-                                        color={'text.secondary'}
-                                        sx={{ fontStyle: 'italic' }}
-                                    >
-                                        {entryPeople.length > 0 && casePeopleRes.data?.length === entryPeople.length
-                                            ? 'Everyone is already added.'
-                                            : 'No one on this case yet.'}
-                                    </Typography>
-                                ) : (
-                                    <Stack
-                                        spacing={1}
-                                        sx={{ alignItems: 'flex-start' }}
-                                    >
-                                        {casePeopleNotStaged.map((p) => (
-                                            <Chip
-                                                key={p.id}
-                                                avatar={<PersonAvatar person={p} />}
-                                                label={personLabel(p)}
-                                                variant={'outlined'}
-                                                onClick={() => addPerson(p)}
-                                            />
-                                        ))}
-                                    </Stack>
-                                )}
-                            </Box>
-                        </Grid2>
-
-                        {/* Right panel: search or create */}
-                        <Grid2 size={{ xs: 12, sm: 8, md: 9 }}>
-                            <Typography
-                                variant={'subtitle2'}
-                                sx={{ mb: 0.25 }}
-                            >
-                                Find or create a person
-                            </Typography>
-                            <Typography
-                                variant={'caption'}
-                                color={'text.secondary'}
-                                sx={{ display: 'block', mb: 1.5 }}
-                            >
-                                Enter the exact name and salt phrase used when the person was created
-                            </Typography>
-                            <PersonFinder
-                                embedded
-                                onSelect={addPerson}
-                                onCreateRequest={(name) => setCreatePersonName(name)}
-                                clearTrigger={finderClearTrigger}
-                            />
-                        </Grid2>
-                    </Grid2>
-                </DialogContent>
-
-                <DialogActions>
-                    <Button
-                        variant={'contained'}
-                        onClick={() => setShowPeopleDialog(false)}
-                    >
-                        Done
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
+            {showPeopleDialog && (
+                <EntryPeopleDialog
+                    people={entryPeople}
+                    casePeople={casePeopleRes.data ?? []}
+                    onAdd={addPerson}
+                    onRemove={removePerson}
+                    onClose={() => setShowPeopleDialog(false)}
+                    onUpdate={(person) =>
+                        setEntryPeople((current) => current.map((item) => (item.id === person.id ? person : item)))
+                    }
+                />
+            )}
             <Box sx={pageLayoutStyle}>
                 <ThemeProvider theme={caseFolderTheme}>
                     <Box

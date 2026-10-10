@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, g
 from src.connection import get_db_connection, managed_connection
-from utils import add_one, get_many, get_one, return_many, update_one
+from utils import get_many, get_one, return_many, update_one
 from hash_name import hash_name
 import logging
 
@@ -67,27 +67,92 @@ def get_persons_by_hashed_name(raw_hash):
 
 @person_views.route('/api/v1/add_person', methods=['POST'])
 def add_person():
-    return add_one(
-        'persons',
-        person_write_model,
-        request,
-        owner_constraint=_org(),
-        returning_model={
-            'id': 'id',
-            'monsterSeed': 'monster_seed',
-            'monsterVersion': 'monster_version',
-        },
+    data = request.get_json(silent=True) or {}
+    is_public = data.get('isPublic') is True
+    identity_key = 'publicName' if is_public else 'hashedName'
+    identity = data.get(identity_key)
+    if not isinstance(identity, str) or not identity.strip():
+        return jsonify({'success': False, 'message': 'A person identity is required.'}), 400
+    # hashedName already received the server pepper in before_request.
+    fields = {key: value for key, value in data.items() if key in person_write_model
+              and key not in {'id', 'organizationId', 'hashedName', 'publicName', 'isPublic'}}
+    fields.update({identity_key: identity, 'isPublic': is_public, 'organizationId': g.organization_id})
+    columns = ', '.join(person_write_model[key] for key in fields)
+    placeholders = ', '.join(['%s'] * len(fields))
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                if _duplicate_person(cur, person_model[identity_key], identity):
+                    return _duplicate_response()
+                cur.execute(f"INSERT INTO persons ({columns}) VALUES ({placeholders}) "
+                            "RETURNING id, monster_seed, monster_version", list(fields.values()))
+                person_id, seed, version = cur.fetchone()
+        return jsonify({'success': True, 'status': 'success', 'id': person_id,
+                        'monsterSeed': seed, 'monsterVersion': version}), 200
+    except Exception:
+        logger.exception('add_person failed')
+        return jsonify({'success': False, 'message': 'Unable to add person'}), 500
+
+
+def _duplicate_person(cur, identity_column, identity, exclude_id=None):
+    # Serialize competing creates/phrase changes for this org and identity.
+    # Preserve existing same-name records without adding accidental duplicates.
+    cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                (f"{g.organization_id}:{identity_column}:{identity}",))
+    cur.execute(
+        f"SELECT 1 FROM persons WHERE organization_id = %s AND {identity_column} = %s "
+        "AND (%s::uuid IS NULL OR id <> %s::uuid) LIMIT 1",
+        (g.organization_id, identity, exclude_id, exclude_id),
     )
+    return cur.fetchone() is not None
+
+
+def _duplicate_response():
+    return jsonify({'success': False, 'message': 'A matching person already exists. Find and select their card.'}), 409
 
 @person_views.route('/api/v1/update_person', methods=['PUT'])
 def update_person():
-    return update_one(
-        'persons',
-        person_model,
-        request,
-        owner_constraint=_org(),
-        immutable_columns={'monster_seed', 'monster_version', 'hashed_name'},
-    )
+    data = request.get_json(silent=True) or {}
+    current_client_hash = data.get('currentHashedName')
+    if not isinstance(current_client_hash, str) or not current_client_hash:
+        # Public contacts have no phrase. This WHERE clause excludes private
+        # people even when a client submits isPublic=true to bypass verification.
+        return update_one(
+            'persons', person_model, request,
+            owner_constraint={**_org(), 'is_public': True},
+            immutable_columns={'monster_seed', 'monster_version', 'hashed_name', 'is_public'},
+        )
+    person_id = data.get('id')
+    if not person_id:
+        return jsonify({'success': False, 'message': 'Missing person.'}), 400
+    allowed = {'gender', 'generation', 'race', 'primaryRole', 'isInternational', 'category1', 'category2', 'category3'}
+    fields = {person_model[key]: value for key, value in data.items() if key in allowed and value is not None}
+    new_client_hash = data.get('newHashedName')
+    if new_client_hash is not None:
+        if not isinstance(new_client_hash, str) or not new_client_hash:
+            return jsonify({'success': False, 'message': 'The new name and phrase are required.'}), 400
+        fields['hashed_name'] = hash_name(new_client_hash)
+    if not fields:
+        return jsonify({'success': False, 'message': 'No changes supplied.'}), 400
+    current_hash = hash_name(current_client_hash)
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                # Keep verification and all changes in the same transaction.
+                cur.execute("SELECT 1 FROM persons WHERE id = %s AND organization_id = %s "
+                            "AND is_public = FALSE AND hashed_name = %s FOR UPDATE",
+                            (person_id, g.organization_id, current_hash))
+                if cur.fetchone() is None:
+                    return jsonify({'success': False, 'message': 'The full name and phrase no longer match this person.'}), 403
+                if 'hashed_name' in fields and _duplicate_person(cur, 'hashed_name', fields['hashed_name'], person_id):
+                    return _duplicate_response()
+                assignments = ', '.join(f'{column} = %s' for column in fields)
+                cur.execute(f"UPDATE persons SET {assignments} WHERE id = %s AND organization_id = %s",
+                            [*fields.values(), person_id, g.organization_id])
+        return jsonify({'success': True, 'message': 'Person updated.'}), 200
+    except Exception:
+        logger.exception('update_person failed')
+        return jsonify({'success': False, 'message': 'Unable to update person'}), 500
 
 
 @person_views.route('/api/v1/change_person_name_phrase', methods=['PUT'])

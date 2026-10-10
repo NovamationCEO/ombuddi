@@ -74,7 +74,7 @@ class PersonMonsterTests(unittest.TestCase):
         self.assertEqual(person_model["monsterVersion"], "monster_version")
 
     def test_add_person_returns_database_generated_portrait_fields(self):
-        connection = FakeConnection(rows=[(PERSON_ID, MONSTER_SEED, 1)])
+        connection = FakeConnection(rows=[None, (PERSON_ID, MONSTER_SEED, 1)])
         with app.test_request_context(
             "/api/v1/add_person",
             method="POST",
@@ -87,7 +87,7 @@ class PersonMonsterTests(unittest.TestCase):
             },
         ):
             g.organization_id = ORGANIZATION_ID
-            with patch("utils.get_db_connection", return_value=connection):
+            with patch("src.person_views.get_db_connection", return_value=connection):
                 response, status = add_person()
 
         self.assertEqual(status, 200)
@@ -101,7 +101,7 @@ class PersonMonsterTests(unittest.TestCase):
                 "monsterVersion": 1,
             },
         )
-        sql, params = connection.fake_cursor.executions[0]
+        sql, params = connection.fake_cursor.executions[-1]
         insert_columns = sql.split("VALUES", maxsplit=1)[0]
         self.assertNotIn("monster_seed", insert_columns)
         self.assertNotIn("monster_version", insert_columns)
@@ -132,7 +132,8 @@ class PersonMonsterTests(unittest.TestCase):
         self.assertNotIn("monster_version", sql)
         self.assertNotIn("hashed_name", sql)
         self.assertNotIn(CLIENT_CHOSEN_SEED, params)
-        self.assertEqual(params, ["Updated public name", PERSON_ID, ORGANIZATION_ID])
+        self.assertIn("is_public = %s", sql)
+        self.assertEqual(params, ["Updated public name", PERSON_ID, ORGANIZATION_ID, True])
 
     def test_change_phrase_conditionally_replaces_the_server_hash(self):
         connection = FakeConnection()

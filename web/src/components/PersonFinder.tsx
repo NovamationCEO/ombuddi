@@ -1,187 +1,171 @@
-import { Box, Button, CircularProgress, Paper, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material'
 import React from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useGetter } from '../tools/db_tools/useGetter'
-import { PersonType } from '../types/majorTypes'
-import { useHashName } from '../tools/useHashName'
 import { useOrganization } from '../tools/useOrganization'
-import './PersonFinder.css'
-import { useNavigate } from 'react-router-dom'
-import { usePhraseSelection } from '../tools/phraseSource'
-import { PhraseSourceControl } from './PhraseSourceControl'
-import { PersonAvatar } from './PersonAvatar'
+import type { PersonType } from '../types/majorTypes'
+import { findPeople, type PersonCredentials } from '../tools/personLookup'
+import { PersonPhraseField } from './PersonPhraseField'
+import { PersonIndexCard } from './PersonIndexCard'
+import { PersonCardDialog } from './PersonCardDialog'
+import './PersonIndexCard.css'
 
-export function PersonFinder(props: {
+export function PersonFinder({
+    onSelect,
+    onUpdate,
+    onCreateRequest,
+    embedded,
+    clearTrigger,
+}: {
     onSelect?: (person: PersonType) => void
-    onCreateRequest?: (name: string) => void
-    /** When true, renders without the standalone Paper shell — use inside a dialog or card. */
+    onUpdate?: (person: PersonType) => void
+    onCreateRequest?: (credentials: PersonCredentials) => void
     embedded?: boolean
-    /** Increment this to programmatically clear the search fields. */
     clearTrigger?: number
 }) {
-    const { onSelect, onCreateRequest, embedded, clearTrigger } = props
-    const [name, setName] = React.useState<string>('')
-    const phraseChoice = usePhraseSelection()
-    const [searched, setSearched] = React.useState(false)
-    const navigate = useNavigate()
-    const queryClient = useQueryClient()
+    const [name, setName] = React.useState('')
+    const [phrase, setPhrase] = React.useState('')
+    const [results, setResults] = React.useState<PersonType[] | null>(null)
+    const [error, setError] = React.useState('')
+    const [busy, setBusy] = React.useState(false)
+    const [opened, setOpened] = React.useState<PersonType | null>(null)
+    const requestId = React.useRef(0)
     const organization = useOrganization()
-    const orgId = organization?.id
-    const trimmedName = name.trim()
-
-    const hashedName = useHashName(trimmedName, phraseChoice.phrase ?? undefined)
-    const privateLookupHash = phraseChoice.phrase === null ? undefined : hashedName
-
-    // Private persons: exact hash match
-    const privateRes = useGetter<PersonType[]>(['get_persons_by_hashed_name', privateLookupHash])
-
-    // Public persons: partial name match via backend ILIKE — only fires when orgId + name ready
-    const publicRes = useGetter<PersonType[]>(
-        ['search_public_persons', orgId, trimmedName],
-        false, // no retry on 404
-    )
-
+    const orgId = organization.id
     React.useEffect(() => {
-        setSearched(false)
-    }, [name, phraseChoice.customPhrase, phraseChoice.defaultPhrase, phraseChoice.source])
-
+        requestId.current++
+        setResults(null)
+        setError('')
+        setBusy(false)
+    }, [name, phrase, orgId])
     React.useEffect(() => {
-        if (clearTrigger === undefined) return
         setName('')
-        phraseChoice.setSource('default')
-        phraseChoice.setCustomPhrase('')
-        setSearched(false)
+        setPhrase('')
+        setResults(null)
+        return () => {
+            requestId.current++
+        }
     }, [clearTrigger])
 
-    async function revealSearch() {
-        if (phraseChoice.phrase === null) return
-        await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['get_persons_by_hashed_name', hashedName] }),
-            queryClient.invalidateQueries({ queryKey: ['search_public_persons', orgId, trimmedName] }),
-        ])
-        setSearched(true)
+    async function search(event: React.FormEvent) {
+        event.preventDefault()
+        if (!name.trim() || !orgId || busy) return
+        const attempt = ++requestId.current
+        setBusy(true)
+        setError('')
+        setResults(null)
+        try {
+            const matches = await findPeople({ name: name.trim(), phrase }, orgId)
+            if (requestId.current === attempt) setResults(matches)
+        } catch {
+            if (requestId.current === attempt)
+                setError('The search could not be completed. Please try again before creating a person.')
+        } finally {
+            if (requestId.current === attempt) setBusy(false)
+        }
     }
-
-    function handleSelect(person: PersonType) {
-        onSelect?.(person)
-        setName('')
-        phraseChoice.setSource('default')
-        phraseChoice.setCustomPhrase('')
-        setSearched(false)
-    }
-
-    const privateMatches = privateRes.data ?? []
-    const publicMatches = (publicRes.data ?? []).filter(
-        (pub) => !privateMatches.some((priv) => priv.id === pub.id),
-    )
-    const allResults = [...privateMatches, ...publicMatches]
-    const isFetching = privateRes.isFetching || publicRes.isFetching
-    const showResults = searched && trimmedName.length > 0
-
-    const inner = (
-        <>
-            <div className="search-panel">
+    return (
+        <Box className={embedded ? undefined : 'people-search-card'}>
+            <Typography
+                component="h3"
+                className="people-section-label"
+            >
+                Find a person
+            </Typography>
+            <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2 }}
+            >
+                Search with the full name and phrase before adding someone new.
+            </Typography>
+            <Box
+                component="form"
+                onSubmit={search}
+                className="people-search-fields"
+            >
                 <TextField
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
                     label="Full Name"
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    placeholder="Enter full name"
+                    variant="standard"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    fullWidth
+                    autoComplete="off"
                 />
-                <PhraseSourceControl
-                    source={phraseChoice.source}
-                    onSourceChange={phraseChoice.setSource}
-                    customPhrase={phraseChoice.customPhrase}
-                    onCustomPhraseChange={phraseChoice.setCustomPhrase}
-                    purpose="lookup"
-                    compact
+                <PersonPhraseField
+                    value={phrase}
+                    onChange={setPhrase}
                 />
                 <Button
+                    type="submit"
                     variant="contained"
-                    onClick={revealSearch}
-                    disabled={phraseChoice.phrase === null}
+                    disabled={busy || !name.trim() || !orgId}
+                    sx={{ mt: 1 }}
                 >
-                    Search
+                    {busy ? (
+                        <CircularProgress
+                            size={22}
+                            color="inherit"
+                        />
+                    ) : (
+                        'Find person'
+                    )}
                 </Button>
-            </div>
-            <Box
-                sx={{
-                    maxHeight: showResults ? 300 : 0,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out',
-                }}
-            >
-                {isFetching ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
-                        <CircularProgress size={20} />
-                    </Box>
-                ) : allResults.length > 0 ? (
-                    allResults.map((person) => (
-                        <div
-                            key={person.id}
-                            className="result-item"
-                        >
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    width: '100%',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                }}
-                            >
-                                <PersonAvatar
-                                    person={person}
-                                    size={42}
-                                />
-                                {person.isPublic ? (
-                                    <Typography
-                                        variant="body2"
-                                        sx={{ flex: 1, fontWeight: 500 }}
-                                    >
-                                        {person.publicName}
-                                    </Typography>
-                                ) : (
-                                    <>
-                                        <Box sx={{ flex: 1 }}>{person.gender}</Box>
-                                        <Box sx={{ flex: 1 }}>{person.generation}</Box>
-                                        <Box sx={{ flex: 1 }}>{person.primaryRole}</Box>
-                                    </>
-                                )}
-                                <Button
-                                    size="small"
-                                    onClick={() => handleSelect(person)}
-                                >
-                                    Select
-                                </Button>
-                            </Box>
-                        </div>
-                    ))
-                ) : (
-                    <div
-                        className="result-item create"
-                        onClick={() =>
-                            onCreateRequest ? onCreateRequest(trimmedName) : navigate('/add_person')
-                        }
-                    >
-                        ✚ Create new person "{trimmedName}"
-                    </div>
-                )}
             </Box>
-        </>
-    )
-
-    if (embedded) {
-        return <Box className="person-finder-embedded">{inner}</Box>
-    }
-
-    return (
-        <Paper
-            elevation={3}
-            className="person-finder"
-        >
-            <Box>Person Finder</Box>
-            {inner}
-        </Paper>
+            {error && (
+                <Alert
+                    severity="error"
+                    sx={{ mt: 2 }}
+                >
+                    {error}
+                </Alert>
+            )}
+            {results && (
+                <Stack
+                    spacing={2}
+                    sx={{ mt: 2 }}
+                    aria-live="polite"
+                >
+                    {results.length ? (
+                        <>
+                            <Typography variant="body2">Matching people</Typography>
+                            <Box className="people-card-grid">
+                                {results.map((person) => (
+                                    <PersonIndexCard
+                                        key={person.id}
+                                        person={person}
+                                        onOpen={() => setOpened(person)}
+                                        onAdd={onSelect ? () => onSelect(person) : undefined}
+                                    />
+                                ))}
+                            </Box>
+                        </>
+                    ) : (
+                        <>
+                            <Typography variant="body2">No matching person found.</Typography>
+                            {onCreateRequest && (
+                                <Button
+                                    variant="outlined"
+                                    sx={{ alignSelf: 'flex-start' }}
+                                    onClick={() => onCreateRequest({ name: name.trim(), phrase })}
+                                >
+                                    Create new person
+                                </Button>
+                            )}
+                        </>
+                    )}
+                </Stack>
+            )}
+            {opened && (
+                <PersonCardDialog
+                    person={opened}
+                    initialName={name.trim()}
+                    onClose={() => setOpened(null)}
+                    onSaved={(person) => {
+                        setResults(null)
+                        onUpdate?.(person)
+                        setOpened(person)
+                    }}
+                />
+            )}
+        </Box>
     )
 }

@@ -1,536 +1,370 @@
 import {
+    Alert,
     Autocomplete,
     Box,
-    CircularProgress,
-    Divider,
-    Drawer,
+    Button,
+    Checkbox,
+    Collapse,
     FormControlLabel,
-    Radio,
-    RadioGroup,
     Stack,
     TextField,
-    Tooltip,
     Typography,
-    useTheme,
 } from '@mui/material'
+import { LockOutlined, ExpandMore, VpnKeyOutlined } from '@mui/icons-material'
 import React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { usePicklists } from '../../tools/usePicklists'
-import { MySwitch } from '../MySwitch'
-import { RoundedContainer } from '../RoundedContainer'
-import { Close, Lock, LockOpen, QuestionMark } from '@mui/icons-material'
-import { SaveCancel } from '../../trusted-components/SaveCancel'
-import { creator } from '../../tools/db_tools/creator'
-import { useSnack } from '../../libraries/useSnack'
-import { PersonType, PrimaryRoleType } from '../../types/majorTypes'
-import { useHashName } from '../../tools/useHashName'
-import { RoundButton } from '../../trusted-components/RoundButton'
-import { useOrganization } from '../../tools/useOrganization'
 import { useGetter } from '../../tools/db_tools/useGetter'
+import { useOrganization } from '../../tools/useOrganization'
+import { creator } from '../../tools/db_tools/creator'
+import { updater } from '../../tools/db_tools/updater'
+import { findPeople, type PersonCredentials } from '../../tools/personLookup'
+import { hashPersonName } from '../../tools/useHashName'
+import type { PersonType, PrimaryRoleType } from '../../types/majorTypes'
 import { getPrimaryRoleOptions } from './primaryRoleOptions'
-import { usePhraseSelection } from '../../tools/phraseSource'
-import { PhraseSourceControl } from '../PhraseSourceControl'
+import { PersonAvatar } from '../PersonAvatar'
+import { PersonPhraseField } from '../PersonPhraseField'
+import '../PersonIndexCard.css'
 
-/**
- * Reusable person-entry form. Owns all field state, the salt-phrase tooltip,
- * the hash pipeline, and the POST to /add_person. The two consumers are:
- *   - the `/add_person` route, which renders the form on its own page
- *   - the inline "Create new user" dialog inside AddEntry
- *
- * On a successful save the form constructs the new PersonType from local
- * state (plus the server-returned id) and hands it to `onSaved`. That lets
- * callers stage the new person immediately without an extra fetch.
- */
-
-function DemographicPicker(props: { kind: string; value: string; onChange: (v: string) => void }) {
-    const { kind, value, onChange } = props
-    const { items, isLoading } = usePicklists(kind)
-    const knownValues = items.map((p) => p.name)
-
-    const [otherMode, setOtherMode] = React.useState(false)
-    const [otherText, setOtherText] = React.useState('')
-
-    // When picklist finishes loading, detect if the current value is a custom one.
-    React.useEffect(() => {
-        if (!isLoading && items.length > 0 && value && !knownValues.includes(value)) {
-            setOtherMode(true)
-            setOtherText(value)
-        }
-    }, [isLoading, items.length])
-
-    const radioValue = otherMode ? '__other__' : value
-
-    function handleRadioChange(newVal: string) {
-        if (newVal === '__other__') {
-            setOtherMode(true)
-        } else {
-            setOtherMode(false)
-            setOtherText('')
-            onChange(newVal)
-        }
-    }
-
+function DetailPicker({
+    kind,
+    label,
+    value,
+    onChange,
+}: {
+    kind: string
+    label: string
+    value: string
+    onChange: (value: string) => void
+}) {
+    const { items } = usePicklists(kind)
     return (
-        <RadioGroup
-            value={radioValue}
-            onChange={(e) => handleRadioChange(e.target.value)}
-        >
-            {items.map((item) => (
-                <Tooltip
-                    key={item.id}
-                    title={item.description || ''}
-                    placement="right"
-                >
-                    <FormControlLabel
-                        value={item.name}
-                        control={<Radio />}
-                        label={item.name}
-                    />
-                </Tooltip>
-            ))}
-            <FormControlLabel
-                value="__other__"
-                control={<Radio />}
-                label="Other..."
-            />
-            {otherMode && (
+        <Autocomplete
+            freeSolo
+            options={items.map((item) => item.name)}
+            value={value}
+            onInputChange={(_, text) => onChange(text)}
+            renderInput={(params) => (
                 <TextField
-                    size="small"
-                    value={otherText}
-                    onChange={(e) => {
-                        setOtherText(e.target.value)
-                        onChange(e.target.value)
-                    }}
-                    placeholder="Specify..."
-                    autoFocus={!otherText}
-                    sx={{ ml: 4, mt: 0.5, width: '80%' }}
+                    {...params}
+                    label={label}
+                    variant="standard"
                 />
             )}
-        </RadioGroup>
+        />
     )
 }
 
-function SaltStrategy(props: { name: string; summary: string; detail: string }) {
-    const { name, summary, detail } = props
-    return (
-        <Box>
-            <Typography variant="subtitle2">
-                <b>{name}</b>
-            </Typography>
-            <Typography
-                variant="body2"
-                sx={{ fontStyle: 'italic', mb: 0.5 }}
-            >
-                {summary}
-            </Typography>
-            <Typography
-                variant="body2"
-                color="text.secondary"
-            >
-                {detail}
-            </Typography>
-        </Box>
-    )
-}
-
-function Title(props: { children: React.ReactNode }) {
-    const { children } = props
-    const theme = useTheme()
-
-    return (
-        <Box
-            sx={{
-                padding: 1,
-                bgcolor: theme.palette.primary.main,
-                color: 'primary.contrastText',
-                borderRadius: 1,
-                marginRight: 1,
-                fontWeight: 'bold',
-            }}
-        >
-            {children}
-        </Box>
-    )
-}
-
-export function PersonForm(props: {
-    initialName?: string
-    onSaved: (person: PersonType) => void
+/** Creation always rechecks the exact current inputs. Editing carries verified credentials,
+ * which the server verifies again in the same transaction as the write. */
+export function PersonForm({
+    credentials,
+    person,
+    onSaved,
+    onCancel,
+    onBusyChange,
+}: {
+    credentials: PersonCredentials
+    person?: PersonType
+    onSaved: (person: PersonType, credentials: PersonCredentials) => void
     onCancel?: () => void
+    onBusyChange?: (busy: boolean) => void
 }) {
-    const { initialName = '', onSaved, onCancel } = props
-    const [name, setName] = React.useState(initialName)
-    const phraseChoice = usePhraseSelection('default', true)
-    const [isSecure, setIsSecure] = React.useState(true)
-    const [saltGuideOpen, setSaltGuideOpen] = React.useState(false)
-    const [generation, setGeneration] = React.useState('unknown')
-    const [gender, setGender] = React.useState('N/A')
-    const [race, setRace] = React.useState('unknown')
-    const [isInternational, setIsInternational] = React.useState(false)
-    const [primaryRole, setPrimaryRole] = React.useState('unknown')
-    const [category1, setCategory1] = React.useState('')
-    const [category2, setCategory2] = React.useState('')
-    const [category3, setCategory3] = React.useState('')
-    const setSnack = useSnack((state) => state.setSnack)
+    const [name, setName] = React.useState(credentials.name)
+    const [phrase, setPhrase] = React.useState(credentials.phrase)
+    const [replacement, setReplacement] = React.useState<string | null>(null)
+    const [isPublic, setIsPublic] = React.useState(person?.isPublic ?? false)
+    const [gender, setGender] = React.useState(person?.gender ?? 'unknown')
+    const [generation, setGeneration] = React.useState(person?.generation ?? 'unknown')
+    const [race, setRace] = React.useState(person?.race ?? 'unknown')
+    const [primaryRole, setPrimaryRole] = React.useState(person?.primaryRole ?? 'unknown')
+    const [isInternational, setIsInternational] = React.useState(person?.isInternational ?? false)
+    const [category1, setCategory1] = React.useState(person?.category1 ?? '')
+    const [category2, setCategory2] = React.useState(person?.category2 ?? '')
+    const [category3, setCategory3] = React.useState(person?.category3 ?? '')
+    const [more, setMore] = React.useState(false)
+    const [busy, setBusy] = React.useState(false)
+    const [error, setError] = React.useState('')
     const organization = useOrganization()
-    const orgId = organization.id
-    const primaryRolesRes = useGetter<PrimaryRoleType[]>(['get_primary_roles_by_organization_id', orgId])
-    const configuredRoles = [...(primaryRolesRes.data ?? [])].sort((a, b) => a.index - b.index)
-    const primaryRolesLoading = !orgId || primaryRolesRes.isLoading
-    const primaryRoleOptions = getPrimaryRoleOptions(configuredRoles, primaryRolesLoading)
-    const normalizedName = name.trim()
+    const orgId = person?.organizationId || organization.id
+    const roles = useGetter<PrimaryRoleType[]>(['get_primary_roles_by_organization_id', orgId])
+    const roleOptions = getPrimaryRoleOptions(
+        [...(roles.data ?? [])].sort((a, b) => a.index - b.index),
+        roles.isLoading,
+    )
+    const queryClient = useQueryClient()
 
-    const hashedName = useHashName(normalizedName, phraseChoice.phrase ?? undefined)
-
-    async function save() {
-        if (!orgId) return
-        if (!normalizedName) {
-            setSnack({ message: 'Enter a name before saving this person.', severity: 'error' })
+    async function save(event: React.FormEvent) {
+        event.preventDefault()
+        if (busy || !orgId || !name.trim()) return
+        const nextPhrase = replacement ?? phrase
+        if (!isPublic && ((!person && !nextPhrase) || replacement === '')) {
+            setError('Choose a phrase to protect this person.')
             return
         }
-        if (isSecure && phraseChoice.phrase === null) {
-            setSnack({
-                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text before saving this person.',
-                severity: 'error',
-            })
-            return
-        }
-        const payload = isSecure
-            ? {
-                  hashedName,
-                  isPublic: false,
-                  gender,
-                  generation,
-                  race,
-                  primaryRole,
-                  isInternational,
-                  category1: category1?.length ? category1 : undefined,
-                  category2: category2?.length ? category2 : undefined,
-                  category3: category3?.length ? category3 : undefined,
-                  organizationId: orgId,
-              }
-            : {
-                  publicName: normalizedName,
-                  isPublic: true,
-                  gender,
-                  generation,
-                  race,
-                  primaryRole,
-                  isInternational,
-                  category1: category1?.length ? category1 : undefined,
-                  category2: category2?.length ? category2 : undefined,
-                  category3: category3?.length ? category3 : undefined,
-                  organizationId: orgId,
-              }
+        setBusy(true)
+        onBusyChange?.(true)
+        setError('')
         try {
-            const res = await creator<{
-                id: string
-                monsterSeed: string
-                monsterVersion: number
-                success: boolean
-            }>('add_person', payload)
-            if (!res?.id) {
-                throw new Error('Server did not return an id for the new person.')
+            // Do not turn network errors into a no-match result or reuse a search for changed inputs.
+            if (!person || replacement !== null) {
+                const matches = await findPeople({ name: name.trim(), phrase: nextPhrase }, orgId)
+                if (matches.some((match) => match.id !== person?.id)) {
+                    setError('A matching person already exists. Return to the search and select their card.')
+                    return
+                }
             }
-            const newPerson: PersonType = {
-                id: res.id,
-                monsterSeed: res.monsterSeed,
-                monsterVersion: res.monsterVersion,
-                hashedName: isSecure ? (hashedName ?? '') : undefined,
-                publicName: isSecure ? undefined : normalizedName,
-                isPublic: !isSecure,
-                gender,
-                generation,
-                race,
-                primaryRole,
-                isInternational,
-                category1,
-                category2,
-                category3,
-                organizationId: orgId,
+            const details = { gender, generation, race, primaryRole, isInternational, category1, category2, category3 }
+            const nextCredentials = { name: name.trim(), phrase: nextPhrase }
+            let saved: PersonType
+            if (person) {
+                await updater('update_person', {
+                    id: person.id,
+                    ...details,
+                    ...(isPublic
+                        ? { publicName: name.trim() }
+                        : {
+                              currentHashedName: hashPersonName(credentials.name, credentials.phrase, orgId),
+                              ...(replacement !== null
+                                  ? { newHashedName: hashPersonName(name, replacement, orgId) }
+                                  : {}),
+                          }),
+                })
+                saved = { ...person, ...details, ...(isPublic ? { publicName: name.trim() } : {}) }
+            } else {
+                const identity = isPublic
+                    ? { publicName: name.trim(), isPublic: true }
+                    : { hashedName: hashPersonName(name, phrase, orgId), isPublic: false }
+                const result = await creator<{ id: string; monsterSeed: string; monsterVersion: number }>(
+                    'add_person',
+                    { ...details, ...identity, organizationId: orgId },
+                )
+                if (!result.id) throw new Error('The person could not be saved.')
+                saved = { ...details, ...identity, ...result, organizationId: orgId }
             }
-            setSnack({ message: 'Person added successfully', severity: 'success' })
-            onSaved(newPerson)
-        } catch (e) {
-            console.error(e)
-            setSnack({
-                message: e instanceof Error ? e.message : 'Unable to add person',
-                severity: 'error',
-            })
+            await Promise.all(
+                [
+                    'get_persons_by_hashed_name',
+                    'get_person_by_id',
+                    'get_persons_by_case_id',
+                    'get_persons_by_entry_id',
+                    'get_public_persons_by_organization_id',
+                    'search_public_persons',
+                ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+            )
+            onSaved(saved, nextCredentials)
+        } catch (caught) {
+            setError(caught instanceof Error ? caught.message : 'Unable to save this person.')
+        } finally {
+            setBusy(false)
+            onBusyChange?.(false)
         }
     }
-
     return (
-        <Stack spacing={2}>
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                }}
+        <Box
+            component="form"
+            onSubmit={save}
+            className="person-index-card person-card-form"
+        >
+            <Stack
+                direction="row"
+                sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 3 }}
             >
-                <Stack
-                    spacing={2}
-                    sx={{ flex: 1 }}
-                >
-                    <TextField
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        label="Full Name"
-                    />
-                    {isSecure && (
-                        <Box sx={{ display: 'flex' }}>
-                            <Box sx={{ flex: 1 }}>
-                                <PhraseSourceControl
-                                    source={phraseChoice.source}
-                                    onSourceChange={phraseChoice.setSource}
-                                    customPhrase={phraseChoice.customPhrase}
-                                    onCustomPhraseChange={phraseChoice.setCustomPhrase}
-                                    defaultConfirmed={phraseChoice.defaultConfirmed}
-                                    onConfirmDefault={phraseChoice.confirmDefault}
-                                    purpose="lookup"
-                                    phraseIsNew
-                                />
-                            </Box>
-                            <Box
-                                sx={{
-                                    ml: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <RoundButton
-                                    onClick={() => setSaltGuideOpen(true)}
-                                    tooltipText="About salt phrases"
-                                >
-                                    <QuestionMark />
-                                </RoundButton>
-                            </Box>
-                        </Box>
-                    )}
-                </Stack>
-                <Box sx={{ flex: 1, padding: 1 }}>
-                    <Box
-                        onClick={() => setIsSecure(!isSecure)}
-                        sx={{
-                            border: '1px solid gray',
-                            width: 135,
-                            height: 135,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: 1,
-                            cursor: 'pointer',
-                        }}
+                <Box>
+                    <Typography
+                        component="h2"
+                        sx={{ fontFamily: 'Georgia, serif', fontSize: '1.7rem' }}
                     >
-                        <Box
-                            sx={{
-                                flex: 1,
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    width: 100,
-                                    height: 100,
-                                    borderRadius: '50%',
-                                    border: '1px solid gray',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                {isSecure ? <Lock fontSize={'large'} /> : <LockOpen fontSize={'large'} />}
-                            </Box>
-                        </Box>
-                        <Box>{isSecure ? 'Secure' : 'Insecure'}</Box>
-                    </Box>
+                        {person ? 'Edit person' : 'New person'}
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        {isPublic
+                            ? 'Public person · name visible to the organization'
+                            : person
+                              ? 'Update this person’s card.'
+                              : 'Add a card for someone new.'}
+                    </Typography>
                 </Box>
-            </Box>
-            <RoundedContainer title={'Demographics'}>
-                <Box sx={{ display: 'flex' }}>
-                    <Stack
-                        spacing={2}
-                        direction={'row'}
-                        sx={{ flex: 1 }}
-                    >
-                        <Box sx={{ flex: 1 }}>
-                            <Title>Gender</Title>
-                            <DemographicPicker
-                                kind="gender"
-                                value={gender}
-                                onChange={setGender}
+                {person ? (
+                    <PersonAvatar
+                        person={person}
+                        size={58}
+                    />
+                ) : (
+                    <LockOutlined sx={{ color: 'text.secondary', fontSize: 30 }} />
+                )}
+            </Stack>
+            <Box
+                component="fieldset"
+                disabled={busy}
+                sx={{ border: 0, p: 0, m: 0, minWidth: 0 }}
+            >
+                <Stack spacing={3}>
+                    <TextField
+                        label="Full Name"
+                        variant="standard"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        fullWidth
+                        autoComplete="off"
+                        slotProps={{
+                            input: { readOnly: Boolean(person && !isPublic) },
+                            htmlInput: { 'data-1p-ignore': '', 'data-op-ignore': '' },
+                        }}
+                    />
+                    {!isPublic &&
+                        (!person ? (
+                            <PersonPhraseField
+                                value={phrase}
+                                onChange={setPhrase}
+                                disabled={busy}
                             />
-                        </Box>
-                    </Stack>
-                    <Box sx={{ flex: 1 }}>
-                        <Title>Generation</Title>
-                        <DemographicPicker
+                        ) : (
+                            <Box>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Full name and phrase verified.
+                                </Typography>
+                                <Button
+                                    type="button"
+                                    startIcon={<VpnKeyOutlined />}
+                                    onClick={() => setReplacement(replacement === null ? '' : null)}
+                                >
+                                    {replacement === null ? 'Change phrase' : 'Keep current phrase'}
+                                </Button>
+                                {replacement !== null && (
+                                    <Stack
+                                        spacing={1}
+                                        sx={{ mt: 1 }}
+                                    >
+                                        <PersonPhraseField
+                                            label="New phrase"
+                                            value={replacement}
+                                            onChange={setReplacement}
+                                            disabled={busy}
+                                        />
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                        >
+                                            Use the new phrase to find this person next time. It cannot be recovered.
+                                        </Typography>
+                                    </Stack>
+                                )}
+                            </Box>
+                        ))}
+                    <Box className="person-card-fields">
+                        <Autocomplete
+                            options={roleOptions.map((role) => role.value)}
+                            value={primaryRole}
+                            loading={roles.isLoading}
+                            freeSolo
+                            onInputChange={(_, text) => setPrimaryRole(text)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Primary role"
+                                    variant="standard"
+                                />
+                            )}
+                        />
+                        <DetailPicker
+                            kind="gender"
+                            label="Gender"
+                            value={gender}
+                            onChange={setGender}
+                        />
+                        <DetailPicker
                             kind="generation"
+                            label="Generation"
                             value={generation}
                             onChange={setGeneration}
                         />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                        <Title>Race</Title>
-                        <DemographicPicker
+                        <DetailPicker
                             kind="race"
+                            label="Race"
                             value={race}
                             onChange={setRace}
                         />
                     </Box>
-                </Box>
-            </RoundedContainer>
-            <Drawer
-                anchor="right"
-                open={saltGuideOpen}
-                onClose={() => setSaltGuideOpen(false)}
-                slotProps={{ paper: { sx: { width: 380, p: 3 } } }}
-            >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Typography
-                        variant="h6"
-                        sx={{ flex: 1 }}
-                    >
-                        Salt Phrase Guide
-                    </Typography>
-                    <RoundButton onClick={() => setSaltGuideOpen(false)}>
-                        <Close />
-                    </RoundButton>
-                </Box>
-                <Typography
-                    variant="body2"
-                    sx={{ mb: 2 }}
-                >
-                    A salt phrase is mixed into a visitor's name before hashing. It acts as a second secret: someone
-                    with the hash database still can't look up a visitor without knowing the exact salt you used. Choose
-                    a strategy that matches how you want to balance cross-reference ability against isolation.
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Stack spacing={2.5}>
-                    <SaltStrategy
-                        name="Organizational salt"
-                        summary="A phrase shared by every ombuds in your organization."
-                        detail="Finding this visitor requires a valid Ombuddi login, the correct org license, the visitor's exact name spelling, and the shared salt. Enables cross-ombuds continuity if a case is handed off."
-                    />
-                    <SaltStrategy
-                        name="Personal salt"
-                        summary="A phrase only you know — not shared with colleagues."
-                        detail="Hides the visitor even from other licensed ombuds in your organization. Records become inaccessible if you leave without transferring them."
-                    />
-                    <SaltStrategy
-                        name="Time-based salt"
-                        summary="A phrase that rotates on a schedule (e.g. the year)."
-                        detail="The same visitor with a different salt is an entirely different record. Limits how far back cross-referencing reaches — records from prior periods are effectively isolated."
-                    />
-                    <SaltStrategy
-                        name="Per-case salt"
-                        summary="A unique phrase for each case."
-                        detail="Maximum isolation. A visitor attached to two cases under different salts has no connection between them for any purpose, including reporting."
-                    />
-                    <SaltStrategy
-                        name="Scrambled spelling"
-                        summary="An intentional misspelling of the visitor's name as the salt."
-                        detail="Records the 'wrong' name in the hash. Someone who obtains the hash database and knows the real name cannot find this visitor without also knowing which misspelling was used. Works best combined with another strategy."
-                    />
-                    <SaltStrategy
-                        name="Blank salt"
-                        summary="No additional phrase — the name alone is hashed."
-                        detail="Still protected by Ombuddi authentication and the server-side pepper. Lookups still require the exact name spelling. Weakest option, but sufficient for low-sensitivity situations or when cross-referencing convenience matters more than isolation."
-                    />
-                </Stack>
-            </Drawer>
-
-            <RoundedContainer title={'Role'}>
-                <Box sx={{ display: 'flex' }}>
-                    <Box sx={{ flex: 1 }}>
-                        <Title>Primary Role</Title>
-                        <RadioGroup
-                            value={primaryRole}
-                            onChange={(evt) => setPrimaryRole(evt.target.value)}
-                            aria-busy={primaryRolesLoading}
+                    <Box>
+                        <Button
+                            type="button"
+                            endIcon={<ExpandMore />}
+                            onClick={() => setMore(!more)}
+                            aria-expanded={more}
                         >
-                            {primaryRoleOptions.map((role) => (
+                            More details
+                        </Button>
+                        <Collapse in={more}>
+                            <Stack
+                                spacing={2}
+                                sx={{ pt: 1 }}
+                            >
+                                {!person && (
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={isPublic}
+                                                onChange={(event) => setIsPublic(event.target.checked)}
+                                            />
+                                        }
+                                        label="Public person (name visible to the organization)"
+                                    />
+                                )}
                                 <FormControlLabel
-                                    key={role.value}
-                                    value={role.value}
-                                    control={<Radio />}
-                                    label={role.label}
+                                    control={
+                                        <Checkbox
+                                            checked={isInternational}
+                                            onChange={(event) => setIsInternational(event.target.checked)}
+                                        />
+                                    }
+                                    label="International"
                                 />
-                            ))}
-                        </RadioGroup>
-                        {primaryRolesLoading && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                                <CircularProgress size={18} />
-                                <Typography variant="body2">Loading organization roles…</Typography>
-                            </Box>
-                        )}
+                                {[
+                                    { value: category1, setValue: setCategory1 },
+                                    { value: category2, setValue: setCategory2 },
+                                    { value: category3, setValue: setCategory3 },
+                                ].map(({ value, setValue }, i) => (
+                                    <TextField
+                                        key={i}
+                                        variant="standard"
+                                        label={`Category ${i + 1}`}
+                                        value={value}
+                                        onChange={(event) => setValue(event.target.value)}
+                                    />
+                                ))}
+                            </Stack>
+                        </Collapse>
                     </Box>
-                    <Box sx={{ flex: 1 }}>
-                        <Stack spacing={2}>
-                            <Title>Categorization</Title>
-                            <MySwitch
-                                value={isInternational}
-                                setValue={setIsInternational}
-                                label={'International'}
-                            />
-                            <Autocomplete
-                                value={category1}
-                                onChange={(_event, newValue) => {
-                                    setCategory1(newValue ?? '')
-                                }}
-                                freeSolo
-                                disablePortal
-                                options={[]}
-                                sx={{ width: 300 }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Category 1"
-                                    />
-                                )}
-                            />
-                            <Autocomplete
-                                value={category2}
-                                onChange={(_event, newValue) => {
-                                    setCategory2(newValue ?? '')
-                                }}
-                                freeSolo
-                                disablePortal
-                                options={[]}
-                                sx={{ width: 300 }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Category 2"
-                                    />
-                                )}
-                            />
-                            <Autocomplete
-                                value={category3}
-                                onChange={(_event, newValue) => {
-                                    setCategory3(newValue ?? '')
-                                }}
-                                freeSolo
-                                disablePortal
-                                options={[]}
-                                sx={{ width: 300 }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label="Category 3"
-                                    />
-                                )}
-                            />
-                        </Stack>
-                    </Box>
-                </Box>
-                <SaveCancel
-                    onSave={save}
-                    onCancel={onCancel ?? (() => null)}
-                />
-            </RoundedContainer>
-        </Stack>
+                    {error && <Alert severity="error">{error}</Alert>}
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ justifyContent: 'flex-end' }}
+                    >
+                        <Button
+                            type="button"
+                            onClick={onCancel}
+                            disabled={busy}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={busy || !name.trim()}
+                        >
+                            {busy ? 'Saving…' : 'Save person'}
+                        </Button>
+                    </Stack>
+                </Stack>
+            </Box>
+        </Box>
     )
 }
