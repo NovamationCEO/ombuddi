@@ -1,176 +1,100 @@
-import { ArrowForward } from '@mui/icons-material'
-import { Box, CardContent, Typography } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
-import { institutionalPalette as palette } from '../../theme/institutionalPalette'
-import { CaseType } from '../../types/majorTypes'
-import { CaseCodeRow } from './CaseCodeRow'
-import { CaseCardWrapper } from './CaseCardWrapper'
+import { Check, LockOpenOutlined, LockOutlined } from '@mui/icons-material'
+import { ButtonBase, Tooltip } from '@mui/material'
+import type { CaseType } from '../../types/majorTypes'
 import { useProtectedText } from '../../tools/useProtectedText'
+import { useResolvedCaseCodes } from '../../tools/useResolvedCaseCodes'
 import { CaseSceneThumbnail } from '../CaseSceneThumbnail'
+import { ThemePaperLabel } from '../ThemePaperLabel'
+import { CaseLabelRow } from './CaseLabelRow'
+import './caseWorkspace.css'
 
-const statusStyles = {
-    active: {
-        label: 'Active',
-        accent: palette.blueGreen,
-        color: 'var(--mui-palette-secondary-main)',
-        background: 'rgba(var(--mui-palette-secondary-mainChannel) / 0.14)',
-    },
-    monitoring: {
-        label: 'Monitoring',
-        accent: 'var(--mui-palette-warning-main)',
-        color: 'var(--mui-palette-warning-main)',
-        background: 'rgba(var(--mui-palette-warning-mainChannel) / 0.14)',
-    },
-    closed: {
-        label: 'Closed',
-        accent: 'var(--mui-palette-text-disabled)',
-        color: 'var(--mui-palette-text-secondary)',
-        background: 'var(--mui-palette-action-hover)',
-    },
-} as const
-
-function formatCaseDate(value: Date) {
-    return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function CaseDescriptionPreview({ caseItem }: { caseItem: CaseType }) {
+export function CaseCard({
+    caseItem,
+    selected,
+    onSelect,
+}: {
+    caseItem: CaseType
+    selected: boolean
+    onSelect: () => void
+}) {
     const description = useProtectedText(caseItem.description, caseItem.organizationId, 'default', '')
-    const text =
-        description.plaintext ??
-        (description.status === 'decrypting'
-            ? 'Decrypting description…'
-            : 'Encrypted description — open case to unlock')
-
+    const codes = useResolvedCaseCodes(caseItem.codes ?? [])
+    const themes = caseItem.themes ?? []
     return (
-        <Typography
-            variant="body2"
-            sx={{
-                color: palette.muted,
-                mb: caseItem.codes?.length ? 1.25 : 0,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                fontStyle: description.plaintext === null ? 'italic' : 'normal',
-            }}
+        <ButtonBase
+            className={`case-file case-file--${caseItem.status} ${selected ? 'case-file--selected' : ''}`}
+            onClick={onSelect}
+            aria-label={`Inspect ${caseItem.name}`}
+            aria-pressed={selected}
+            aria-description={`Status: ${caseItem.status}`}
+            data-case-card={caseItem.id}
         >
-            {text}
-        </Typography>
-    )
-}
-
-export function CaseCard({ caseItem }: { caseItem: CaseType }) {
-    const navigate = useNavigate()
-    const isGeneral = caseItem.caseKind === 'general'
-    const normalizedStatus = caseItem.status?.toLowerCase() as keyof typeof statusStyles
-    const status = isGeneral
-        ? {
-              label: 'General',
-              accent: palette.purpleLight,
-              color: palette.purpleLight,
-              background: 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)',
-          }
-        : (statusStyles[normalizedStatus] ?? statusStyles.active)
-
-    return (
-        <CaseCardWrapper
-            onClick={() => navigate(`/case/${caseItem.id}`)}
-            accentColor={status.accent}
-        >
-            <CardContent
-                sx={{
-                    p: { xs: 2, sm: 2.25 },
-                    pl: { xs: 2.5, sm: 2.75 },
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '62px minmax(0, 1fr)', sm: '72px minmax(0, 1fr) auto' },
-                    columnGap: { xs: 1.5, sm: 2 },
-                    rowGap: 1,
-                    alignItems: 'start',
-                    '&:last-child': { pb: { xs: 2, sm: 2.25 } },
-                }}
-            >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                    <Box
-                        sx={{
-                            width: { xs: 54, sm: 60 },
-                            height: { xs: 54, sm: 60 },
-                            display: 'block',
-                            bgcolor: palette.surfaceRaised,
-                            borderRadius: 2.25,
-                            boxShadow: '0 6px 14px var(--mui-palette-app-shadow)',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        <CaseSceneThumbnail seed={caseItem.id} />
-                    </Box>
-                    <Box
-                        sx={{
-                            width: '100%',
-                            px: 0.5,
-                            py: 0.25,
-                            maxWidth: 72,
-                            boxSizing: 'border-box',
-                            color: status.color,
-                            bgcolor: status.background,
-                            borderRadius: 4,
-                            fontSize: '0.64rem',
-                            fontWeight: 700,
-                            lineHeight: 1.4,
-                            textAlign: 'center',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
-                        {status.label}
-                    </Box>
-                </Box>
-
-                <Box sx={{ minWidth: 0 }}>
-                    <Typography
-                        variant="h6"
-                        component="h2"
-                        sx={{ color: palette.text, fontWeight: 600, lineHeight: 1.25, mb: 0.5 }}
-                    >
-                        {caseItem.name}
-                    </Typography>
-                    {isGeneral ? (
-                        <Typography
-                            variant="body2"
-                            sx={{ color: palette.muted }}
-                        >
-                            One-off and cross-cutting activity not assigned to a case.
-                        </Typography>
-                    ) : (
-                        caseItem.description && <CaseDescriptionPreview caseItem={caseItem} />
-                    )}
-
-                    {!isGeneral && !!caseItem.codes?.length && <CaseCodeRow codeIds={caseItem.codes} />}
-                </Box>
-
-                <Box
-                    sx={{
-                        gridColumn: { xs: '2', sm: 'auto' },
-                        minWidth: { sm: 122 },
-                        display: 'flex',
-                        flexDirection: { xs: 'row', sm: 'column' },
-                        alignItems: { xs: 'center', sm: 'flex-end' },
-                        justifyContent: { xs: 'space-between', sm: 'space-between' },
-                        alignSelf: 'stretch',
-                        gap: 0.5,
-                        color: palette.muted,
-                        textAlign: { sm: 'right' },
-                    }}
+            <span className="case-file-tab">
+                Updated {new Date(caseItem.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+            {selected && (
+                <span
+                    className="case-file-selection"
+                    aria-hidden="true"
                 >
-                    <Box>
-                        <Typography sx={{ fontSize: '0.7rem' }}>
-                            Updated {formatCaseDate(caseItem.updatedAt)}
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.68rem', opacity: 0.76 }}>
-                            Created {formatCaseDate(caseItem.createdAt)}
-                        </Typography>
-                    </Box>
-                    <ArrowForward sx={{ color: palette.purpleLight, fontSize: 19 }} />
-                </Box>
-            </CardContent>
-        </CaseCardWrapper>
+                    <Check fontSize="inherit" /> Selected
+                </span>
+            )}
+            <span className="case-file-paper">
+                <span className="case-file-heading">
+                    <span className="case-file-thumbnail">
+                        <CaseSceneThumbnail seed={caseItem.id} />
+                    </span>
+                    <span className="case-file-name">{caseItem.name}</span>
+                    <span className={`case-file-status case-file-status--${caseItem.status}`}>{caseItem.status}</span>
+                </span>
+                <span className="case-file-description">
+                    {description.plaintext === null ? (
+                        <>
+                            <LockOutlined />
+                            {description.status === 'decrypting' ? 'Unlocking description…' : 'Protected description'}
+                        </>
+                    ) : (
+                        <>
+                            {description.encrypted && <LockOpenOutlined aria-label="Decrypted; stored encrypted" />}
+                            <span>{description.plaintext || 'No description recorded.'}</span>
+                        </>
+                    )}
+                </span>
+                <span className="case-file-labels">
+                    {!!codes.length && (
+                        <CaseLabelRow
+                            kind="codes"
+                            items={codes.map((code) => ({
+                                id: code.id,
+                                content: (
+                                    <Tooltip title={`${code.shortName}: ${code.description}`}>
+                                        <span className="case-file-code">{code.shortName}</span>
+                                    </Tooltip>
+                                ),
+                            }))}
+                        />
+                    )}
+                    {!!themes.length && (
+                        <CaseLabelRow
+                            kind="themes"
+                            items={themes.map((theme) => ({
+                                id: theme,
+                                content: (
+                                    <ThemePaperLabel
+                                        theme={theme}
+                                        component="span"
+                                        size="small"
+                                    />
+                                ),
+                            }))}
+                        />
+                    )}
+                    {!codes.length && !themes.length && (
+                        <span className="case-file-unclassified">No codes or themes yet</span>
+                    )}
+                </span>
+            </span>
+        </ButtonBase>
     )
 }
