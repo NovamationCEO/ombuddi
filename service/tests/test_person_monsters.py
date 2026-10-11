@@ -205,6 +205,7 @@ class PersonMonsterTests(unittest.TestCase):
             None,
             None,
             ORGANIZATION_ID,
+            'consulted',
         )
         connection = FakeConnection(rows=[row])
         with app.test_request_context(f"/api/v1/get_persons_by_entry_id/{PERSON_ID}"):
@@ -215,6 +216,7 @@ class PersonMonsterTests(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data[0]["monsterSeed"], MONSTER_SEED)
         self.assertEqual(data[0]["gender"], "Woman")
+        self.assertEqual(data[0]["entryRole"], "consulted")
         self.assertTrue(data[0]["isInternational"])
         sql, _params = connection.fake_cursor.executions[0]
         self.assertNotIn("SELECT p.*", sql)

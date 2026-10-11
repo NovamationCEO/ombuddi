@@ -107,6 +107,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         FROM entries e
         JOIN entry_person ep ON ep.entry_id = e.id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+          AND ep.entry_role = 'visitor'
         {aliased_entry_scope}
         GROUP BY month ORDER BY month
     """, (organization_id, start, end, *aliased_entry_scope_params))
@@ -122,6 +123,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+          AND ep.entry_role = 'visitor'
         {aliased_entry_scope}
         GROUP BY race ORDER BY count DESC
     """, (organization_id, start, end, *aliased_entry_scope_params))
@@ -154,6 +156,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+          AND ep.entry_role = 'visitor'
         {aliased_entry_scope}
         GROUP BY role ORDER BY count DESC
     """, (organization_id, start, end, *aliased_entry_scope_params))
@@ -166,6 +169,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         JOIN persons p ON p.id = ep.person_id
         JOIN entries e ON e.id = ep.entry_id
         WHERE e.organization_id = %s AND e.date >= %s AND e.date <= %s
+          AND ep.entry_role = 'visitor'
         {aliased_entry_scope}
         GROUP BY generation ORDER BY count DESC
     """, (organization_id, start, end, *aliased_entry_scope_params))

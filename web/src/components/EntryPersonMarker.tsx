@@ -1,11 +1,7 @@
-import {
-    Box,
-    Stack,
-    Tooltip,
-    Typography,
-} from '@mui/material'
+import { Box, Stack, Tooltip, Typography } from '@mui/material'
 import React from 'react'
-import type { PersonType } from '../types/majorTypes'
+import { entryRoleLabel } from '../tools/entryRoles'
+import type { EntryPersonType, PersonType } from '../types/majorTypes'
 import { useVerifiedPersonNames } from '../libraries/useVerifiedPersonNames'
 import { PersonAvatar } from './PersonAvatar'
 import { personDisplayDetails, personDisplayLabel, personPublicName } from './personDisplay'
@@ -65,7 +61,7 @@ function PersonDetails({ person, displayName }: { person: PersonType; displayNam
     )
 }
 
-export function EntryPersonMarker({ person }: { person: PersonType }) {
+export function EntryPersonMarker({ person }: { person: EntryPersonType }) {
     const verifiedName = useVerifiedPersonNames((state) => state.names[person.id])
     const [verifyOpen, setVerifyOpen] = React.useState(false)
     const [phraseChangeOpen, setPhraseChangeOpen] = React.useState(false)
@@ -94,7 +90,12 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                 }}
             >
                 <Tooltip
-                    title={<PersonDetails person={person} displayName={displayName} />}
+                    title={
+                        <PersonDetails
+                            person={person}
+                            displayName={displayName}
+                        />
+                    }
                     placement="top-start"
                     arrow
                     enterDelay={250}
@@ -116,7 +117,7 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                     <Box
                         component="span"
                         tabIndex={0}
-                        aria-label={`${label}. Hover or focus for person details.${
+                        aria-label={`${label}. ${person.entryRole ? `${entryRoleLabel(person.entryRole)}. ` : ''}Hover or focus for person details.${
                             person.isPublic
                                 ? ''
                                 : verifiedName
@@ -159,6 +160,14 @@ export function EntryPersonMarker({ person }: { person: PersonType }) {
                         />
                     </Box>
                 </Tooltip>
+                {person.entryRole && (
+                    <Typography
+                        variant="caption"
+                        sx={{ fontSize: '0.62rem', mt: 0.35, lineHeight: 1.2 }}
+                    >
+                        {entryRoleLabel(person.entryRole)}
+                    </Typography>
+                )}
                 {displayName && (
                     <Box
                         sx={{

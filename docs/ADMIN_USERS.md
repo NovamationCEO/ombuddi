@@ -141,7 +141,10 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/013_add_general_activity_cases.sql
 \i /Users/nova/Code/ombuddi/service/migrations/014_add_case_creator.sql
 \i /Users/nova/Code/ombuddi/service/migrations/015_add_invitation_email_audit.sql
+\i /Users/nova/Code/ombuddi/service/migrations/016_add_entry_person_roles.sql
 ```
+
+Migration 016 adds per-entry involvement roles. Apply it before deploying the updated service. Existing links become `visitor`, preserving historical visitor totals; future visitor charts exclude the other involvement roles.
 
 Migration 005 checks existing rows before installing tenant-aware foreign keys
 and the entry-person guard. It aborts without changing the schema if it finds a

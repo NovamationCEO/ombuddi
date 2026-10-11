@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetter } from '../tools/db_tools/useGetter'
-import { CaseType, EntryType, PersonType } from '../types/majorTypes'
+import { CaseType, EntryType, PersonType, EntryPersonType } from '../types/majorTypes'
 import { creator } from '../tools/db_tools/creator'
 import { updater } from '../tools/db_tools/updater'
 import { deleter } from '../tools/db_tools/deleter'
@@ -17,6 +17,7 @@ import { NoteEncryptionDialog, type NoteEncryptionChoice } from '../components/N
 import { PersonAvatar } from '../components/PersonAvatar'
 import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
+import { entryRoleLabel } from '../tools/entryRoles'
 import { entryPersonChanges } from '../tools/entryPersonChanges'
 import { calendarDateInputValue, localCalendarDateInputValue } from '../tools/calendarDate'
 import { useCurrentOmbuds } from '../tools/useCurrentOmbuds'
@@ -38,7 +39,7 @@ export function AddEntry() {
     const caseRes = useGetter<CaseType>(['get_case_by_id', caseId])
     const casePeopleRes = useGetter<PersonType[]>(['get_persons_by_case_id', caseId])
     const entryRes = useGetter<EntryType>(['get_entry_by_id', entryId])
-    const existingEntryPeopleRes = useGetter<PersonType[]>(['get_persons_by_entry_id', entryId])
+    const existingEntryPeopleRes = useGetter<EntryPersonType[]>(['get_persons_by_entry_id', entryId])
     const currentOmbudsRes = useCurrentOmbuds(isEditing)
     const [notes, setNotes] = useState('')
     const [storedNotes, setStoredNotes] = useState('')
@@ -56,7 +57,7 @@ export function AddEntry() {
     const [showPeopleDialog, setShowPeopleDialog] = React.useState(false)
     const [isSaving, setIsSaving] = React.useState(false)
     const initializedEntryId = React.useRef<string | null>(null)
-    const originalPersonIds = React.useRef<string[]>([])
+    const originalPeople = React.useRef<EntryPersonType[]>([])
 
     // Entry medium and priority are org-customizable picklists. The stored
     // value on entries.medium is the picklist row's display name directly
@@ -82,7 +83,7 @@ export function AddEntry() {
 
     // People staged for this entry. New entries send them with the entry so the
     // server can create the note and all relationships in one transaction.
-    const [entryPeople, setEntryPeople] = useState<PersonType[]>([])
+    const [entryPeople, setEntryPeople] = useState<EntryPersonType[]>([])
 
     React.useEffect(() => {
         const entry = entryRes.data
@@ -100,13 +101,15 @@ export function AddEntry() {
         setNotesLocked(encrypted)
         setEncryptionChoice(null)
         setEntryPeople(people)
-        originalPersonIds.current = people.map((person) => person.id)
+        originalPeople.current = people
         initializedEntryId.current = entryId
         setEntryInitialized(true)
     }, [caseId, entryId, entryRes.data, existingEntryPeopleRes.data, isEditing])
 
     function addPerson(person: PersonType) {
-        setEntryPeople((prev) => (prev.some((p) => p.id === person.id) ? prev : [...prev, person]))
+        setEntryPeople((prev) =>
+            prev.some((p) => p.id === person.id) ? prev : [...prev, { ...person, entryRole: 'visitor' }],
+        )
     }
 
     function removePerson(personId: string) {
@@ -145,13 +148,14 @@ export function AddEntry() {
             }
             if (isEditing && entryId) {
                 await updater('update_entry', { id: entryId, ...payload })
-                const { additions, removals } = entryPersonChanges(originalPersonIds.current, entryPeople)
+                const { additions, updates, removals } = entryPersonChanges(originalPeople.current, entryPeople)
 
                 await Promise.all([
-                    ...additions.map((person) =>
-                        creator<{ entryId: string; personId: string }>('add_entry_person', {
+                    ...[...additions, ...updates].map((person) =>
+                        creator('add_entry_person', {
                             entryId,
                             personId: person.id,
+                            entryRole: person.entryRole ?? 'visitor',
                         }),
                     ),
                     ...removals.map((personId) =>
@@ -165,8 +169,12 @@ export function AddEntry() {
                 await creator<{ id: string; success: boolean }>('add_entry', {
                     ...payload,
                     personIds: entryPeople.map((person) => person.id),
+                    personRoles: Object.fromEntries(
+                        entryPeople.map((person) => [person.id, person.entryRole ?? 'visitor']),
+                    ),
                 })
             }
+            await queryClient.invalidateQueries({ queryKey: ['reports'] })
             await queryClient.invalidateQueries({ queryKey: ['get_entries_by_case_id', caseId] })
             await queryClient.invalidateQueries({ queryKey: ['get_persons_by_case_id', caseId] })
             if (entryId) {
@@ -243,9 +251,18 @@ export function AddEntry() {
                     casePeople={casePeopleRes.data ?? []}
                     onAdd={addPerson}
                     onRemove={removePerson}
+                    onRoleChange={(id, entryRole) =>
+                        setEntryPeople((current) =>
+                            current.map((person) => (person.id === id ? { ...person, entryRole } : person)),
+                        )
+                    }
                     onClose={() => setShowPeopleDialog(false)}
                     onUpdate={(person) =>
-                        setEntryPeople((current) => current.map((item) => (item.id === person.id ? person : item)))
+                        setEntryPeople((current) =>
+                            current.map((item) =>
+                                item.id === person.id ? { ...person, entryRole: item.entryRole } : item,
+                            ),
+                        )
                     }
                 />
             )}
@@ -467,8 +484,7 @@ export function AddEntry() {
                                                 <Chip
                                                     key={person.id}
                                                     avatar={<PersonAvatar person={person} />}
-                                                    label={personLabel(person)}
-                                                    onDelete={isSaving ? undefined : () => removePerson(person.id)}
+                                                    label={`${personLabel(person)} · ${entryRoleLabel(person.entryRole)}`}
                                                     sx={{
                                                         maxWidth: '100%',
                                                         bgcolor: 'rgba(255,255,255,0.5)',

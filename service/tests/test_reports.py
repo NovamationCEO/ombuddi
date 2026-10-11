@@ -143,6 +143,18 @@ class ReportTests(unittest.TestCase):
         self.assertGreater(len(entry_only_queries), 0)
         self.assertTrue(all("case_kind" not in sql for sql in entry_only_queries))
 
+    def test_visitor_reports_exclude_other_involvement_roles(self):
+        connection = EmptyReportConnection()
+        with app.test_request_context('/api/v1/reports?scope=organization'):
+            g.organization_id = ORGANIZATION_ID
+            with patch('src.report_views.get_db_connection', return_value=connection):
+                get_reports()
+        visitor_queries = [sql for sql, _ in connection.fake_cursor.executions if 'entry_person' in sql]
+        self.assertEqual(len(visitor_queries), 4)
+        for sql in visitor_queries:
+            self.assertIn("ep.entry_role = 'visitor'", sql)
+            self.assertIn('COUNT(DISTINCT ep.person_id)', sql)
+
     def test_my_scope_filters_every_aggregation_to_the_current_ombuds(self):
         connection = EmptyReportConnection()
         with app.test_request_context(

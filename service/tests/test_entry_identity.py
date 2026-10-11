@@ -125,8 +125,40 @@ class EntryIdentityTests(unittest.TestCase):
             if "INSERT INTO entry_person" in execution[0]
         ]
         self.assertEqual(len(person_inserts), 1)
-        self.assertEqual(person_inserts[0][1], (ENTRY_ID, PERSON_ID))
+        self.assertEqual(person_inserts[0][1], (ENTRY_ID, PERSON_ID, 'visitor'))
         self.assertTrue(connection.committed)
+
+    def test_new_entry_persists_each_selected_role(self):
+        for role in ['visitor', 'referenced', 'consulted', 'support_person', 'participant', 'other']:
+            with self.subTest(role=role):
+                connection = FakeConnection(
+                    fetchone_rows=[('standard', None), (ENTRY_ID,)],
+                    fetchall_rows=[[(PERSON_ID,)]],
+                )
+                with app.test_request_context('/api/v1/add_entry', method='POST', json={
+                    'caseId': CASE_ID, 'date': '2026-08-03', 'personIds': [PERSON_ID],
+                    'personRoles': {PERSON_ID: role},
+                }):
+                    self._principal()
+                    with patch('src.ombuddi_views.get_db_connection', return_value=connection):
+                        _, status = add_entry()
+                self.assertEqual(status, 200)
+                self.assertEqual(connection.fake_cursor.executions[-1][1], (ENTRY_ID, PERSON_ID, role))
+                self.assertTrue(connection.committed)
+
+    def test_invalid_roles_are_rejected_before_creating_an_entry(self):
+        for roles in [{PERSON_ID: 'invalid'}, {PERSON_ID: None}, {PERSON_ID: []},
+                      {ENTRY_ID: 'visitor'}, {'not-a-uuid': 'visitor'}, [], None]:
+            with self.subTest(roles=roles):
+                with app.test_request_context('/api/v1/add_entry', method='POST', json={
+                    'caseId': CASE_ID, 'date': '2026-08-03', 'personIds': [PERSON_ID],
+                    'personRoles': roles,
+                }):
+                    self._principal()
+                    with patch('src.ombuddi_views.get_db_connection') as connect:
+                        _, status = add_entry()
+                self.assertEqual(status, 400)
+                connect.assert_not_called()
 
     def test_another_ombuds_cannot_add_to_a_general_container(self):
         connection = FakeConnection(fetchone_rows=[("general", OTHER_OMBUDS_ID)])

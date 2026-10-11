@@ -1,3 +1,8 @@
+import type { EntryRole } from '../tools/entryRoles'
+
+// This role belongs to one entry-person link, never to the person record.
+export type EntryPersonType = PersonType & { entryRole?: EntryRole }
+
 export type CaseType = {
     id: string
     organizationId: string

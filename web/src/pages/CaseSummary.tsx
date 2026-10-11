@@ -33,6 +33,7 @@ import {
     CaseReferralSourceType,
     CaseType,
     EntryType,
+    EntryPersonType,
     PersonType,
     ReferralSourceSelectionType,
 } from '../types/majorTypes'
@@ -127,7 +128,7 @@ export function CaseSummary() {
         () => sortedEntries.find((entry) => entry.id === highlightedId) ?? null,
         [highlightedId, sortedEntries],
     )
-    const highlightedPeopleRes = useGetter<PersonType[]>(['get_persons_by_entry_id', highlightedId ?? undefined])
+    const highlightedPeopleRes = useGetter<EntryPersonType[]>(['get_persons_by_entry_id', highlightedId ?? undefined])
     const organizationId = caseRes.data?.organizationId ?? ''
     const rawDescription = caseRes.data?.description ?? ''
     const descriptionLocked = isEncrypted(rawDescription) && decryptedDescription === null

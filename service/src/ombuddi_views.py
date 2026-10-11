@@ -1,6 +1,7 @@
 import logging
 from datetime import date
 from uuid import UUID
+from src.entry_roles import valid_entry_role
 
 from flask import Blueprint, request, g, jsonify
 from connection import get_db_connection, managed_connection
@@ -772,6 +773,18 @@ def add_entry():
     person_ids, error = _normalized_uuid_list(payload.get('personIds'), 'personIds')
     if error:
         return error
+    raw_roles = payload.get('personRoles', {})
+    if not isinstance(raw_roles, dict):
+        return _entry_input_error('personRoles must map person IDs to entry roles')
+    person_roles = {}
+    for raw_id, role in raw_roles.items():
+        try:
+            person_id = str(UUID(str(raw_id)))
+        except (ValueError, TypeError, AttributeError):
+            return _entry_input_error('Invalid person ID in personRoles')
+        if person_id not in person_ids or not valid_entry_role(role) or person_id in person_roles:
+            return _entry_input_error('Invalid personRoles')
+        person_roles[person_id] = role
 
     try:
         with managed_connection(get_db_connection) as conn:
@@ -837,10 +850,10 @@ def add_entry():
                 for person_id in person_ids:
                     cur.execute(
                         """
-                        INSERT INTO entry_person (entry_id, person_id)
-                        VALUES (%s, %s)
+                        INSERT INTO entry_person (entry_id, person_id, entry_role)
+                        VALUES (%s, %s, %s)
                         """,
-                        (entry_id, person_id),
+                        (entry_id, person_id, person_roles.get(person_id, 'visitor')),
                     )
         return jsonify({'success': True, 'status': 'success', 'id': entry_id}), 200
     except Exception:

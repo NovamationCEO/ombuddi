@@ -537,7 +537,7 @@ export function ReportPage() {
                                 highcharts={Highcharts}
                                 options={colOptions(
                                     chartTheme,
-                                    'Persons per Month',
+                                    'Visitors per Month',
                                     personMonths,
                                     [
                                         {
@@ -547,11 +547,11 @@ export function ReportPage() {
                                         },
                                         {
                                             type: 'column',
-                                            name: 'Unique persons',
+                                            name: 'Unique visitors',
                                             data: data?.personsByMonth.map((r) => r.uniquePersons) ?? [],
                                         },
                                     ],
-                                    'Persons',
+                                    'Visitors',
                                     true,
                                 )}
                             />
@@ -561,10 +561,10 @@ export function ReportPage() {
                     {/* Categorical charts — bar/pie toggle + shareable suppression */}
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Unique Persons by Race / Ethnicity"
+                            title="Unique Visitors by Race / Ethnicity"
                             categories={data?.personsByRace.map((r) => r.race) ?? []}
                             data={data?.personsByRace.map((r) => r.count) ?? []}
-                            yTitle="Persons"
+                            yTitle="Visitors"
                             suppressable
                             shareMode={shareMode}
                             minCellSize={minCellSize}
@@ -598,10 +598,10 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Unique Persons by Role"
+                            title="Unique Visitors by Organizational Role"
                             categories={data?.personsByRole.map((r) => r.role) ?? []}
                             data={data?.personsByRole.map((r) => r.count) ?? []}
-                            yTitle="Persons"
+                            yTitle="Visitors"
                             suppressable
                             shareMode={shareMode}
                             minCellSize={minCellSize}
@@ -610,10 +610,10 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Unique Persons by Generation"
+                            title="Unique Visitors by Generation"
                             categories={data?.personsByGeneration.map((r) => r.generation) ?? []}
                             data={data?.personsByGeneration.map((r) => r.count) ?? []}
-                            yTitle="Persons"
+                            yTitle="Visitors"
                             suppressable
                             shareMode={shareMode}
                             minCellSize={minCellSize}

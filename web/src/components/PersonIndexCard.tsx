@@ -1,6 +1,7 @@
 import { Add, Close, LockOutlined } from '@mui/icons-material'
-import { Box, ButtonBase, IconButton, Tooltip, Typography } from '@mui/material'
+import { Box, ButtonBase, IconButton, MenuItem, TextField, Tooltip, Typography } from '@mui/material'
 import type { PersonType } from '../types/majorTypes'
+import { entryRoles, type EntryRole } from '../tools/entryRoles'
 import { PersonAvatar } from './PersonAvatar'
 import './PersonIndexCard.css'
 
@@ -10,21 +11,25 @@ export function PersonIndexCard({
     onAdd,
     onRemove,
     selected = false,
+    entryRole = 'visitor',
+    onRoleChange,
 }: {
     person: PersonType
     onOpen: () => void
     onAdd?: () => void
     onRemove?: () => void
     selected?: boolean
+    entryRole?: EntryRole
+    onRoleChange?: (role: EntryRole) => void
 }) {
     const summary =
         [person.primaryRole, person.generation]
             .filter((value) => value && !['unknown', 'n/a'].includes(value.toLowerCase()))
-            .join(' · ') || 'Visitor'
+            .join(' · ') || 'Person'
     return (
         <Box
             className={`person-index-card person-summary-card${selected ? ' person-card-selected' : ''}`}
-            sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}
+            sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}
         >
             <ButtonBase
                 onClick={onOpen}
@@ -72,6 +77,32 @@ export function PersonIndexCard({
                         {onRemove ? <Close fontSize="small" /> : <Add fontSize="small" />}
                     </IconButton>
                 </Tooltip>
+            )}
+            {onRoleChange && (
+                <TextField
+                    select
+                    variant="standard"
+                    label="Role in this entry"
+                    value={entryRole}
+                    onChange={(event) => onRoleChange(event.target.value as EntryRole)}
+                    helperText={entryRoles.find((role) => role.value === entryRole)?.description}
+                    sx={{
+                        width: '100%',
+                        mx: 1.5,
+                        mb: 1.5,
+                        '& .MuiInputBase-root': { fontSize: '0.85rem' },
+                        '& .MuiFormHelperText-root': { fontSize: '0.7rem', lineHeight: 1.35 },
+                    }}
+                >
+                    {entryRoles.map((role) => (
+                        <MenuItem
+                            key={role.value}
+                            value={role.value}
+                        >
+                            {role.label}
+                        </MenuItem>
+                    ))}
+                </TextField>
             )}
         </Box>
     )

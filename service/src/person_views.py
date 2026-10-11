@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from src.connection import get_db_connection, managed_connection
 from utils import get_many, get_one, return_many, update_one
 from hash_name import hash_name
+from src.entry_roles import valid_entry_role
 import logging
 
 logger = logging.getLogger(__name__)
@@ -246,13 +247,13 @@ def delete_person():
             'message': 'Unable to delete person',
         }), 500
 
-def _get_persons_by_sql(sql: str, params: tuple):
+def _get_persons_by_sql(sql: str, params: tuple, model=person_model):
     try:
         with managed_connection(get_db_connection) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
                 rows = cur.fetchall()
-                return return_many(person_model, rows)
+                return return_many(model, rows)
     except Exception:
         logger.exception("Person query failed")
         return (
@@ -283,17 +284,13 @@ SQL_PERSONS_BY_CASE_ID = f"""
 """
 
 SQL_PERSONS_BY_ENTRY_ID = f"""
-    SELECT {PERSON_SELECT_COLUMNS}
+    SELECT {PERSON_SELECT_COLUMNS}, ep.entry_role
     FROM persons p
+    JOIN entry_person ep ON ep.person_id = p.id
+    JOIN entries e ON e.id = ep.entry_id
     WHERE p.organization_id = %s
-      AND EXISTS (
-        SELECT 1
-        FROM entry_person ep
-        JOIN entries e ON e.id = ep.entry_id
-        WHERE ep.entry_id = %s
-          AND e.organization_id = %s
-          AND ep.person_id = p.id
-    )
+      AND ep.entry_id = %s
+      AND e.organization_id = %s
     ORDER BY p.id;
 """
 
@@ -305,7 +302,8 @@ def get_persons_by_case_id(case_id):
 @person_views.route("/api/v1/get_persons_by_entry_id/<entry_id>")
 def get_persons_by_entry_id(entry_id):
     org = g.organization_id
-    return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (org, entry_id, org))
+    return _get_persons_by_sql(SQL_PERSONS_BY_ENTRY_ID, (org, entry_id, org),
+                               {**person_model, 'entryRole': 'entry_role'})
 
 
 # ---------------------------------------------------------------------------
@@ -315,9 +313,9 @@ def get_persons_by_entry_id(entry_id):
 # ---------------------------------------------------------------------------
 
 SQL_ADD_ENTRY_PERSON = """
-    INSERT INTO entry_person (entry_id, person_id)
-    VALUES (%s, %s)
-    ON CONFLICT (entry_id, person_id) DO NOTHING;
+    INSERT INTO entry_person (entry_id, person_id, entry_role)
+    VALUES (%s, %s, %s)
+    ON CONFLICT (entry_id, person_id) DO UPDATE SET entry_role = EXCLUDED.entry_role;
 """
 
 SQL_REMOVE_ENTRY_PERSON = """
@@ -326,7 +324,9 @@ SQL_REMOVE_ENTRY_PERSON = """
 """
 
 
-def _exec_entry_person(sql: str, entry_id, person_id):
+def _exec_entry_person(sql: str, entry_id, person_id, entry_role='visitor'):
+    if sql == SQL_ADD_ENTRY_PERSON and not valid_entry_role(entry_role):
+        return jsonify({'success': False, 'error': 'Invalid entryRole'}), 400
     if not entry_id or not person_id:
         return (
             jsonify(
@@ -366,7 +366,8 @@ def _exec_entry_person(sql: str, entry_id, person_id):
                         }),
                         404,
                     )
-                cur.execute(sql, (entry_id, person_id))
+                params = (entry_id, person_id, entry_role) if sql == SQL_ADD_ENTRY_PERSON else (entry_id, person_id)
+                cur.execute(sql, params)
         return jsonify({"success": True, "status": "success"}), 200
     except Exception:
         logger.exception("entry_person mutation failed")
@@ -386,7 +387,8 @@ def _exec_entry_person(sql: str, entry_id, person_id):
 @person_views.route("/api/v1/add_entry_person", methods=["POST"])
 def add_entry_person():
     data = request.get_json(silent=True) or {}
-    return _exec_entry_person(SQL_ADD_ENTRY_PERSON, data.get("entryId"), data.get("personId"))
+    return _exec_entry_person(SQL_ADD_ENTRY_PERSON, data.get("entryId"), data.get("personId"),
+                              data.get("entryRole", "visitor"))
 
 
 @person_views.route("/api/v1/remove_entry_person", methods=["DELETE"])

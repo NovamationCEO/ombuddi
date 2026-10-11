@@ -2,7 +2,8 @@ import { Box, Button, Dialog, DialogTitle, Stack, Typography } from '@mui/materi
 import { ThemeProvider } from '@mui/material/styles'
 import { ContactPageOutlined } from '@mui/icons-material'
 import React from 'react'
-import type { PersonType } from '../types/majorTypes'
+import type { EntryRole } from '../tools/entryRoles'
+import type { EntryPersonType, PersonType } from '../types/majorTypes'
 import type { PersonCredentials } from '../tools/personLookup'
 import { caseFolderTheme } from '../theme/caseFolderTheme'
 import { PersonFinder } from './PersonFinder'
@@ -21,13 +22,15 @@ export function EntryPeopleDialog({
     casePeople,
     onAdd,
     onRemove,
+    onRoleChange,
     onUpdate,
     onClose,
 }: {
-    people: PersonType[]
+    people: EntryPersonType[]
     casePeople: PersonType[]
     onAdd: (person: PersonType) => void
     onRemove: (id: string) => void
+    onRoleChange: (id: string, role: EntryRole) => void
     onUpdate: (person: PersonType) => void
     onClose: () => void
 }) {
@@ -96,6 +99,8 @@ export function EntryPeopleDialog({
                                                         }
                                                         onOpen={() => openPerson(person)}
                                                         onRemove={() => onRemove(person.id)}
+                                                        entryRole={person.entryRole ?? 'visitor'}
+                                                        onRoleChange={(role) => onRoleChange(person.id, role)}
                                                     />
                                                 ))}
                                             </Box>

@@ -162,3 +162,9 @@ The working decision queue is maintained in `docs/OPEN_DECISIONS.md`.
 Once functional, submit to IOA for feedback / informal blessing. That means we should be able to walk an IOA reviewer through how each Standard of Practice is honored — confidentiality, independence, neutrality, informality, and especially record-retention practices.
 
 - **404 — Off the map.** Unknown URLs render a standalone dark-teal patterned page with the Ombuddi monster consulting a map. Home routes to the workspace (or welcome when signed out); Go back uses prior app history when present and otherwise replaces the missing URL with Home. The page is noindex. Artwork and its generation prompt are documented in `docs/design/404-off-the-map.md`.
+
+### Entry-person involvement roles (2026-10-11)
+
+Each `entry_person` link has `entry_role`: visitor (default), referenced, consulted, support_person, participant, or other. This is separate from a person's organizational `primaryRole`. Apply migration 016 before running this version against an existing database; existing links become visitor to preserve historical counts. New entries send `personIds` plus a `personRoles` map; older clients omitting roles default to visitor. The authorized `add_entry_person` endpoint also updates the role of an existing link. Entry reads include `entryRole`; case-wide person reads deliberately omit it because roles can differ by entry.
+
+Selected index cards expose a Role in this entry selector; note summaries and case-review entry avatars display that role. All four visitor report aggregations (monthly unique/appearances, race, organizational role, generation) filter to visitor links, retaining all other people for case history. A person with any qualifying visitor link is counted once in each relevant distinct-person aggregation.

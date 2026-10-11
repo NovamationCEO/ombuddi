@@ -13,7 +13,7 @@ sys.path.insert(0, SRC_DIR)
 
 from app import app
 from src.ombuddi_views import _require_owned_reference
-from src.person_views import SQL_ADD_ENTRY_PERSON, _exec_entry_person
+from src.person_views import SQL_ADD_ENTRY_PERSON, _exec_entry_person, add_entry_person
 from src.utils import update_one
 
 
@@ -120,6 +120,28 @@ class TenantWriteTests(unittest.TestCase):
         self.assertEqual(status, 404)
         _sql, params = connection.fake_cursor.executions[0]
         self.assertEqual(params, (ROW_ID, ORGANIZATION_ID))
+
+    def test_entry_role_update_uses_authorized_link_and_validates_role(self):
+        connection = FakeConnection(rows=[(1,)])
+        with app.test_request_context('/api/v1/add_entry_person', method='POST', json={
+            'entryId': ROW_ID, 'personId': PERSON_ID, 'entryRole': 'support_person',
+        }):
+            g.organization_id = ORGANIZATION_ID
+            g.ombuds_id = OMBUDS_ID
+            with patch('src.person_views.get_db_connection', return_value=connection):
+                _, status = add_entry_person()
+        self.assertEqual(status, 200)
+        sql, params = connection.fake_cursor.executions[-1]
+        self.assertIn('DO UPDATE SET entry_role', sql)
+        self.assertEqual(params, (ROW_ID, PERSON_ID, 'support_person'))
+        for role in ['invalid', None, []]:
+            with app.test_request_context('/api/v1/add_entry_person', method='POST', json={
+                'entryId': ROW_ID, 'personId': PERSON_ID, 'entryRole': role,
+            }):
+                with patch('src.person_views.get_db_connection') as connect:
+                    _, status = add_entry_person()
+            self.assertEqual(status, 400)
+            connect.assert_not_called()
 
     def test_entry_person_mutation_requires_both_rows_in_tenant(self):
         connection = FakeConnection(rows=[])

@@ -80,6 +80,7 @@ describe('person index card workflow', () => {
                     casePeople={[person, otherPerson]}
                     onAdd={vi.fn()}
                     onRemove={vi.fn()}
+                    onRoleChange={vi.fn()}
                     onUpdate={vi.fn()}
                     onClose={vi.fn()}
                 />,

@@ -475,6 +475,10 @@ CREATE INDEX persons_organization_id_idx ON persons (organization_id);
 CREATE TABLE entry_person (
     entry_id  UUID NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
     person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+    entry_role TEXT NOT NULL DEFAULT 'visitor'
+        CONSTRAINT entry_person_role_check CHECK (
+            entry_role IN ('visitor', 'referenced', 'consulted', 'support_person', 'participant', 'other')
+        ),
     PRIMARY KEY (entry_id, person_id)
 );
 

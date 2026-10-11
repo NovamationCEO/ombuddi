@@ -261,9 +261,76 @@ describe('AddEntry edit mode', () => {
         expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     })
 
+    it('saves a changed involvement role on the existing link', async () => {
+        await act(async () => root.render(<AddEntry />))
+        await click('Manage people')
+        const selector = document.body.querySelector('[role="dialog"] [role="combobox"]')!
+        expect(selector.textContent).toBe('Visitor')
+        await act(async () => selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })))
+        const options = [...document.body.querySelectorAll<HTMLElement>('[role="option"]')]
+        expect(options.map((option) => option.textContent)).toEqual([
+            'Visitor',
+            'Referenced',
+            'Consulted',
+            'Support person',
+            'Participant',
+            'Other',
+        ])
+        await act(async () => options.find((option) => option.textContent === 'Referenced')!.click())
+        await click('Done')
+        expect(container.textContent).toContain('Referenced')
+        await click('Save changes')
+        expect(mocks.creator).toHaveBeenCalledWith('add_entry_person', {
+            entryId: 'entry-1',
+            personId: 'person-1',
+            entryRole: 'referenced',
+        })
+        expect(mocks.deleter).not.toHaveBeenCalled()
+    })
+
+    it('sends the selected role with people on a newly created note', async () => {
+        mocks.params.entryId = undefined
+        await act(async () => root.render(<AddEntry />))
+        await click('Add people')
+        await act(async () => {
+            document.body.querySelector<HTMLButtonElement>('button[aria-label="Add to entry: Visitor"]')!.click()
+        })
+        const selector = document.body.querySelector('[role="dialog"] [role="combobox"]')!
+        expect(selector.textContent).toBe('Visitor')
+        await act(async () => selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })))
+        await act(async () => {
+            ;[...document.body.querySelectorAll<HTMLElement>('[role="option"]')]
+                .find((option) => option.textContent === 'Support person')!
+                .click()
+        })
+        await click('Done')
+        await click('Save entry')
+        await click('Turn off encryption')
+        await click('Save without encryption')
+        expect(mocks.creator).toHaveBeenCalledWith(
+            'add_entry',
+            expect.objectContaining({
+                personIds: ['person-1'],
+                personRoles: { 'person-1': 'support_person' },
+            }),
+        )
+        expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['reports'] })
+    })
+
+    it('detects role changes independently from additions and removals', () => {
+        const changes = entryPersonChanges([existingPerson], [{ ...existingPerson, entryRole: 'consulted' }])
+        expect(changes.additions).toEqual([])
+        expect(changes.removals).toEqual([])
+        expect(changes.updates.map((person) => person.entryRole)).toEqual(['consulted'])
+        expect(entryPersonChanges([existingPerson], [{ ...existingPerson, entryRole: 'visitor' }]).updates).toEqual([])
+    })
+
     it('calculates people additions and removals without duplicating unchanged people', () => {
         const added = { ...existingPerson, id: 'person-2' }
-        const changes = entryPersonChanges(['person-1', 'person-3'], [existingPerson, added])
+        const changes = entryPersonChanges(
+            [existingPerson, { ...existingPerson, id: 'person-3' }],
+            [existingPerson, added],
+        )
 
         expect(changes.additions.map((person) => person.id)).toEqual(['person-2'])
         expect(changes.removals).toEqual(['person-3'])
