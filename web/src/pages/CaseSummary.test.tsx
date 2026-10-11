@@ -14,6 +14,10 @@ const mocks = vi.hoisted(() => ({
     refetch: vi.fn(),
     snack: vi.fn(),
 }))
+vi.mock('@tanstack/react-query', () => ({
+    useQueryClient: () => ({ invalidateQueries: vi.fn().mockResolvedValue(undefined) }),
+}))
+
 vi.mock('react-router-dom', () => ({ useParams: () => ({ caseId: 'case-1' }), useNavigate: () => mocks.navigate }))
 vi.mock('../tools/db_tools/useGetter', () => ({
     useGetter: (key: string[]) => ({ data: mocks.data[key.join('/')], isLoading: false, refetch: mocks.refetch }),

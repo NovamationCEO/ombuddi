@@ -12,6 +12,7 @@ export type CaseType = {
     name: string
     description: string
     codes: string[]
+    themes?: string[]
     status: string
     createdAt: Date
     updatedAt: Date

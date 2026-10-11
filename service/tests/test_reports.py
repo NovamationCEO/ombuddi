@@ -111,7 +111,7 @@ class ReportTests(unittest.TestCase):
             execution for execution in connection.fake_cursor.executions
             if "case_kind = 'standard'" in execution[0]
         ]
-        self.assertEqual(len(case_queries), 5)
+        self.assertEqual(len(case_queries), 6)
         self.assertTrue(all("created_at" not in sql for sql, _params in case_queries))
         self.assertTrue(all("e.date >= %s AND e.date <= %s" in sql for sql, _params in case_queries))
         self.assertTrue(connection.fake_cursor.closed)
@@ -132,7 +132,7 @@ class ReportTests(unittest.TestCase):
             for sql, _params in connection.fake_cursor.executions
             if "FROM cases" in sql
         ]
-        self.assertEqual(len(case_queries), 4)
+        self.assertEqual(len(case_queries), 5)
         self.assertTrue(all("case_kind = 'standard'" in sql for sql in case_queries))
 
         entry_only_queries = [

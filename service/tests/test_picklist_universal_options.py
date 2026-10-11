@@ -108,7 +108,7 @@ class UniversalPicklistOptionTests(unittest.TestCase):
         self.assertIn("managed by the application", response.get_json()["error"])
 
     def test_client_cannot_modify_a_universal_option(self):
-        connection = FakeConnection(("other_detail",))
+        connection = FakeConnection(("other_detail", "referral_source"))
         with app.test_request_context(
             "/api/v1/update_picklist",
             method="PUT",
@@ -126,7 +126,7 @@ class UniversalPicklistOptionTests(unittest.TestCase):
         self.assertTrue(connection.closed)
 
     def test_client_cannot_promote_an_organization_option_to_universal(self):
-        connection = FakeConnection(("standard",))
+        connection = FakeConnection(("standard", "referral_source"))
         with app.test_request_context(
             "/api/v1/update_picklist",
             method="PUT",

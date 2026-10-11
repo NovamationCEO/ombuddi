@@ -26,7 +26,7 @@ class EntryRolePostgresTests(unittest.TestCase):
                     CREATE TEMP TABLE entries (id uuid PRIMARY KEY, organization_id uuid,
                         ombuds_id uuid, case_id uuid, date date, medium text, duration integer);
                     CREATE TEMP TABLE cases (id uuid PRIMARY KEY, organization_id uuid,
-                        case_kind text, status text, codes uuid[]);
+                        case_kind text, status text, codes uuid[], themes text[]);
                     CREATE TEMP TABLE persons (id uuid PRIMARY KEY, race text,
                         primary_role text, generation text);
                     CREATE TEMP TABLE codes (id uuid PRIMARY KEY, code text);
@@ -35,7 +35,7 @@ class EntryRolePostgresTests(unittest.TestCase):
                 org, owner, colleague, case = [str(uuid4()) for _ in range(4)]
                 entries = [str(uuid4()) for _ in range(3)]
                 people = [str(uuid4()) for _ in range(6)]
-                cur.execute("INSERT INTO cases VALUES (%s, %s, 'standard', 'open', '{}')", (case, org))
+                cur.execute("INSERT INTO cases VALUES (%s, %s, 'standard', 'open', '{}', '{Advising Issues}')", (case, org))
                 for index, entry in enumerate(entries):
                     cur.execute("INSERT INTO entries VALUES (%s, %s, %s, %s, '2026-07-01', 'Phone', 30)",
                                 (entry, org, owner if index < 2 else colleague, case))

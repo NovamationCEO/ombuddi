@@ -10,6 +10,7 @@ import { PublicPersons } from '../components/organization/PublicPersons'
 import { updater } from '../tools/db_tools/updater'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSnack } from '../libraries/useSnack'
+import { schoolThemes } from '../tools/caseThemes'
 import { OrganizationType } from '../types/majorTypes'
 
 const MEDIUM_SETS: DefaultSet[] = [
@@ -188,6 +189,20 @@ export function Organization() {
                         </Stack>
                     </RoundedContainer>
                     <CodeSummary />
+                    <PicklistManager
+                        kind="case_theme"
+                        title="Case Themes"
+                        singularNoun="theme"
+                        recordNoun="cases"
+                        description="Suggested themes for cases. Renaming or deleting a suggestion leaves existing case themes unchanged."
+                        defaultSets={[
+                            {
+                                label: 'School',
+                                description: 'A starting list for school ombuds offices.',
+                                items: schoolThemes.map((name) => ({ name, description: '' })),
+                            },
+                        ]}
+                    />
                     <PrimaryRoles />
                     <PublicPersons />
                     <PicklistManager

@@ -22,6 +22,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CaseSceneThumbnail } from '../components/CaseSceneThumbnail'
 import { caseCodeFlagStyle } from '../components/caseCodeFlagStyle'
 import { EditCodeDialog } from '../components/EditCodeDialog'
+import { CaseThemes } from '../components/CaseThemes'
 import { ReferralSourceSelector } from '../components/ReferralSourceSelector'
 import { ProtectedText } from '../components/ProtectedText'
 import { useSnack } from '../libraries/useSnack'
@@ -161,7 +162,8 @@ export function CaseSummary() {
         const replaceProtection = changeDescriptionProtection || descriptionNeedsProtection
         if (!descriptionLocked && replaceProtection && editDescriptionPhrase.phrase === null) {
             setSnack({
-                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
+                message:
+                    'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
                 severity: 'error',
             })
             return
@@ -544,6 +546,13 @@ export function CaseSummary() {
                                     unlockLabel="Unlock description"
                                     onDecrypted={rememberDescription}
                                 />
+                                {!isGeneral && (
+                                    <CaseThemes
+                                        caseId={caseItem.id}
+                                        value={caseItem.themes ?? []}
+                                        onSaved={() => void caseRes.refetch()}
+                                    />
+                                )}
                             </Box>
                             {!isGeneral && (
                                 <Box sx={{ minWidth: 0 }}>

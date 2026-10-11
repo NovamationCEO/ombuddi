@@ -3,6 +3,7 @@ import logging
 from flask import Blueprint, request, g, jsonify
 from connection import get_db_connection, managed_connection
 from utils import add_one, get_many, update_one
+from src.case_themes import normalize_themes
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,24 @@ def get_picklists_by_organization_id(organization_id):
     return get_many('picklists', picklist_model, {'soft_delete': False}, owner_constraint=_org())
 
 
+def _normalize_theme_name(payload):
+    if 'name' not in payload:
+        return None
+    try:
+        payload['name'] = normalize_themes([payload['name']])[0]
+    except ValueError as exc:
+        return jsonify({'success': False, 'error': 'Input error', 'message': str(exc)}), 400
+    request._cached_json = {False: payload, True: payload}
+    return None
+
+
 @picklist_views.route('/api/v1/add_picklist', methods=['POST'])
 def add_picklist():
     payload = request.get_json(silent=True) or {}
+    if payload.get('kind') == 'case_theme':
+        error = _normalize_theme_name(payload)
+        if error:
+            return error
     if payload.get('behavior', 'standard') != 'standard':
         return jsonify({
             'success': False,
@@ -96,7 +112,7 @@ def update_picklist():
                 with conn.cursor() as cur:
                     cur.execute(
                         '''
-                        SELECT behavior
+                        SELECT behavior, kind
                         FROM picklists
                         WHERE id = %s AND organization_id = %s
                         ''',
@@ -118,6 +134,10 @@ def update_picklist():
                 'status': '404 error',
                 'error': 'Not found',
             }), 404
+        if row[1] == 'case_theme' or payload.get('kind') == 'case_theme':
+            error = _normalize_theme_name(payload)
+            if error:
+                return error
         if row[0] != 'standard':
             return jsonify({
                 'success': False,

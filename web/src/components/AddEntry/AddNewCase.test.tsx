@@ -37,6 +37,10 @@ const mocks = vi.hoisted(() => ({
     })),
 }))
 
+vi.mock('@tanstack/react-query', () => ({
+    useQueryClient: () => ({ invalidateQueries: vi.fn().mockResolvedValue(undefined) }),
+}))
+
 vi.mock('react-router-dom', () => ({
     useNavigate: () => mocks.navigate,
 }))

@@ -54,6 +54,8 @@ export function PicklistManager(props: {
     title: string
     /** Used in the empty state and dialog copy, e.g. "medium" or "priority". */
     singularNoun: string
+    recordNoun?: string
+    description?: string
     /**
      * Named preset packs surfaced via a "Load defaults" picker dialog.
      * Pass one or more DefaultSet objects; the picker grows automatically
@@ -64,7 +66,7 @@ export function PicklistManager(props: {
     /** Behaviors supplied by the application rather than managed by the organization. */
     hiddenBehaviors?: PicklistType['behavior'][]
 }) {
-    const { kind, title, singularNoun, defaultSets, hiddenBehaviors = [] } = props
+    const { kind, title, singularNoun, defaultSets, hiddenBehaviors = [], recordNoun = 'entries', description } = props
     const organization = useOrganization()
     const picklists = usePicklists(kind)
     const setSnack = useSnack((s) => s.setSnack)
@@ -233,8 +235,8 @@ export function PicklistManager(props: {
                 <DialogContent>
                     <DialogContentText>
                         Remove "{pendingDeleteItem?.name}" from the {singularNoun} list? Existing
-                        entries that already chose this {singularNoun} keep their value; only new
-                        entries lose the option.
+                        {recordNoun} that already chose this {singularNoun} keep their value; only new
+                        selections lose the suggestion.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
@@ -323,6 +325,7 @@ export function PicklistManager(props: {
             {/* ── Main list ─────────────────────────────────────────── */}
             <RoundedContainer title={title}>
                 <Stack spacing={1}>
+                    {description && <Typography variant="body2" color="text.secondary">{description}</Typography>}
                     {items.length === 0 && (
                         <Box sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                             No {singularNoun} options yet.

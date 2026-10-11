@@ -94,6 +94,7 @@ type ReportData = {
     personsByRole: { role: string; count: number }[]
     personsByGeneration: { generation: string; count: number }[]
     casesByStatus: { status: string; count: number }[]
+    casesByTheme?: { theme: string; count: number }[]
     codesByCaseCount: CodeRow[]
     codesByDuration: CodeRow[]
     codesByEntryCount: CodeRow[]
@@ -625,6 +626,18 @@ export function ReportPage() {
                             title="Cases Worked by Current Status"
                             categories={data?.casesByStatus.map((r) => r.status) ?? []}
                             data={data?.casesByStatus.map((r) => r.count) ?? []}
+                            yTitle="Cases"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Themes (by Cases Worked)"
+                            categories={data?.casesByTheme?.map((row) => row.theme) ?? []}
+                            data={data?.casesByTheme?.map((row) => row.count) ?? []}
                             yTitle="Cases"
                             suppressable
                             shareMode={shareMode}

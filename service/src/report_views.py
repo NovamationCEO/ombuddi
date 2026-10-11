@@ -263,6 +263,21 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         for r in cur.fetchall()
     ]
 
+    cur.execute(f"""
+        SELECT theme, COUNT(DISTINCT c.id) AS count
+        FROM cases c
+        CROSS JOIN LATERAL unnest(c.themes) AS theme
+        WHERE c.organization_id = %s AND c.case_kind = 'standard'
+          AND EXISTS (
+              SELECT 1 FROM entries e
+              WHERE e.case_id = c.id AND e.organization_id = %s
+                AND e.date >= %s AND e.date <= %s
+                {aliased_entry_scope}
+          )
+        GROUP BY theme ORDER BY count DESC, theme
+    """, (organization_id, organization_id, start, end, *aliased_entry_scope_params))
+    cases_by_theme = [{'theme': row[0], 'count': row[1]} for row in cur.fetchall()]
+
     return jsonify({
         'scope': 'my' if ombuds_id is not None else 'organization',
         'entriesByMonth': entries_by_month,
@@ -275,6 +290,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         'personsByRole': persons_by_role,
         'personsByGeneration': persons_by_generation,
         'casesByStatus': cases_by_status,
+        'casesByTheme': cases_by_theme,
         'codesByCaseCount': codes_by_case_count,
         'codesByDuration': codes_by_duration,
         'codesByEntryCount': codes_by_entry_count,

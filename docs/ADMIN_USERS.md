@@ -142,7 +142,10 @@ Then apply the remaining migrations in order:
 \i /Users/nova/Code/ombuddi/service/migrations/014_add_case_creator.sql
 \i /Users/nova/Code/ombuddi/service/migrations/015_add_invitation_email_audit.sql
 \i /Users/nova/Code/ombuddi/service/migrations/016_add_entry_person_roles.sql
+\i /Users/nova/Code/ombuddi/service/migrations/017_add_case_themes.sql
 ```
+
+Migration 017 adds plain-text case themes and seeds school theme suggestions for organizations that have never had a theme list. Apply it before deploying the updated service. Retiring or renaming a suggestion does not alter case snapshots, and an intentionally emptied list stays empty.
 
 Migration 016 adds per-entry involvement roles. Apply it before deploying the updated service. Existing links become `visitor`, preserving historical visitor totals; future visitor charts exclude the other involvement roles.
 

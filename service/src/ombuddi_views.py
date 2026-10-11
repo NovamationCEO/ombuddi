@@ -2,6 +2,7 @@ import logging
 from datetime import date
 from uuid import UUID
 from src.entry_roles import valid_entry_role
+from src.case_themes import normalize_themes, record_theme_suggestions
 
 from flask import Blueprint, request, g, jsonify
 from connection import get_db_connection, managed_connection
@@ -186,6 +187,7 @@ case_model = {
     'status': 'status',
     'createdAt': 'created_at',
     'updatedAt': 'updated_at',
+    'themes': 'themes',
 }
 
 CASE_SELECT_COLUMNS = ', '.join(case_model.values())
@@ -284,6 +286,10 @@ def _insert_referral_sources(cur, case_id, referral_sources):
 @ombuddi_views.route('/api/v1/create_case', methods=['POST'])
 def create_case():
     payload = request.get_json(silent=True) or {}
+    try:
+        themes = normalize_themes(payload.get('themes', []))
+    except ValueError as exc:
+        return _referral_input_error(str(exc))
     if 'codes' in payload:
         error = _reject_foreign_code_references(payload.get('codes'))
         if error:
@@ -315,16 +321,17 @@ def create_case():
                 error = _validate_referral_sources(cur, referral_sources)
                 if error:
                     raise _ReferralTransactionAbort(error)
+                themes = record_theme_suggestions(cur, g.organization_id, themes)
                 cur.execute(
                     """
                     INSERT INTO cases (
                         id, organization_id, created_by_ombuds_id,
-                        name, description, codes, status
+                        name, description, codes, status, themes
                     )
-                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s, %s::uuid[], %s)
+                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s, %s::uuid[], %s, %s::text[])
                     RETURNING id
                     """,
-                    (case_id, g.organization_id, g.ombuds_id, name.strip(), description, codes, status),
+                    (case_id, g.organization_id, g.ombuds_id, name.strip(), description, codes, status, themes),
                 )
                 new_id = cur.fetchone()[0]
                 _insert_referral_sources(cur, new_id, referral_sources)
@@ -439,6 +446,34 @@ def update_case_referral_sources():
             'message': 'Unable to save referral sources',
         }), 500
 
+@ombuddi_views.route('/api/v1/update_case_themes', methods=['PUT'])
+def update_case_themes():
+    payload = request.get_json(silent=True) or {}
+    try:
+        case_id = str(UUID(str(payload.get('caseId'))))
+        themes = normalize_themes(payload.get('themes'))
+    except (ValueError, TypeError) as exc:
+        return _referral_input_error(str(exc))
+    try:
+        with managed_connection(get_db_connection) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT themes FROM cases
+                    WHERE id = %s AND organization_id = %s AND case_kind = 'standard'
+                    FOR UPDATE
+                """, (case_id, g.organization_id))
+                row = cur.fetchone()
+                if row is None:
+                    return jsonify({'error': 'Not found'}), 404
+                themes = record_theme_suggestions(cur, g.organization_id, themes, row[0])
+                cur.execute('UPDATE cases SET themes = %s::text[] WHERE id = %s AND organization_id = %s',
+                            (themes, case_id, g.organization_id))
+        return jsonify({'success': True, 'themes': themes}), 200
+    except Exception:
+        logger.exception('Failed to update case themes')
+        return jsonify({'error': 'Database error', 'message': 'Unable to save case themes'}), 500
+
+
 @ombuddi_views.route('/api/v1/get_case_by_id/<id>')
 def get_case_by_id(id):
     return get_one('cases', case_model, {'id': id}, owner_constraint=_org())
@@ -536,7 +571,7 @@ def update_case():
         case_model,
         request,
         owner_constraint={**_org(), 'case_kind': 'standard'},
-        immutable_columns={'case_kind', 'owner_ombuds_id', 'created_by_ombuds_id'},
+        immutable_columns={'case_kind', 'owner_ombuds_id', 'created_by_ombuds_id', 'themes'},
     )
 
 

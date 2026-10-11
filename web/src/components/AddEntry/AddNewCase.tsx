@@ -1,3 +1,5 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { CaseThemeSelector } from '../CaseThemeSelector'
 import { pageLayoutStyle, pageContentStyle } from '../../theme/pageLayout'
 import { Button, Chip, Collapse, TextField, Tooltip, Typography } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
@@ -21,6 +23,8 @@ import { encryptProtectedText } from '../../tools/notesCrypto'
 import { CaseSceneThumbnail } from '../CaseSceneThumbnail'
 
 export function AddNewCase() {
+    const queryClient = useQueryClient()
+    const [themes, setThemes] = React.useState<string[]>([])
     const [caseName, setCaseName] = React.useState('')
     const [activeIoaCodes, setActiveIoaCodes] = React.useState<string[]>([])
     const [activeOrgCodes, setActiveOrgCodes] = React.useState<string[]>([])
@@ -68,7 +72,8 @@ export function AddNewCase() {
         if (description && descriptionPhrase.phrase === null) {
             setProtectionOpen(true)
             setSnack({
-                message: 'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
+                message:
+                    'Choose Blank, set the Default Encryption Phrase, or provide free text for the case description.',
                 severity: 'error',
             })
             return
@@ -84,6 +89,7 @@ export function AddNewCase() {
             description: storedDescription,
             codes: [...new Set([...activeIoaCodes, ...activeOrgCodes])],
             status: 'active',
+            themes,
             referralSources: referralSources.map((selection) => ({
                 id: selection.id,
                 ...(selection.detail !== undefined ? { detail: selection.detail.trim() } : {}),
@@ -94,6 +100,7 @@ export function AddNewCase() {
         try {
             const response = await creator<{ id: string; status: string; success: boolean }>('create_case', payload)
             if (response.success) {
+                await queryClient.invalidateQueries({ queryKey: ['get_picklists_by_organization_id'] })
                 setSnack({
                     message: 'Case created successfully',
                     severity: 'success',
@@ -122,7 +129,9 @@ export function AddNewCase() {
 
     const needsPhrase = !!description && descriptionPhrase.phrase === null
     const protectionExpanded = protectionOpen || needsPhrase
-    const phraseLabel = { blank: 'Blank', default: 'Default Encryption Phrase', custom: 'Free text' }[descriptionPhrase.source]
+    const phraseLabel = { blank: 'Blank', default: 'Default Encryption Phrase', custom: 'Free text' }[
+        descriptionPhrase.source
+    ]
     const phraseStatus =
         descriptionPhrase.source === 'blank'
             ? 'No phrase-based protection beyond organization separation.'
@@ -294,6 +303,13 @@ export function AddNewCase() {
                                             />
                                         </Box>
                                     </Collapse>
+                                </Box>
+                                <Box sx={{ mt: 3 }}>
+                                    <CaseThemeSelector
+                                        value={themes}
+                                        onChange={setThemes}
+                                        disabled={isSaving}
+                                    />
                                 </Box>
                                 <Box sx={{ pt: 3 }}>
                                     <Stack
