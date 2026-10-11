@@ -3,6 +3,7 @@ import React, { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PersonFinder } from './PersonFinder'
+import { EntryPeopleDialog } from './EntryPeopleDialog'
 import { PersonForm } from './AddPerson/PersonForm'
 import { PersonCardDialog } from './PersonCardDialog'
 import { useSessionSalt } from '../libraries/useSessionSalt'
@@ -36,13 +37,13 @@ let root: Root, container: HTMLDivElement
 function button(text: string) {
     return [...document.body.querySelectorAll('button')].find((item) => item.textContent === text)!
 }
-function input(label: string) {
-    const element = [...document.body.querySelectorAll('label')].find((item) => item.textContent === label)!
+function input(label: string, scope: ParentNode = document.body) {
+    const element = [...scope.querySelectorAll('label')].find((item) => item.textContent === label)!
     return document.getElementById(element.htmlFor) as HTMLInputElement
 }
-async function fill(label: string, value: string) {
+async function fill(label: string, value: string, scope: ParentNode = document.body) {
     await act(async () => {
-        const field = input(label)
+        const field = input(label, scope)
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, value)
         field.dispatchEvent(new Event('input', { bubbles: true }))
     })
@@ -70,6 +71,39 @@ afterEach(async () => {
 })
 
 describe('person index card workflow', () => {
+    it('opens cards in the adjacent panel and requires fresh verification when switching people', async () => {
+        const otherPerson = { ...person, id: 'person-2', primaryRole: 'Faculty', race: 'Other private detail' }
+        await act(async () =>
+            root.render(
+                <EntryPeopleDialog
+                    people={[]}
+                    casePeople={[person, otherPerson]}
+                    onAdd={vi.fn()}
+                    onRemove={vi.fn()}
+                    onUpdate={vi.fn()}
+                    onClose={vi.fn()}
+                />,
+            ),
+        )
+        const openCard = async (label: string) =>
+            act(async () => {
+                document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click()
+            })
+        await openCard('Open person card: Staff · Gen X')
+        const panel = document.querySelector('aside')!
+        expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
+        expect(panel.textContent).not.toContain('Hidden detail')
+        await fill('Full Name', 'First Person', panel)
+        await fill('Phrase', 'correct', panel)
+        mocks.getter.mockResolvedValue([person])
+        await click('Open card')
+        expect(panel.textContent).toContain('Hidden detail')
+        await openCard('Open person card: Faculty · Gen X')
+        expect(panel.textContent).not.toContain('Hidden detail')
+        expect(panel.textContent).not.toContain('Other private detail')
+        expect(input('Full Name', panel).value).toBe('')
+        expect(input('Phrase', panel).value).toBe('')
+    })
     it('offers creation only after a completed no-match search, forwarding both exact inputs', async () => {
         const create = vi.fn()
         await act(async () => root.render(<PersonFinder onCreateRequest={create} />))

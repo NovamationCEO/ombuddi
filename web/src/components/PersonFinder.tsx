@@ -11,12 +11,14 @@ import './PersonIndexCard.css'
 export function PersonFinder({
     onSelect,
     onUpdate,
+    onOpenPerson,
     onCreateRequest,
     embedded,
     clearTrigger,
 }: {
     onSelect?: (person: PersonType) => void
     onUpdate?: (person: PersonType) => void
+    onOpenPerson?: (person: PersonType, name: string) => void
     onCreateRequest?: (credentials: PersonCredentials) => void
     embedded?: boolean
     clearTrigger?: number
@@ -132,7 +134,9 @@ export function PersonFinder({
                                     <PersonIndexCard
                                         key={person.id}
                                         person={person}
-                                        onOpen={() => setOpened(person)}
+                                        onOpen={() =>
+                                            onOpenPerson ? onOpenPerson(person, name.trim()) : setOpened(person)
+                                        }
                                         onAdd={onSelect ? () => onSelect(person) : undefined}
                                     />
                                 ))}

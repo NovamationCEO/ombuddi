@@ -1,5 +1,6 @@
-import { Box, Button, Dialog, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogTitle, Stack, Typography } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
+import { ContactPageOutlined } from '@mui/icons-material'
 import React from 'react'
 import type { PersonType } from '../types/majorTypes'
 import type { PersonCredentials } from '../tools/personLookup'
@@ -9,6 +10,11 @@ import { PersonIndexCard } from './PersonIndexCard'
 import { PersonCardDialog } from './PersonCardDialog'
 import { PersonForm } from './AddPerson/PersonForm'
 import './PersonIndexCard.css'
+
+type Editor = { key: number } & (
+    | { kind: 'new'; credentials: PersonCredentials }
+    | { kind: 'person'; person: PersonType; name: string }
+)
 
 export function EntryPeopleDialog({
     people,
@@ -26,148 +32,215 @@ export function EntryPeopleDialog({
     onClose: () => void
 }) {
     const [savingPerson, setSavingPerson] = React.useState(false)
-    const [creation, setCreation] = React.useState<PersonCredentials | null>(null)
-    const [opened, setOpened] = React.useState<PersonType | null>(null)
+    const [editor, setEditor] = React.useState<Editor | null>(null)
     const [clearSearch, setClearSearch] = React.useState(0)
+    const sequence = React.useRef(0)
+    const editorPanel = React.useRef<HTMLElement>(null)
     const available = casePeople.filter((person) => !people.some((selected) => selected.id === person.id))
+    function openPerson(person: PersonType, name = '') {
+        setEditor({ kind: 'person', person, name, key: ++sequence.current })
+    }
+    React.useEffect(() => {
+        if (editor) {
+            editorPanel.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' })
+            editorPanel.current?.focus({ preventScroll: true })
+        }
+    }, [editor?.key])
     return (
         <ThemeProvider theme={caseFolderTheme}>
             <Dialog
                 open
                 fullScreen
-                onClose={onClose}
+                onClose={savingPerson ? undefined : onClose}
                 aria-labelledby="entry-people-title"
                 slotProps={{ paper: { sx: { bgcolor: 'transparent', backgroundImage: 'none' } } }}
             >
-                <Box
-                    sx={{
-                        p: { xs: 1.5, sm: 4 },
-                        overflowY: 'auto',
-                        minHeight: '100%',
-                        bgcolor: 'var(--mui-palette-background-default, #edf3f1)',
-                        backgroundImage:
-                            'radial-gradient(var(--mui-palette-divider, #d7e1df) 0.7px, transparent 0.7px)',
-                        backgroundSize: '12px 12px',
-                    }}
-                >
-                    <Box className="people-folder">
-                        <DialogTitle
-                            id="entry-people-title"
-                            sx={{ p: 0, mb: 3, fontFamily: 'Georgia, serif', fontSize: { xs: '1.8rem', sm: '2.2rem' } }}
+                <Box className="people-desk">
+                    <Box className="people-workspace">
+                        <Box
+                            className="people-folder people-selection-folder"
+                            inert={savingPerson}
                         >
-                            Add people to entry
-                        </DialogTitle>
-                        <Stack spacing={3.5}>
-                            <Box>
-                                <Typography
-                                    component="h2"
-                                    className="people-section-label"
+                            <Box className="people-folder-liner">
+                                <DialogTitle
+                                    id="entry-people-title"
+                                    sx={{
+                                        p: 0,
+                                        mb: 3,
+                                        fontFamily: 'Georgia, serif',
+                                        fontSize: { xs: '1.8rem', sm: '2.2rem' },
+                                    }}
                                 >
-                                    On this entry · {people.length}
-                                </Typography>
-                                {people.length ? (
-                                    <Box className="people-card-grid">
-                                        {people.map((person) => (
-                                            <PersonIndexCard
-                                                key={person.id}
-                                                person={person}
-                                                onOpen={() => setOpened(person)}
-                                                onRemove={() => onRemove(person.id)}
-                                            />
-                                        ))}
+                                    Add people to entry
+                                </DialogTitle>
+                                <Stack spacing={3}>
+                                    <Box className="people-selected-tray">
+                                        <span
+                                            className="stationery-paperclip"
+                                            aria-hidden="true"
+                                        />
+                                        <Typography
+                                            component="h2"
+                                            className="people-section-label"
+                                        >
+                                            On this entry · {people.length}
+                                        </Typography>
+                                        {people.length ? (
+                                            <Box className="people-card-grid">
+                                                {people.map((person) => (
+                                                    <PersonIndexCard
+                                                        key={person.id}
+                                                        person={person}
+                                                        selected={
+                                                            editor?.kind === 'person' && editor.person.id === person.id
+                                                        }
+                                                        onOpen={() => openPerson(person)}
+                                                        onRemove={() => onRemove(person.id)}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                Add someone from this case, or find a person below.
+                                            </Typography>
+                                        )}
                                     </Box>
-                                ) : (
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
-                                        Add someone from this case, or find a person below.
-                                    </Typography>
-                                )}
-                            </Box>
-                            <Box>
-                                <Typography
-                                    component="h2"
-                                    className="people-section-label"
-                                >
-                                    People on this case
-                                </Typography>
-                                {available.length ? (
-                                    <Box className="people-card-grid">
-                                        {available.map((person) => (
-                                            <PersonIndexCard
-                                                key={person.id}
-                                                person={person}
-                                                onOpen={() => setOpened(person)}
-                                                onAdd={() => onAdd(person)}
-                                            />
-                                        ))}
+                                    <Box>
+                                        <Typography
+                                            component="h2"
+                                            className="people-section-label"
+                                        >
+                                            People on this case
+                                        </Typography>
+                                        {available.length ? (
+                                            <Box className="people-card-grid">
+                                                {available.map((person) => (
+                                                    <PersonIndexCard
+                                                        key={person.id}
+                                                        person={person}
+                                                        selected={
+                                                            editor?.kind === 'person' && editor.person.id === person.id
+                                                        }
+                                                        onOpen={() => openPerson(person)}
+                                                        onAdd={() => onAdd(person)}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                {casePeople.length
+                                                    ? 'Everyone on this case has been added.'
+                                                    : 'No people on this case yet.'}
+                                            </Typography>
+                                        )}
                                     </Box>
-                                ) : (
-                                    <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                    >
-                                        {casePeople.length
-                                            ? 'Everyone on this case has been added.'
-                                            : 'No people on this case yet.'}
-                                    </Typography>
-                                )}
+                                    <Box className="people-search-card">
+                                        <PersonFinder
+                                            embedded
+                                            onSelect={onAdd}
+                                            onCreateRequest={(credentials) =>
+                                                setEditor({ kind: 'new', credentials, key: ++sequence.current })
+                                            }
+                                            onOpenPerson={openPerson}
+                                            onUpdate={onUpdate}
+                                            clearTrigger={clearSearch}
+                                        />
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Button
+                                            variant="contained"
+                                            disabled={savingPerson}
+                                            onClick={onClose}
+                                        >
+                                            Done
+                                        </Button>
+                                    </Box>
+                                </Stack>
                             </Box>
-                            <Box className="people-search-card">
-                                <PersonFinder
-                                    embedded
-                                    onSelect={onAdd}
-                                    onCreateRequest={setCreation}
-                                    onUpdate={onUpdate}
-                                    clearTrigger={clearSearch}
+                        </Box>
+                        <Box
+                            component="aside"
+                            ref={editorPanel}
+                            tabIndex={-1}
+                            className="people-editor-sheet"
+                            aria-labelledby="people-editor-title"
+                        >
+                            <Typography
+                                id="people-editor-title"
+                                component="h2"
+                                className="people-editor-title"
+                            >
+                                {editor?.kind === 'new'
+                                    ? 'Add a person'
+                                    : editor?.kind === 'person'
+                                      ? 'Person details'
+                                      : 'Add / edit a person'}
+                            </Typography>
+                            <Box className="people-editor-stack">
+                                <span
+                                    className="stationery-paperclip stationery-paperclip-right"
+                                    aria-hidden="true"
                                 />
+                                {editor?.kind === 'new' ? (
+                                    <PersonForm
+                                        key={editor.key}
+                                        credentials={editor.credentials}
+                                        onBusyChange={setSavingPerson}
+                                        onCancel={() => setEditor(null)}
+                                        onSaved={(person) => {
+                                            onAdd(person)
+                                            setEditor(null)
+                                            setClearSearch((value) => value + 1)
+                                        }}
+                                    />
+                                ) : editor?.kind === 'person' ? (
+                                    <PersonCardDialog
+                                        key={editor.key}
+                                        embedded
+                                        person={editor.person}
+                                        initialName={editor.name}
+                                        onBusyChange={setSavingPerson}
+                                        onClose={() => setEditor(null)}
+                                        onSaved={(person) => {
+                                            onUpdate(person)
+                                            setClearSearch((value) => value + 1)
+                                        }}
+                                    />
+                                ) : (
+                                    <Box className="person-index-card person-card-form people-empty-card">
+                                        <ContactPageOutlined sx={{ fontSize: 44, color: '#768888', mb: 2 }} />
+                                        <Typography
+                                            component="h3"
+                                            sx={{ fontFamily: 'Georgia, serif', fontSize: '1.7rem', mb: 2 }}
+                                        >
+                                            A place for every person.
+                                        </Typography>
+                                        <Typography
+                                            color="text.secondary"
+                                            sx={{ mb: 3 }}
+                                        >
+                                            Choose an index card to view or edit a person’s details.
+                                        </Typography>
+                                        <Typography color="text.secondary">
+                                            Adding someone new? Start with a search, then fill out their card here.
+                                        </Typography>
+                                        <Box
+                                            className="people-blank-rules"
+                                            aria-hidden="true"
+                                        />
+                                    </Box>
+                                )}
                             </Box>
-                            <Box sx={{ textAlign: 'right' }}>
-                                <Button
-                                    variant="contained"
-                                    onClick={onClose}
-                                >
-                                    Done
-                                </Button>
-                            </Box>
-                        </Stack>
+                        </Box>
                     </Box>
                 </Box>
             </Dialog>
-            {creation && (
-                <Dialog
-                    open
-                    onClose={savingPerson ? undefined : () => setCreation(null)}
-                    fullWidth
-                    maxWidth="sm"
-                    aria-label="Create person"
-                    slotProps={{ paper: { sx: { bgcolor: '#e9d1a0' } } }}
-                >
-                    <DialogContent sx={{ p: { xs: 1.5, sm: 3 } }}>
-                        <PersonForm
-                            credentials={creation}
-                            onBusyChange={setSavingPerson}
-                            onCancel={() => setCreation(null)}
-                            onSaved={(person) => {
-                                onAdd(person)
-                                setCreation(null)
-                                setClearSearch((value) => value + 1)
-                            }}
-                        />
-                    </DialogContent>
-                </Dialog>
-            )}
-            {opened && (
-                <PersonCardDialog
-                    person={opened}
-                    onClose={() => setOpened(null)}
-                    onSaved={(person) => {
-                        onUpdate(person)
-                        setOpened(person)
-                    }}
-                />
-            )}
         </ThemeProvider>
     )
 }

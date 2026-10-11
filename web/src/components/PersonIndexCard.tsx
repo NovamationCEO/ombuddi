@@ -9,11 +9,13 @@ export function PersonIndexCard({
     onOpen,
     onAdd,
     onRemove,
+    selected = false,
 }: {
     person: PersonType
     onOpen: () => void
     onAdd?: () => void
     onRemove?: () => void
+    selected?: boolean
 }) {
     const summary =
         [person.primaryRole, person.generation]
@@ -21,11 +23,12 @@ export function PersonIndexCard({
             .join(' · ') || 'Visitor'
     return (
         <Box
-            className="person-index-card"
+            className={`person-index-card person-summary-card${selected ? ' person-card-selected' : ''}`}
             sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}
         >
             <ButtonBase
                 onClick={onOpen}
+                aria-current={selected ? 'true' : undefined}
                 aria-label={`Open person card: ${person.publicName || summary}`}
                 sx={{
                     p: 1.5,
@@ -34,12 +37,13 @@ export function PersonIndexCard({
                     justifyContent: 'flex-start',
                     textAlign: 'left',
                     minWidth: 0,
-                    minHeight: 92,
+                    minHeight: 100,
+                    pt: 3,
                 }}
             >
                 <PersonAvatar
                     person={person}
-                    size={46}
+                    size={52}
                 />
                 <Box sx={{ minWidth: 0 }}>
                     <Typography
