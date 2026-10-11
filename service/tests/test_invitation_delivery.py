@@ -10,6 +10,19 @@ from invitation_delivery import deliver_invitation
 
 
 class DeliveryAuditTests(unittest.TestCase):
+    @patch.dict(os.environ, {'INVITATION_EMAIL_ENABLED': 'true'})
+    @patch('invitation_email.urlopen')
+    def test_test_address_skip_is_persisted_without_network_calls(self, send):
+        conn = MagicMock()
+        result = self.deliver(conn)
+        self.assertEqual(result['status'], 'skipped')
+        calls = conn.cursor.return_value.__enter__.return_value.execute.call_args_list
+        details = [json.loads(call.args[1][-1]) for call in calls]
+        self.assertEqual([d['status'] for d in details], ['started', 'skipped'])
+        self.assertEqual(details[-1]['reason'], 'test_address')
+        self.assertEqual(details[-1]['invitationId'], 'invitation-id')
+        send.assert_not_called()
+
     def deliver(self, conn):
         return deliver_invitation('recipient@example.com', 'https://example.com/?token=secret',
                                   datetime.now(timezone.utc), conn=conn,

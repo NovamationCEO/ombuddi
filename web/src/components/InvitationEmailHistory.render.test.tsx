@@ -15,6 +15,9 @@ describe('Stored email history', () => {
         [{ data: [{ id: 'event', createdAt: '2026-09-19T10:00:00Z', delivery: {
             status: 'accepted', sender: 'admin@ombuddi.com', invitationId: 'invite',
         } }] }, 'Latest recorded status'],
+        [{ data: [{ id: 'skipped-event', createdAt: '2026-10-11T10:00:00Z', delivery: {
+            status: 'skipped', reason: 'test_address', sender: 'admin@ombuddi.com', invitationId: 'invite',
+        } }] }, 'Email skipped: test address. No email was sent.'],
     ])('renders persisted state %j', async (state, expected) => {
         mocks.get.mockReturnValue({ ...state, refetch: mocks.refetch })
         const container = document.createElement('div')

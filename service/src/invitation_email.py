@@ -14,6 +14,16 @@ from urllib.request import Request, urlopen
 logger = logging.getLogger(__name__)
 SENDER = 'admin@ombuddi.com'
 TOKEN_LOCK_TIMEOUT_SECONDS = 2
+# Reserved documentation/testing domains, including their subdomains.
+TEST_EMAIL_DOMAINS = frozenset({
+    'example.com', 'example.net', 'example.org', 'example', 'test', 'invalid', 'localhost',
+})
+
+
+def _is_test_recipient(recipient):
+    domain = recipient.rsplit('@', 1)[-1].strip().lower().rstrip('.')
+    return any(domain == reserved or domain.endswith('.' + reserved)
+               for reserved in TEST_EMAIL_DOMAINS)
 
 
 class TokenRefreshBusy(Exception):
@@ -61,6 +71,8 @@ def deliver_invitation(recipient, invite_url, expires_at):
     result = {'sender': SENDER, 'status': 'not_configured'}
     if os.environ.get('INVITATION_EMAIL_ENABLED', '').lower() != 'true':
         return result
+    if _is_test_recipient(recipient):
+        return {**result, 'status': 'skipped', 'reason': 'test_address'}
     stage = 'configuration'
     try:
         tenant = os.environ['MICROSOFT_TENANT_ID'].strip()

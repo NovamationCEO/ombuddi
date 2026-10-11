@@ -13,6 +13,10 @@ from invitation_email import deliver_invitation, _token_cache
 
 class InvitationEmailTests(unittest.TestCase):
     def setUp(self):
+        # Any new transport test must supply fake responses explicitly.
+        transport = patch('invitation_email.urlopen', side_effect=AssertionError('Unexpected email network call'))
+        transport.start()
+        self.addCleanup(transport.stop)
         _token_cache.clear()
         self.env = patch.dict(os.environ, {
             'INVITATION_EMAIL_ENABLED': 'true',
@@ -25,7 +29,34 @@ class InvitationEmailTests(unittest.TestCase):
         self.expires = datetime(2026, 10, 1, tzinfo=timezone.utc)
 
     def deliver(self, url='https://app.ombuddi.com/accept-invite?token=private-token'):
-        return deliver_invitation('invitee@example.com', url, self.expires)
+        return deliver_invitation('invitee@ombuddi.com', url, self.expires)
+
+    @patch('invitation_email.urlopen')
+    def test_reserved_test_addresses_never_use_network_even_on_repeated_attempts(self, send):
+        # Skipping must work even without Microsoft credentials or a valid URL.
+        del os.environ['MICROSOFT_CLIENT_SECRET']
+        for domain in ('example.com', 'example.net', 'example.org', 'example',
+                       'test', 'invalid', 'localhost'):
+            for variant in (domain, 'sub.' + domain, domain.upper(), domain + '.'):
+                for _ in range(3):
+                    with self.subTest(domain=variant):
+                        result = deliver_invitation(f'invitee@{variant}', 'http://localhost/invite', self.expires)
+                        self.assertEqual(result, {
+                            'sender': 'admin@ombuddi.com', 'status': 'skipped', 'reason': 'test_address',
+                        })
+        send.assert_not_called()
+
+    @patch('invitation_email.urlopen')
+    def test_similar_nonreserved_domains_are_not_suppressed(self, send):
+        for domain in ('myexample.com', 'example.com.ombuddi.com', 'example.org.ombuddi.com',
+                       'contest.com', 'ombuddi.com'):
+            with self.subTest(domain=domain):
+                _token_cache.clear()
+                response = MagicMock()
+                response.__enter__.return_value.status = 202
+                send.side_effect = [io.BytesIO(b'{"access_token":"token"}'), response]
+                result = deliver_invitation(f'invitee@{domain}', 'https://app.ombuddi.com/invite', self.expires)
+                self.assertEqual(result['status'], 'accepted')
 
     @patch('invitation_email.urlopen')
     def test_disabled_makes_no_network_calls(self, send):
@@ -76,7 +107,7 @@ class InvitationEmailTests(unittest.TestCase):
         request = send.call_args_list[1].args[0]
         self.assertEqual(request.full_url, 'https://graph.microsoft.com/v1.0/users/admin%40ombuddi.com/sendMail')
         payload = json.loads(request.data)
-        self.assertEqual(payload['message']['toRecipients'], [{'emailAddress': {'address': 'invitee@example.com'}}])
+        self.assertEqual(payload['message']['toRecipients'], [{'emailAddress': {'address': 'invitee@ombuddi.com'}}])
         self.assertIn('private-token', payload['message']['body']['content'])
         self.assertTrue(payload['saveToSentItems'])
         self.assertIn('October 01, 2026 at 00:00 UTC', payload['message']['body']['content'])

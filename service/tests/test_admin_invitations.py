@@ -89,6 +89,14 @@ class InvitationConnection:
 
 
 class AdminInvitationTests(unittest.TestCase):
+    def setUp(self):
+        # Keep route/audit coverage without using developer email credentials.
+        sender = patch('invitation_delivery.send_email', return_value={
+            'sender': 'admin@ombuddi.com', 'status': 'accepted',
+        })
+        self.send_email = sender.start()
+        self.addCleanup(sender.stop)
+
     def test_admin_guard(self):
         with app.test_request_context("/api/v1/admin/ombuds"):
             g.is_admin = False
@@ -125,6 +133,8 @@ class AdminInvitationTests(unittest.TestCase):
         self.assertNotIn("raw-secret-token", insert[1])
         self.assertIn(INVITED_EMAIL, insert[1])
         self.assertTrue(connection.committed)
+        self.send_email.assert_called_once()
+        self.assertEqual(self.send_email.call_args.args[0], INVITED_EMAIL)
 
     def test_delivery_runs_after_commit_and_preserves_invitation_on_failure(self):
         connection = InvitationConnection("create")

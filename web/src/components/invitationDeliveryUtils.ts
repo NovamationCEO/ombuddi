@@ -1,6 +1,6 @@
 export type EmailDelivery = {
     sender: string
-    status: 'started' | 'accepted' | 'not_configured' | 'unconfirmed' | 'configuration_error' | 'failed' | 'rejected'
+    status: 'started' | 'accepted' | 'skipped' | 'not_configured' | 'unconfirmed' | 'configuration_error' | 'failed' | 'rejected'
     reason?:
         | 'invalid_configuration'
         | 'authentication_failed'
@@ -8,6 +8,7 @@ export type EmailDelivery = {
         | 'submission_unknown'
         | 'audit_unavailable'
         | 'token_refresh_busy'
+        | 'test_address'
     httpStatus?: number
     auditWarning?: 'outcome_not_saved'
 }
@@ -19,6 +20,8 @@ export function deliveryText(delivery?: EmailDelivery): string {
     if (delivery.reason === 'audit_unavailable')
         return 'Email was not sent because its audit record could not be saved. The invitation link remains valid.'
     switch (delivery.status) {
+        case 'skipped':
+            return 'Email skipped: test address. No email was sent. Use a mailbox you control to test delivery.'
         case 'accepted':
             return `Microsoft accepted the invitation email from ${delivery.sender}. Inbox delivery is not confirmed.`
         case 'started':

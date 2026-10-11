@@ -90,6 +90,14 @@ class SeatConnection:
 
 
 class SystemAdminSeatTests(unittest.TestCase):
+    def setUp(self):
+        # Keep route/audit coverage without using developer email credentials.
+        sender = patch('invitation_delivery.send_email', return_value={
+            'sender': 'admin@ombuddi.com', 'status': 'accepted',
+        })
+        self.send_email = sender.start()
+        self.addCleanup(sender.stop)
+
     def test_system_admin_guard(self):
         with app.test_request_context("/api/v1/system/organizations"):
             g.is_system_admin = False
@@ -120,6 +128,8 @@ class SystemAdminSeatTests(unittest.TestCase):
         self.assertEqual(response.get_json()["ombudsId"], str(OMBUDS_ID))
         self.assertIn("replacement-token", response.get_json()["inviteUrl"])
         self.assertTrue(connection.committed)
+        self.send_email.assert_called_once()
+        self.assertEqual(self.send_email.call_args.args[0], 'replacement@example.com')
         audit_events = [
             params[3]
             for sql, params in connection.fake_cursor.executions

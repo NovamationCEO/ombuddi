@@ -1,8 +1,10 @@
 # Invitation email from Microsoft 365
 
 The official sender is **admin@ombuddi.com**. Every invitation creation flow
-(including organization onboarding and replacement invitations) submits a
-plain-text message through Microsoft Graph after the database commits.
+(including organization onboarding and replacement invitations) uses the same
+delivery safeguards and submits a plain-text message through Microsoft Graph
+after the database commits when sending is enabled and the address is not a
+reserved sample address.
 The recipient is the email bound to the invitation, never an arbitrary address
 supplied alongside a send request. No case or visitor information is included.
 
@@ -60,6 +62,20 @@ migration, the audit write fails and sending is skipped.
 
 ## Delivery behavior
 
+With sending enabled, recipients at reserved sample domains (`example.com`,
+`example.net`, `example.org`, `.example`, `.test`, `.invalid`, and `.localhost`,
+including subdomains and the bare reserved names) are skipped before contacting
+Microsoft. The invitation remains valid and email history shows **Email skipped:
+test address**, with status `skipped` and reason `test_address`. Repeated attempts
+remain visible in history but send no email and generate no new delivery-failure
+messages. When sending is disabled, the status remains `not_configured`.
+
+Automated invitation route tests simulate the sender, and sender tests mock the
+network transport, so they do not use real Microsoft credentials to deliver mail.
+For a deliberate end-to-end delivery test, use a mailbox you control. Ordinary
+recipient domains retain the existing sending and error reporting behavior;
+this safeguard does not process bounces or suppress invalid real-world addresses.
+
 A Graph 202 means accepted for processing, not confirmed inbox delivery.
 Failures leave the invitation usable. Configuration, authentication, explicit
 rejection, and uncertain submission have distinct statuses. Uncertain
@@ -76,7 +92,7 @@ organization. System administrators see the same sending events inside
 **Invitation history**. Both views support refresh and distinguish no recorded
 status from sending disabled.
 
-Statuses distinguish `started`, `accepted`, `not_configured`,
+Statuses distinguish `started`, `accepted`, `skipped`, `not_configured`,
 `configuration_error`, `failed` (before submission), `rejected` (HTTP 4xx), and
 `unconfirmed` (possibly submitted). A lone `started` event means the final
 outcome is unknown; inspect Microsoft message trace before recovery. Failure

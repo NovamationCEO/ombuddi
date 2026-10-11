@@ -18,6 +18,7 @@ describe('Invitation delivery feedback', () => {
         [{ status: 'started' }, 'If no later outcome appears', 'warning'],
         [{ status: 'failed', reason: 'audit_unavailable' }, 'audit record could not be saved', 'warning'],
         [{ status: 'accepted' }, 'Microsoft accepted', 'success'],
+        [{ status: 'skipped', reason: 'test_address' }, 'Email skipped: test address. No email was sent.', 'warning'],
         [{ status: 'unconfirmed' }, 'could not be confirmed', 'warning'],
         [{ status: 'configuration_error', reason: 'invalid_configuration' }, 'FRONTEND_URL email configuration', 'warning'],
         [{ status: 'failed', reason: 'authentication_failed' }, 'authentication failed', 'warning'],
