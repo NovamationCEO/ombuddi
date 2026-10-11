@@ -16,6 +16,6 @@ export async function getter<T>(address: string) {
     }
 
     const json = await res.json()
-    if (json.error) throw new Error(json.message)
+    if (json?.error) throw new Error(json.message)
     return json as T
 }
