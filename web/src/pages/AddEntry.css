@@ -18,9 +18,16 @@
     padding-bottom: 24px;
     border-bottom: 1px solid #dddfdb;
 }
-.case-note-writing {
+.case-note-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
     padding-top: 24px;
     padding-bottom: 28px;
+    align-items: start;
+}
+.case-note-writing {
+    min-width: 0;
 }
 .case-note-locked {
     min-height: 280px;
@@ -32,8 +39,20 @@
     text-align: center;
 }
 .case-note-protection {
+    min-width: 0;
     border-top: 1px solid #dddfdb;
     padding-top: 18px;
+}
+@media (min-width: 1200px) {
+    .case-note-content-with-protection {
+        grid-template-columns: minmax(0, 1fr) 192px;
+    }
+    .case-note-protection {
+        border-top: 0;
+        border-left: 1px solid #dddfdb;
+        padding-top: 0;
+        padding-left: 20px;
+    }
 }
 .case-note-margin {
     min-width: 0;

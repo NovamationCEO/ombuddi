@@ -322,109 +322,121 @@ export function AddEntry() {
                                     />
                                 </Box>
                                 <Box
-                                    component="section"
-                                    aria-labelledby="note-writing-label"
-                                    className="case-note-writing"
+                                    className={`case-note-content${notesLocked ? '' : ' case-note-content-with-protection'}`}
                                 >
-                                    <Typography
-                                        component="h2"
-                                        id="note-writing-label"
-                                        sx={{ fontSize: '0.9rem', fontWeight: 700, mb: 1.5 }}
+                                    <Box
+                                        component="section"
+                                        aria-labelledby="note-writing-label"
+                                        className="case-note-writing"
                                     >
-                                        Notes
-                                    </Typography>
-                                    {notesLocked ? (
-                                        <Box className="case-note-locked">
-                                            <LockOutlined sx={{ color: 'text.secondary', fontSize: 28 }} />
-                                            <Typography
-                                                variant="body2"
-                                                color="text.secondary"
-                                            >
-                                                Unlock this note to edit its text.
-                                            </Typography>
-                                            <ProtectedText
-                                                stored={storedNotes}
-                                                organizationId={caseRes.data?.organizationId ?? ''}
-                                                emptyText="No notes recorded."
-                                                unlockLabel="Unlock notes"
-                                                onDecrypted={(plaintext) => {
-                                                    setNotes(plaintext)
-                                                    setOriginalNotes(plaintext)
-                                                    setNotesLocked(false)
+                                        <Typography
+                                            component="h2"
+                                            id="note-writing-label"
+                                            sx={{ fontSize: '0.9rem', fontWeight: 700, mb: 1.5 }}
+                                        >
+                                            Notes
+                                        </Typography>
+                                        {notesLocked ? (
+                                            <Box className="case-note-locked">
+                                                <LockOutlined sx={{ color: 'text.secondary', fontSize: 28 }} />
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    Unlock this note to edit its text.
+                                                </Typography>
+                                                <ProtectedText
+                                                    stored={storedNotes}
+                                                    organizationId={caseRes.data?.organizationId ?? ''}
+                                                    emptyText="No notes recorded."
+                                                    unlockLabel="Unlock notes"
+                                                    onDecrypted={(plaintext) => {
+                                                        setNotes(plaintext)
+                                                        setOriginalNotes(plaintext)
+                                                        setNotesLocked(false)
+                                                    }}
+                                                />
+                                            </Box>
+                                        ) : (
+                                            <TextField
+                                                value={notes}
+                                                onChange={(event) => setNotes(event.target.value)}
+                                                multiline
+                                                minRows={6}
+                                                maxRows={12}
+                                                fullWidth
+                                                variant="standard"
+                                                disabled={isSaving}
+                                                placeholder="Record the interaction, options discussed, and any planned follow-up…"
+                                                slotProps={{
+                                                    input: { disableUnderline: true },
+                                                    htmlInput: { 'aria-label': 'Entry notes' },
+                                                }}
+                                                sx={{
+                                                    '& .MuiInputBase-root': {
+                                                        p: 0,
+                                                        lineHeight: 1.8,
+                                                        alignItems: 'flex-start',
+                                                    },
                                                 }}
                                             />
+                                        )}
+                                    </Box>
+                                    {!notesLocked && (
+                                        <Box
+                                            component="section"
+                                            className="case-note-protection"
+                                            aria-labelledby="note-protection-title"
+                                        >
+                                            <Typography
+                                                component="h2"
+                                                id="note-protection-title"
+                                                sx={{ fontSize: '0.9rem', fontWeight: 700, mb: 1.5 }}
+                                            >
+                                                Encryption
+                                            </Typography>
+                                            <Stack
+                                                spacing={1.5}
+                                                sx={{ alignItems: 'flex-start' }}
+                                            >
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    sx={{ alignItems: 'center' }}
+                                                >
+                                                    {encryptionOff ? (
+                                                        <LockOpenOutlined
+                                                            sx={{ fontSize: 18, color: 'warning.main' }}
+                                                        />
+                                                    ) : (
+                                                        <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
+                                                    )}
+                                                    <Typography variant="body2">
+                                                        {encryptionOff
+                                                            ? 'Encryption off'
+                                                            : encryptionChoice?.mode === 'encrypted'
+                                                              ? 'Encryption phrase selected'
+                                                              : needsEncryptionChoice
+                                                                ? 'Choose encryption before saving'
+                                                                : 'Encryption unchanged'}
+                                                    </Typography>
+                                                </Stack>
+                                                <Button
+                                                    size="small"
+                                                    disabled={isSaving}
+                                                    onClick={() => {
+                                                        setSaveAfterChoice(false)
+                                                        setProtectionOpen(true)
+                                                    }}
+                                                >
+                                                    {needsEncryptionChoice && encryptionChoice === null
+                                                        ? 'Choose Encryption Phrase'
+                                                        : 'Change encryption'}
+                                                </Button>
+                                            </Stack>
                                         </Box>
-                                    ) : (
-                                        <TextField
-                                            value={notes}
-                                            onChange={(event) => setNotes(event.target.value)}
-                                            multiline
-                                            minRows={10}
-                                            fullWidth
-                                            variant="standard"
-                                            disabled={isSaving}
-                                            placeholder="Record the interaction, options discussed, and any planned follow-up…"
-                                            slotProps={{
-                                                input: { disableUnderline: true },
-                                                htmlInput: { 'aria-label': 'Entry notes' },
-                                            }}
-                                            sx={{
-                                                '& .MuiInputBase-root': {
-                                                    p: 0,
-                                                    lineHeight: 1.8,
-                                                    alignItems: 'flex-start',
-                                                },
-                                            }}
-                                        />
                                     )}
                                 </Box>
-                                {!notesLocked && (
-                                    <Box className="case-note-protection">
-                                        <Stack
-                                            direction="row"
-                                            useFlexGap
-                                            spacing={1}
-                                            sx={{
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                flexWrap: 'wrap',
-                                            }}
-                                        >
-                                            <Stack
-                                                direction="row"
-                                                spacing={1}
-                                                sx={{ alignItems: 'center' }}
-                                            >
-                                                {encryptionOff ? (
-                                                    <LockOpenOutlined sx={{ fontSize: 18, color: 'warning.main' }} />
-                                                ) : (
-                                                    <LockOutlined sx={{ fontSize: 18, color: 'text.secondary' }} />
-                                                )}
-                                                <Typography variant="body2">
-                                                    {encryptionOff
-                                                        ? 'Encryption off'
-                                                        : encryptionChoice?.mode === 'encrypted'
-                                                          ? 'Encryption phrase selected'
-                                                          : needsEncryptionChoice
-                                                            ? 'Choose encryption before saving'
-                                                            : 'Encryption unchanged'}
-                                                </Typography>
-                                            </Stack>
-                                            <Button
-                                                size="small"
-                                                disabled={isSaving}
-                                                onClick={() => {
-                                                    setSaveAfterChoice(false)
-                                                    setProtectionOpen(true)
-                                                }}
-                                            >
-                                                {needsEncryptionChoice && encryptionChoice === null
-                                                    ? 'Choose Encryption Phrase'
-                                                    : 'Change encryption'}
-                                            </Button>
-                                        </Stack>
-                                    </Box>
-                                )}
                                 {protectionOpen && (
                                     <NoteEncryptionDialog
                                         choice={encryptionChoice}
