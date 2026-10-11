@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import {
     AdminPanelSettings,
     ArrowForward,
+    AssessmentOutlined,
     Lock,
     Login,
     VisibilityOff,
@@ -14,12 +15,11 @@ import { institutionalPalette as palette } from '../theme/institutionalPalette'
 
 type PrivacyCardProps = {
     icon: ReactNode
-    number: string
     title: string
     children: ReactNode
 }
 
-function PrivacyCard({ icon, number, title, children }: PrivacyCardProps) {
+function PrivacyCard({ icon, title, children }: PrivacyCardProps) {
     return (
         <Box
             sx={{
@@ -30,7 +30,7 @@ function PrivacyCard({ icon, number, title, children }: PrivacyCardProps) {
                 borderRadius: 1.5,
             }}
         >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+            <Box sx={{ mb: 2.5 }}>
                 <Box
                     sx={{
                         width: 46,
@@ -44,7 +44,6 @@ function PrivacyCard({ icon, number, title, children }: PrivacyCardProps) {
                 >
                     {icon}
                 </Box>
-                <Typography sx={{ color: palette.blueGreen, letterSpacing: '0.14em' }}>{number}</Typography>
             </Box>
             <Typography
                 component="h3"
@@ -55,24 +54,6 @@ function PrivacyCard({ icon, number, title, children }: PrivacyCardProps) {
             </Typography>
             <Typography sx={{ color: palette.muted }}>{children}</Typography>
         </Box>
-    )
-}
-
-function Eyebrow({ children }: { children: ReactNode }) {
-    return (
-        <Typography
-            component="p"
-            sx={{
-                color: palette.blueGreen,
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                mb: 1.5,
-            }}
-        >
-            {children}
-        </Typography>
     )
 }
 
@@ -162,21 +143,20 @@ export function WelcomePage() {
                                 py: 1.15,
                             }}
                         >
-                            Get in touch
+                            Ask about Ombuddi
                         </Button>
                     </Stack>
                 </Box>
             </Box>
 
-            <Box sx={{ p: { xs: 3, sm: 5, md: 7 } }}>
+            <Box sx={{ p: { xs: 3, sm: 5, md: 7 }, bgcolor: palette.surfaceRaised }}>
                 <Box sx={{ maxWidth: 720, mb: 4 }}>
-                    <Eyebrow>Privacy by design</Eyebrow>
                     <Typography
                         component="h2"
                         variant="h3"
                         sx={{ color: palette.text, fontSize: { xs: '1.85rem', sm: '2.4rem', md: '2.75rem' }, fontWeight: 650, mb: 2 }}
                     >
-                        Confidentiality, enforced technically.
+                        Privacy by design
                     </Typography>
                     <Typography sx={{ color: palette.muted }}>
                         The IOA requires that Ombuds maintain strict confidentiality. Ombuddi carries that obligation
@@ -191,7 +171,6 @@ export function WelcomePage() {
                     <Grid2 size={{ xs: 12, md: 4 }}>
                         <PrivacyCard
                             icon={<VisibilityOff />}
-                            number="01"
                             title="Identity protection"
                         >
                             Visitor identities are stored as one-way cryptographic hashes—the application cannot reveal
@@ -201,7 +180,6 @@ export function WelcomePage() {
                     <Grid2 size={{ xs: 12, md: 4 }}>
                         <PrivacyCard
                             icon={<Lock />}
-                            number="02"
                             title="Local encryption"
                         >
                             Protect case notes with AES-256-GCM encryption before they leave your browser.
@@ -210,7 +188,6 @@ export function WelcomePage() {
                     <Grid2 size={{ xs: 12, md: 4 }}>
                         <PrivacyCard
                             icon={<AdminPanelSettings />}
-                            number="03"
                             title="Practitioner access"
                         >
                             Ombuddi staff cannot unlock phrase-encrypted notes. There is no support backdoor to your
@@ -218,6 +195,46 @@ export function WelcomePage() {
                         </PrivacyCard>
                     </Grid2>
                 </Grid2>
+            </Box>
+
+            <Box
+                component="section"
+                aria-labelledby="reports-heading"
+                sx={{
+                    p: { xs: 3, sm: 5, md: 7 },
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: { xs: 2, md: 3 },
+                }}
+            >
+                <Box
+                    sx={{
+                        width: 46,
+                        height: 46,
+                        flexShrink: 0,
+                        display: 'grid',
+                        placeItems: 'center',
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(154, 108, 174, 0.16)',
+                        color: palette.purpleLight,
+                    }}
+                >
+                    <AssessmentOutlined />
+                </Box>
+                <Box sx={{ maxWidth: 760 }}>
+                    <Typography
+                        id="reports-heading"
+                        component="h2"
+                        sx={{ color: palette.text, fontSize: { xs: '1.85rem', sm: '2.4rem', md: '2.75rem' }, fontWeight: 650, mb: 2 }}
+                    >
+                        Automated reports
+                    </Typography>
+                    <Typography sx={{ color: palette.muted }}>
+                        Turn the work you log into charts of visitor trends, common concerns, and contact time.
+                        Choose a date range, explore your own activity or your whole office, and export charts for
+                        your reports—without maintaining a separate spreadsheet.
+                    </Typography>
+                </Box>
             </Box>
 
             <Box
