@@ -263,6 +263,7 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         for r in cur.fetchall()
     ]
 
+    # Use case snapshots so retired or renamed suggestions remain reportable.
     cur.execute(f"""
         SELECT theme, COUNT(DISTINCT c.id) AS count
         FROM cases c
@@ -278,6 +279,32 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
     """, (organization_id, organization_id, start, end, *aliased_entry_scope_params))
     cases_by_theme = [{'theme': row[0], 'count': row[1]} for row in cur.fetchall()]
 
+    # Each theme receives the full contact time and entry count of its cases,
+    # just as each code does. Only entries in the requested scope/period qualify.
+    cur.execute(f"""
+        SELECT theme, COALESCE(SUM(e.duration), 0) AS total_minutes
+        FROM cases c
+        CROSS JOIN LATERAL unnest(c.themes) AS theme
+        JOIN entries e ON e.case_id = c.id AND e.organization_id = c.organization_id
+        WHERE c.organization_id = %s AND c.case_kind = 'standard'
+          AND e.date >= %s AND e.date <= %s
+          {aliased_entry_scope}
+        GROUP BY theme ORDER BY total_minutes DESC, theme
+    """, (organization_id, start, end, *aliased_entry_scope_params))
+    themes_by_duration = [{'theme': row[0], 'totalMinutes': int(row[1])} for row in cur.fetchall()]
+
+    cur.execute(f"""
+        SELECT theme, COUNT(e.id) AS entry_count
+        FROM cases c
+        CROSS JOIN LATERAL unnest(c.themes) AS theme
+        JOIN entries e ON e.case_id = c.id AND e.organization_id = c.organization_id
+        WHERE c.organization_id = %s AND c.case_kind = 'standard'
+          AND e.date >= %s AND e.date <= %s
+          {aliased_entry_scope}
+        GROUP BY theme ORDER BY entry_count DESC, theme
+    """, (organization_id, start, end, *aliased_entry_scope_params))
+    themes_by_entry_count = [{'theme': row[0], 'count': row[1]} for row in cur.fetchall()]
+
     return jsonify({
         'scope': 'my' if ombuds_id is not None else 'organization',
         'entriesByMonth': entries_by_month,
@@ -291,6 +318,8 @@ def _execute_reports(cur, organization_id, start, end, ombuds_id=None):
         'personsByGeneration': persons_by_generation,
         'casesByStatus': cases_by_status,
         'casesByTheme': cases_by_theme,
+        'themesByDuration': themes_by_duration,
+        'themesByEntryCount': themes_by_entry_count,
         'codesByCaseCount': codes_by_case_count,
         'codesByDuration': codes_by_duration,
         'codesByEntryCount': codes_by_entry_count,

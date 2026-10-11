@@ -53,6 +53,10 @@ class CaseThemesPostgresTests(unittest.TestCase):
                     report = _execute_reports(cur, org, date(2026, 7, 1), date(2026, 7, 31), ombuds).get_json()
                     self.assertEqual(report['casesByTheme'], [
                         {'theme': 'Advising Issues', 'count': 1}, {'theme': 'Local Concern', 'count': 1}])
+                    self.assertEqual(report['themesByDuration'], [
+                        {'theme': 'Advising Issues', 'totalMinutes': 60}, {'theme': 'Local Concern', 'totalMinutes': 60}])
+                    self.assertEqual(report['themesByEntryCount'], [
+                        {'theme': 'Advising Issues', 'count': 2}, {'theme': 'Local Concern', 'count': 2}])
                     self.assertEqual(_execute_reports(cur, other_org, date(2026, 7, 1), date(2026, 7, 31)).get_json()['casesByTheme'], [])
                     self.assertEqual(_execute_reports(cur, org, date(2026, 8, 1), date(2026, 8, 31)).get_json()['casesByTheme'], [])
                 # An intentionally emptied list stays empty, and existing customized lists are not seeded.
@@ -64,6 +68,75 @@ class CaseThemesPostgresTests(unittest.TestCase):
                 cur.execute('INSERT INTO organizations VALUES (%s)', (other_org,))
                 cur.execute('SELECT count(*) FROM picklists WHERE organization_id = %s', (other_org,))
                 self.assertEqual(cur.fetchone()[0], 1)
+        finally:
+            conn.rollback()
+            conn.close()
+
+    def test_theme_metrics_follow_dates_scope_and_standard_cases(self):
+        import psycopg2
+        conn = psycopg2.connect(host='db', user=os.environ['DB_USER'],
+                               password=os.environ['DB_PASS'], dbname=os.environ['DB_NAME'])
+        try:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    CREATE TEMP TABLE cases (id uuid PRIMARY KEY, organization_id uuid,
+                        case_kind text, status text, codes uuid[], themes text[]);
+                    CREATE TEMP TABLE entries (id uuid PRIMARY KEY, case_id uuid, organization_id uuid,
+                        ombuds_id uuid, date date, medium text, duration integer);
+                    CREATE TEMP TABLE persons (id uuid, race text, generation text, primary_role text);
+                    CREATE TEMP TABLE entry_person (entry_id uuid, person_id uuid, entry_role text);
+                    CREATE TEMP TABLE codes (id uuid, code text);
+                ''')
+                org, foreign_org, owner, colleague = [str(uuid4()) for _ in range(4)]
+
+                def case(themes, organization=org, kind='standard'):
+                    case_id = str(uuid4())
+                    cur.execute("INSERT INTO cases VALUES (%s, %s, %s, 'open', '{}', %s)",
+                                (case_id, organization, kind, themes))
+                    return case_id
+
+                def entry(case_id, minutes, day='2026-07-01', ombuds=owner, organization=org):
+                    cur.execute("INSERT INTO entries VALUES (%s, %s, %s, %s, %s, 'Phone', %s)",
+                                (str(uuid4()), case_id, organization, ombuds, day, minutes))
+
+                shared = case(['Shared', 'Retired theme'])
+                entry(shared, 30)
+                entry(shared, 60, day='2026-07-31')
+                entry(shared, 120, ombuds=colleague)
+                entry(shared, 999, day='2026-06-30')
+                entry(shared, 999, day='2026-08-01')
+                entry(case(['Shared']), 30)
+                entry(case(['No duration']), None)
+                entry(case([]), 999)
+                case(['No entries'])
+                entry(case(['General only'], kind='general'), 999)
+                entry(case(['Foreign only'], organization=foreign_org), 999, organization=foreign_org)
+
+                def report(ombuds=None, start=date(2026, 7, 1), end=date(2026, 7, 31)):
+                    with app.app_context():
+                        return _execute_reports(cur, org, start, end, ombuds).get_json()
+
+                personal = report(owner)
+                self.assertEqual(personal['casesByTheme'], [
+                    {'theme': 'Shared', 'count': 2}, {'theme': 'No duration', 'count': 1},
+                    {'theme': 'Retired theme', 'count': 1}])
+                self.assertEqual(personal['themesByDuration'], [
+                    {'theme': 'Shared', 'totalMinutes': 120}, {'theme': 'Retired theme', 'totalMinutes': 90},
+                    {'theme': 'No duration', 'totalMinutes': 0}])
+                self.assertEqual(personal['themesByEntryCount'], [
+                    {'theme': 'Shared', 'count': 3}, {'theme': 'Retired theme', 'count': 2},
+                    {'theme': 'No duration', 'count': 1}])
+                organization = report()
+                self.assertEqual(organization['casesByTheme'], personal['casesByTheme'])
+                self.assertEqual(organization['themesByDuration'], [
+                    {'theme': 'Shared', 'totalMinutes': 240}, {'theme': 'Retired theme', 'totalMinutes': 210},
+                    {'theme': 'No duration', 'totalMinutes': 0}])
+                self.assertEqual(organization['themesByEntryCount'], [
+                    {'theme': 'Shared', 'count': 4}, {'theme': 'Retired theme', 'count': 3},
+                    {'theme': 'No duration', 'count': 1}])
+                for empty in [report(str(uuid4())), report(start=date(2025, 1, 1), end=date(2025, 12, 31))]:
+                    for key in ['casesByTheme', 'themesByDuration', 'themesByEntryCount']:
+                        self.assertEqual(empty[key], [])
         finally:
             conn.rollback()
             conn.close()

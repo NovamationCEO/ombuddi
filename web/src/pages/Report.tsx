@@ -95,6 +95,8 @@ type ReportData = {
     personsByGeneration: { generation: string; count: number }[]
     casesByStatus: { status: string; count: number }[]
     casesByTheme?: { theme: string; count: number }[]
+    themesByDuration?: { theme: string; totalMinutes: number }[]
+    themesByEntryCount?: { theme: string; count: number }[]
     codesByCaseCount: CodeRow[]
     codesByDuration: CodeRow[]
     codesByEntryCount: CodeRow[]
@@ -635,9 +637,9 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Themes (by Cases Worked)"
-                            categories={data?.casesByTheme?.map((row) => row.theme) ?? []}
-                            data={data?.casesByTheme?.map((row) => row.count) ?? []}
+                            title="Most Common Codes (by Cases Worked)"
+                            categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
+                            data={data?.codesByCaseCount.map((r) => r.count ?? 0) ?? []}
                             yTitle="Cases"
                             suppressable
                             shareMode={shareMode}
@@ -647,9 +649,9 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
-                            title="Most Common Codes (by Cases Worked)"
-                            categories={data?.codesByCaseCount.map(resolveCodeLabel) ?? []}
-                            data={data?.codesByCaseCount.map((r) => r.count ?? 0) ?? []}
+                            title="Most Common Themes (by Cases Worked)"
+                            categories={data?.casesByTheme?.map((row) => row.theme) ?? []}
+                            data={data?.casesByTheme?.map((row) => row.count) ?? []}
                             yTitle="Cases"
                             suppressable
                             shareMode={shareMode}
@@ -671,9 +673,32 @@ export function ReportPage() {
 
                     <Grid2 size={{ xs: 12, md: 6 }}>
                         <ToggleChart
+                            title="Contact Time by Theme (hours)"
+                            categories={data?.themesByDuration?.map((row) => row.theme) ?? []}
+                            data={data?.themesByDuration?.map((row) => +(row.totalMinutes / 60).toFixed(1)) ?? []}
+                            yTitle="Hours"
+                            decimalPlaces={1}
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
                             title="Most Active Codes (by Entries)"
                             categories={data?.codesByEntryCount.map(resolveCodeLabel) ?? []}
                             data={data?.codesByEntryCount.map((r) => r.count ?? 0) ?? []}
+                            yTitle="Entries"
+                            suppressable
+                            shareMode={shareMode}
+                            minCellSize={minCellSize}
+                        />
+                    </Grid2>
+                    <Grid2 size={{ xs: 12, md: 6 }}>
+                        <ToggleChart
+                            title="Most Active Themes (by Entries)"
+                            categories={data?.themesByEntryCount?.map((row) => row.theme) ?? []}
+                            data={data?.themesByEntryCount?.map((row) => row.count) ?? []}
                             yTitle="Entries"
                             suppressable
                             shareMode={shareMode}
