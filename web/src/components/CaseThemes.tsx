@@ -1,5 +1,7 @@
 import React from 'react'
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
+import { Add } from '@mui/icons-material'
+import { ThemePaperLabel } from './ThemePaperLabel'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
 import { CaseThemeSelector } from './CaseThemeSelector'
 import { updater } from '../tools/db_tools/updater'
@@ -42,7 +44,7 @@ export function CaseThemes({ caseId, value, onSaved }: { caseId: string; value: 
         >
             <Stack
                 direction="row"
-                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+                sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}
             >
                 <Typography
                     component="h2"
@@ -53,36 +55,27 @@ export function CaseThemes({ caseId, value, onSaved }: { caseId: string; value: 
                 </Typography>
                 <Button
                     size="small"
+                    startIcon={<Add sx={{ fontSize: 16 }} />}
+                    sx={{ fontSize: '0.75rem', textTransform: 'none' }}
                     aria-label="Edit case themes"
                     onClick={() => {
                         setDraft([...value])
                         setOpen(true)
                     }}
                 >
-                    Edit
+                    Add / edit themes
                 </Button>
             </Stack>
             {value.length ? (
-                <Stack
-                    direction="row"
-                    useFlexGap
-                    spacing={0.75}
-                    sx={{ flexWrap: 'wrap' }}
-                >
+                <Box className="theme-paper-labels">
                     {value.map((theme) => (
-                        <Chip
+                        <ThemePaperLabel
                             key={theme}
-                            label={theme}
+                            theme={theme}
                             size="small"
-                            sx={{
-                                bgcolor: '#e6eddf',
-                                height: 'auto',
-                                minHeight: 26,
-                                '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere', py: 0.25 },
-                            }}
                         />
                     ))}
-                </Stack>
+                </Box>
             ) : (
                 <Typography
                     variant="body2"

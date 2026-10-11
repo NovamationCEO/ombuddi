@@ -1,0 +1,115 @@
+.theme-paper-label.MuiChip-root {
+    position: relative;
+    isolation: isolate;
+    max-width: 100%;
+    height: auto;
+    min-height: 30px;
+    margin: 0;
+    padding: 4px 0 3px;
+    overflow: visible;
+    border: 1px solid transparent;
+    border-radius: 1px 2px 2px 1px;
+    color: #39413b;
+    background: transparent;
+    filter: drop-shadow(0 2px 1.5px rgba(79, 66, 37, 0.13));
+    transform: rotate(var(--theme-tilt));
+    transform-origin: 50% 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+.theme-paper-label::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border: 1px solid rgba(135, 118, 77, 0.18);
+    border-radius: inherit;
+    background: linear-gradient(170deg, rgba(255, 255, 255, 0.28), transparent 65%), var(--theme-paper);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    clip-path: var(--theme-paper-outline, none);
+    pointer-events: none;
+}
+.theme-paper-label::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: calc(50% - 15px);
+    width: 30px;
+    height: 11px;
+    border: 1px solid rgba(171, 151, 103, 0.16);
+    background: rgba(255, 250, 221, 0.62);
+    box-shadow: 0 1px 1px rgba(79, 66, 37, 0.06);
+    transform: rotate(var(--theme-tape-tilt));
+    pointer-events: none;
+}
+.theme-paper-label .MuiChip-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    padding: 0 10px;
+}
+/* Cut away the original corner, then turn its triangular underside inward. */
+.theme-paper-fold {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    filter: drop-shadow(-0.6px -0.6px 0.6px rgba(79, 66, 37, 0.3));
+    pointer-events: none;
+}
+.theme-paper-fold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    background: linear-gradient(135deg, #fffef8 0%, var(--theme-paper) 44%, #b9ad91 50%, transparent 51%);
+}
+.theme-paper-label--fold-bottom-right {
+    --theme-paper-outline: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+}
+.theme-paper-label--fold-bottom-left {
+    --theme-paper-outline: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.theme-paper-label--fold-top-right {
+    --theme-paper-outline: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+.theme-paper-label--fold-top-left {
+    --theme-paper-outline: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+}
+.theme-paper-label--fold-bottom-right .theme-paper-fold {
+    right: -1px;
+    bottom: -1px;
+}
+.theme-paper-label--fold-bottom-left .theme-paper-fold {
+    left: -1px;
+    bottom: -1px;
+    transform: scaleX(-1);
+}
+.theme-paper-label--fold-top-right .theme-paper-fold {
+    right: -1px;
+    top: -1px;
+    transform: scaleY(-1);
+}
+.theme-paper-label--fold-top-left .theme-paper-fold {
+    left: -1px;
+    top: -1px;
+    transform: scale(-1);
+}
+.theme-paper-label .MuiChip-deleteIcon {
+    color: #626b60;
+    font-size: 17px;
+}
+.theme-paper-label.Mui-focusVisible {
+    outline: 2px solid #743d68;
+    outline-offset: 3px;
+}
+.theme-paper-labels {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px 10px;
+    min-width: 0;
+    padding: 8px 2px 4px;
+}
+.theme-paper-labels--editor {
+    flex-basis: 100%;
+    margin-bottom: 8px;
+}

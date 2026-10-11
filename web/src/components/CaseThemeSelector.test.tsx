@@ -74,7 +74,7 @@ describe('case themes', () => {
                 />,
             ),
         )
-        await click('Edit')
+        await click('Add / edit themes')
         await type('New Theme')
         await act(async () => document.body.querySelector<HTMLInputElement>('input[role="combobox"]')!.blur())
         await click('Save themes')
@@ -95,11 +95,11 @@ describe('case themes', () => {
                 />,
             ),
         )
-        await click('Edit')
+        await click('Add / edit themes')
         await type('Unwanted')
         await click('Cancel')
         expect(mocks.update).not.toHaveBeenCalled()
-        await click('Edit')
+        await click('Add / edit themes')
         expect(document.body.querySelector('[role="dialog"]')!.textContent).not.toContain('Unwanted')
         mocks.update.mockRejectedValue(new Error('offline'))
         await click('Save themes')
